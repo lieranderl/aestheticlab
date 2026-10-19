@@ -43,12 +43,12 @@
 		"@biomejs/biome": "^2.5.14",
 		"@builder.io/qwik": "^1.20.1",
 		"@builder.io/qwik-city": "^1.20.1",
-		"@playwright/test": "^1.63.0",
+		"@playwright/test": "^1.64.1",
 		"@qwikest/icons": "^0.0.13",
 		"@tailwindcss/vite": "^4.3.3",
-		"@types/bun": "^1.4.2",
-		"@types/node": "26.6.4",
-		"@vitest/coverage-v8": "5.0.3",
+		"@types/bun": "^1.4.3",
+		"@types/node": "26.6.5",
+		"@vitest/coverage-v8": "5.0.5",
 		"daisyui": "^5.7.46",
 		"husky": "^9.1.7",
 		"ignore": "^7.0.10",
@@ -56,8 +56,8 @@
 		"qwik-speak": "^0.24.0",
 		"tailwindcss": "^4.3.3",
 		"typescript": "7.0.2",
-		"vite": "7.3.6",
-		"vitest": "5.0.3"
+		"vite": "7.3.7",
+		"vitest": "5.0.5"
 	},
 	"dependencies": {
 		"@fontsource-variable/onest": "^5.3.1",
