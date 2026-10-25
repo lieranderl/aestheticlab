@@ -121,17 +121,25 @@ func openTreatment(ctx context.Context, category, area string, c content.Categor
 		query += "&treatmentArea=" + url.QueryEscape(area)
 	}
 	id := cmp.Or(area, category)
-	return "history.pushState(null, '', " + jsString(query+"#services") + "); @get(" + jsString(query) + "); " +
+	return "history.pushState(null, '', " + jsString(query+"#services") + "); " + sectionGet(jsString(query)) + "; " +
 		track("service_category_viewed", map[string]string{
 			"category_id": id, "service_category": tileTitle(ctx, c), "placement": placement,
 			"service_count": strconv.Itoa(len(c.Services)),
 		})
 }
 
-// backToOverview and backToLaser are the back buttons' expressions.
-const (
-	backToOverview = "history.pushState(null, '', location.pathname + '#services'); @get(location.pathname)"
-	backToLaser    = "history.pushState(null, '', '?treatment=laser#services'); @get('?treatment=laser')"
+// sectionGet fetches the services section for url (a JavaScript
+// expression), cancelling any section request still under way, whatever its
+// URL.
+func sectionGet(url string) string {
+	return "@get(" + url + ", {requestCancellation: aesthetic.sectionSignal()})"
+}
+
+// The back buttons' and the browser back button's expressions.
+var (
+	backToOverview    = "history.pushState(null, '', location.pathname + '#services'); " + sectionGet("location.pathname")
+	backToLaser       = "history.pushState(null, '', '?treatment=laser#services'); " + sectionGet("'?treatment=laser'")
+	sectionOnPopState = sectionGet("location.pathname + location.search")
 )
 
 // lowestAddOn is the lowest add-on price, for the services note.
@@ -157,12 +165,15 @@ const smoothBehavior = "matchMedia('(prefers-reduced-motion: reduce)').matches ?
 
 // revealTreatments brings a freshly patched section into view: the
 // treatments (focusing their heading for screen readers) or, for the
-// overview, the section top.
+// overview, the section top. The expression names the selection: a patch
+// morphs #services-body in place, and Datastar runs a data-init again only
+// when its value changes.
 func revealTreatments(t treatments) string {
+	selection := "void " + jsString("services:"+t.Category+"/"+t.Area) + "; "
 	if t.Category == "" {
-		return "document.getElementById('services')?.scrollIntoView({behavior: " + smoothBehavior + "})"
+		return selection + "document.getElementById('services')?.scrollIntoView({behavior: " + smoothBehavior + "})"
 	}
-	return "document.getElementById('service-details-card')?.scrollIntoView({behavior: " + smoothBehavior + "}); " +
+	return selection + "document.getElementById('service-details-card')?.scrollIntoView({behavior: " + smoothBehavior + "}); " +
 		"document.getElementById('service-details-heading')?.focus({preventScroll: true}); " +
 		`document.querySelector('#service-category-nav [aria-pressed="true"]')?.scrollIntoView({block: 'nearest', inline: 'center'})`
 }

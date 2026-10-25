@@ -119,3 +119,34 @@ func TestEverySloganHasItsSize(t *testing.T) {
 		}
 	}
 }
+
+// A patch morphs #services-body in place, and Datastar re-runs a data-init
+// only when its value changes: each selection must reveal itself anew.
+func TestEachSelectionRevealsItselfAfterAPatch(t *testing.T) {
+	reveal := regexp.MustCompile(`<div id="services-body" data-init="([^"]*)"`)
+	seen := map[string]string{}
+	for _, q := range []url.Values{
+		{}, {"treatment": {"635112"}}, {"treatment": {"635110"}},
+		{"treatment": {"laser"}}, {"treatment": {"laser"}, "treatmentArea": {"674219"}},
+	} {
+		frag := renderAt(t, "/en-BE/", func(loc *content.Localized) templ.Component { return views.ServicesFragment(loc, q) })
+		m := reveal.FindStringSubmatch(frag)
+		if m == nil {
+			t.Fatalf("%v: no reveal", q)
+		}
+		if other, dup := seen[m[1]]; dup {
+			t.Errorf("%v reveals with the same data-init as %s", q, other)
+		}
+		seen[m[1]] = q.Encode()
+	}
+}
+
+// Requests for different selections share one abort signal, so a slow
+// earlier response never lands after the latest one.
+func TestSectionRequestsCancelEachOther(t *testing.T) {
+	html := renderAt(t, "/en-BE/?treatment=laser", home)
+	gets, shared := strings.Count(html, "@get("), strings.Count(html, "{requestCancellation: aesthetic.sectionSignal()})")
+	if gets < 3 || shared != gets {
+		t.Errorf("%d section requests, %d sharing the abort signal; want all of several", gets, shared)
+	}
+}

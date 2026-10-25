@@ -150,6 +150,19 @@
 		return video.paused ? "paused" : "playing";
 	}
 
+	let sectionRequest;
+	/**
+	 * A fresh abort signal for the services section's requests, aborting the
+	 * previous one: Datastar cancels requests per URL only, so a slow
+	 * response for an earlier category could otherwise land after the
+	 * latest one.
+	 */
+	function sectionSignal() {
+		sectionRequest?.abort();
+		sectionRequest = new AbortController();
+		return sectionRequest;
+	}
+
 	window.aesthetic = {
 		/** True when the cookie banner should show: no choice stored yet. */
 		needsConsent: () => stored() === null,
@@ -159,5 +172,6 @@
 		playInView,
 		toggleVideo,
 		videoState,
+		sectionSignal,
 	};
 })();
