@@ -60,7 +60,7 @@ func (b Booking) event() string {
 // open is the Datastar expression that opens the booking dialog on b's
 // widget and records booking_opened.
 func (b Booking) open() string {
-	return "$bookingUrl = " + jsString(b.widgetURL()) + "; $bookingLoaded = false; $bookingEvent = " + jsString(b.event()) +
+	return "$bookingUrl = " + jsString(b.widgetURL()) + "; $bookingTitle = " + jsString(b.Text) + "; $bookingLoaded = false; $bookingEvent = " + jsString(b.event()) +
 		"; document.getElementById('booking').showModal(); aesthetic.track('booking_opened', JSON.parse($bookingEvent))"
 }
 
@@ -73,18 +73,21 @@ func track(name string, params map[string]string) string {
 	return "aesthetic.track(" + jsString(name) + ", JSON.parse(" + jsString(string(data)) + "))"
 }
 
-// fadeDelay is the transition delay class for a FadeUp: Tailwind sees only
-// literal class names.
+// fadeDelay is the transition delay class for a FadeUp, rounded to 20ms
+// and capped at 400ms as the Qwik site does. Tailwind sees only literal
+// class names, hence the list.
 func fadeDelay(ms int) string {
-	switch {
-	case ms >= 400:
-		return "delay-400"
-	case ms >= 300:
-		return "delay-300"
-	case ms >= 200:
-		return "delay-200"
-	case ms >= 100:
+	switch min(400, max(0, (ms+10)/20*20)) {
+	case 80:
+		return "delay-80"
+	case 100:
 		return "delay-100"
+	case 160:
+		return "delay-160"
+	case 200:
+		return "delay-200"
+	case 400:
+		return "delay-400"
 	}
 	return ""
 }

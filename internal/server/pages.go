@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/a-h/templ"
+	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/i18n"
@@ -28,3 +29,25 @@ func page(l i18n.Locale, store *content.Store, log *slog.Logger, render func(*co
 }
 
 func pricelist(loc *content.Localized) templ.Component { return views.Pricelist(loc) }
+
+func homePage(loc *content.Localized) templ.Component { return views.Home(loc) }
+
+// home serves the landing page in locale l. A Datastar request (a tap in
+// the services section, or the back button) gets only that section for its
+// URL, patched in place.
+func home(l i18n.Locale, store *content.Store, log *slog.Logger) http.HandlerFunc {
+	full := page(l, store, log, homePage)
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Datastar-Request") != "true" {
+			full(w, r)
+			return
+		}
+		ctx := views.WithRequest(r.Context(), r.URL)
+		loc := store.Content(ctx).In(l)
+		w.Header().Set("Cache-Control", "no-store")
+		sse := datastar.NewSSE(w, r)
+		if err := sse.PatchElementTempl(views.ServicesFragment(loc, r.URL.Query())); err != nil {
+			log.ErrorContext(ctx, "services_patch_failed", "path", r.URL.Path, "error", err.Error())
+		}
+	}
+}

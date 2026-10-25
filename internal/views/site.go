@@ -23,8 +23,12 @@ const (
 	opens     = "10:00"
 	closes    = "18:00"
 	instagram = "https://www.instagram.com/aestheticlabbe"
+	// instagramMessage opens a direct message thread with the studio.
+	instagramMessage = "https://ig.me/m/aestheticlabbe"
 	// googlePlaceURL opens the studio on Google Maps (reviews, directions).
 	googlePlaceURL = "https://maps.app.goo.gl/bsdNssGY4YTJeR7j6"
+	googleRating   = "5.0"
+	googleReviews  = 60
 	bookingURL     = "https://bookings.gettimely.com/aestheticlab2/bb/book"
 	// bookingLocationID is Timely's location when the content names none.
 	bookingLocationID = "372146"

@@ -252,6 +252,7 @@ templ phoneBookingBar(landing bool) {
 // BookButton opens the booking dialog on b's widget.
 templ BookButton(b Booking) {
 	<button
+		id={ b.ID }
 		type="button"
 		class={ b.Class, "motion-safe:active:scale-[0.97] motion-safe:transition-transform motion-safe:duration-100" }
 		if b.AriaLabel != "" {

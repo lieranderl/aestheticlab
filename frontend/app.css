@@ -238,9 +238,9 @@
   from { transform: translate3d(0, 60px, 0); }
   to { transform: translate3d(0, -60px, 0); }
 }
-/* The hero lags behind the scroll at 35% of its speed. */
+/* The hero lags behind the scroll at 25% of its speed. */
 @keyframes parallax-top {
-  to { transform: translate3d(0, 35vh, 0); }
+  to { transform: translate3d(0, 25vh, 0); }
 }
 /* Drifts up and fades out over the first 420px of scrolling. */
 @keyframes parallax-fade {

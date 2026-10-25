@@ -45,12 +45,14 @@ func New(cfg Config) http.Handler {
 	// never keeps an instance warm.
 	mux.HandleFunc("GET /dependencyz", dependency(store, log))
 	mux.HandleFunc("GET /static/", staticFiles(cfg.Static))
-	mux.HandleFunc("GET /{$}", home)
+	mux.HandleFunc("GET /{$}", root)
 	// Each page under each locale, spelled out: a locale-shaped segment that
 	// is not a locale (/de-BE/pricelist/) falls through to the 404.
 	// The slashless form gets pages' 301, as on the Qwik site (the mux's own
 	// redirect would be a 307).
 	for _, l := range i18n.Supported() {
+		mux.HandleFunc("GET /"+string(l)+"/{$}", home(l, store, log))
+		mux.HandleFunc("GET /"+string(l), pages)
 		mux.HandleFunc("GET /"+string(l)+"/pricelist/{$}", page(l, store, log, pricelist))
 		mux.HandleFunc("GET /"+string(l)+"/pricelist", pages)
 	}

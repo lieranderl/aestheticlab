@@ -104,11 +104,74 @@
 	script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
 	document.head.appendChild(script);
 
+	/**
+	 * A short silent clip (src/components/ui/in-view-video.tsx): plays once
+	 * when 40% of it is in view, then rests on its last frame; pauses while
+	 * off screen and resumes on return. Never plays by itself with reduced
+	 * motion.
+	 */
+	function playInView(video) {
+		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+		let started = false;
+		let pausedOffscreen = false;
+		new IntersectionObserver(
+			([entry]) => {
+				if (entry?.isIntersecting && (!started || pausedOffscreen)) {
+					started = true;
+					pausedOffscreen = false;
+					video.muted = true;
+					// Autoplay can be refused (low-power mode); the poster then stays.
+					video.play().catch(() => undefined);
+				} else if (!entry?.isIntersecting && !video.paused) {
+					pausedOffscreen = true;
+					video.pause();
+				}
+			},
+			{ threshold: 0.4 },
+		).observe(video);
+	}
+
+	/** Pauses a playing clip, resumes a paused one, replays an ended one. */
+	function toggleVideo(id) {
+		const video = document.getElementById(id);
+		if (!(video instanceof HTMLVideoElement)) return;
+		if (!video.paused && !video.ended) {
+			video.pause();
+			return;
+		}
+		if (video.ended) video.currentTime = 0;
+		video.muted = true;
+		video.play().catch(() => undefined);
+	}
+
+	/** A clip's state for its control: "playing", "paused" or "ended". */
+	function videoState(video) {
+		if (video.ended) return "ended";
+		return video.paused ? "paused" : "playing";
+	}
+
+	let sectionRequest;
+	/**
+	 * A fresh abort signal for the services section's requests, aborting the
+	 * previous one: Datastar cancels requests per URL only, so a slow
+	 * response for an earlier category could otherwise land after the
+	 * latest one.
+	 */
+	function sectionSignal() {
+		sectionRequest?.abort();
+		sectionRequest = new AbortController();
+		return sectionRequest;
+	}
+
 	window.aesthetic = {
 		/** True when the cookie banner should show: no choice stored yet. */
 		needsConsent: () => stored() === null,
 		accept: () => choose(true),
 		reject: () => choose(false),
 		track,
+		playInView,
+		toggleVideo,
+		videoState,
+		sectionSignal,
 	};
 })();
