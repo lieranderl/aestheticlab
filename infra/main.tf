@@ -331,11 +331,13 @@ resource "google_cloud_run_v2_service" "web" {
         }
       }
 
+      # Probe every second so a cold start is routed as soon as /healthz answers,
+      # instead of waiting up to 5 s for the next probe; 60 x 1 s keeps the 60 s budget.
       startup_probe {
         initial_delay_seconds = 0
-        timeout_seconds       = 3
-        period_seconds        = 5
-        failure_threshold     = 12
+        timeout_seconds       = 1
+        period_seconds        = 1
+        failure_threshold     = 60
         http_get {
           path = "/healthz"
           port = 3000
