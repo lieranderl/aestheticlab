@@ -55,6 +55,10 @@ func New(cfg Config) http.Handler {
 		mux.HandleFunc("GET /"+string(l), pages)
 		mux.HandleFunc("GET /"+string(l)+"/pricelist/{$}", page(l, store, log, pricelist))
 		mux.HandleFunc("GET /"+string(l)+"/pricelist", pages)
+		mux.HandleFunc("GET /"+string(l)+"/privacy-policy/{$}", page(l, store, log, privacy))
+		mux.HandleFunc("GET /"+string(l)+"/privacy-policy", pages)
+		mux.HandleFunc("GET /"+string(l)+"/notice/{$}", page(l, store, log, care))
+		mux.HandleFunc("GET /"+string(l)+"/notice", pages)
 	}
 	mux.HandleFunc("/", pages)
 	return Middleware(log, withLocale(mux))

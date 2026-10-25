@@ -32,6 +32,10 @@ func pricelist(loc *content.Localized) templ.Component { return views.Pricelist(
 
 func homePage(loc *content.Localized) templ.Component { return views.Home(loc) }
 
+func privacy(*content.Localized) templ.Component { return views.Privacy() }
+
+func care(*content.Localized) templ.Component { return views.Care() }
+
 // home serves the landing page in locale l. A Datastar request (a tap in
 // the services section, or the back button) gets only that section for its
 // URL, patched in place.

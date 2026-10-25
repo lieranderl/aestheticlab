@@ -1,7 +1,6 @@
 package server
 
 import (
-	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -9,6 +8,7 @@ import (
 	"unicode"
 
 	"github.com/lieranderl/aestheticlab/internal/i18n"
+	"github.com/lieranderl/aestheticlab/internal/views"
 )
 
 // withLocale puts the locale the path's first segment names (else English)
@@ -70,15 +70,15 @@ func slashed(u *url.URL) (string, bool) {
 	return target, true
 }
 
-// notFound is the 404 answer, in the locale the path names. Phase 6 of
-// plans/go-datastar-scale-to-zero.md replaces the text with the branded page.
+// notFound is the branded 404 page, in the locale the path names, never
+// cached.
 func notFound(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	ctx := views.WithRequest(r.Context(), r.URL)
 	h := w.Header()
-	h.Set("Content-Type", "text/plain; charset=utf-8")
+	h.Set("Content-Type", "text/html; charset=utf-8")
 	h.Set("Content-Language", string(i18n.FromContext(ctx)))
 	h.Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusNotFound)
-	_, _ = io.WriteString(w, i18n.T(ctx, "This page has moved on")+"\n"+
-		i18n.T(ctx, "The link may be old. Everything you need is one tap away.")+"\n")
+	// The status is sent; a failed render can only end the response early.
+	_ = views.NotFound().Render(ctx, w)
 }

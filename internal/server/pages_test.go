@@ -66,3 +66,50 @@ func TestADatastarRequestGetsOnlyTheServicesSection(t *testing.T) {
 		t.Error("the response carries the whole page")
 	}
 }
+
+func TestThePolicyPagesAreServedInEachLocale(t *testing.T) {
+	h := server.New(server.Config{})
+	for _, l := range []string{"en-BE", "nl-BE", "fr-BE", "ru-BE", "uk-BE"} {
+		for _, p := range []string{"privacy-policy", "notice"} {
+			res := get(t, h, "/"+l+"/"+p+"/")
+			if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `<html lang="`+l+`">`) {
+				t.Errorf("/%s/%s/: status %d, want the page in its locale", l, p, res.Code)
+			}
+		}
+	}
+	privacy := get(t, h, "/en-BE/privacy-policy/").Body.String()
+	if got := strings.Count(privacy, `<section id="privacy-`); got != 8 {
+		t.Errorf("the privacy policy has %d sections, want 8", got)
+	}
+	if strings.Contains(privacy, ">1. Information") {
+		t.Error("section titles keep their translated numbers")
+	}
+	for path, want := range map[string]string{"/en-BE/notice/": "Nails", "/en-BE/notice/?tab=laser": "Laser"} {
+		body := get(t, h, path).Body.String()
+		if !strings.Contains(body, `aria-label="`+want+`" checked`) {
+			t.Errorf("%s: the %s tab is not selected", path, want)
+		}
+	}
+}
+
+// As e2e/seo-head.spec.ts checks the Qwik site's.
+func TestUnknownLinksGetTheBrandedLocalizedPage(t *testing.T) {
+	res := get(t, server.New(server.Config{}), "/nl-BE/oude-link/")
+	if res.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", res.Code)
+	}
+	body := res.Body.String()
+	for _, want := range []string{
+		"Deze pagina is verhuisd",
+		`<meta name="robots" content="noindex">`,
+		`href="/nl-BE/#services"`, `href="/nl-BE/pricelist/"`, `href="/nl-BE/#contact"`,
+		`id="not-found-book-btn"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the 404 page lacks %s", want)
+		}
+	}
+	if strings.Contains(body, `id="bottom-bar-book-btn"`) {
+		t.Error("the 404 page shows the phone booking bar; it has its own Book button")
+	}
+}
