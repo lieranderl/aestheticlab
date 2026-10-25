@@ -353,7 +353,7 @@ templ contact(c content.Contact) {
 	{{ street, city := addressLines(c.Location.Address) }}
 	{{ days := tr(ctx, "Monday") + " – " + tr(ctx, "Saturday") }}
 	<section id="contact" aria-labelledby="contact-title" class="scroll-mt-16 bg-sage-200 text-primary-content lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(20rem,30rem)]">
-		<figure class="relative h-42.5 overflow-hidden lg:order-last lg:h-auto">
+		<figure class="parallax-frame relative h-42.5 overflow-hidden lg:order-last lg:h-auto">
 			<div class="parallax-center absolute inset-x-0 -top-15 h-[calc(100%+7.5rem)]">
 				@Picture("gallery/universal.jpg", tr(ctx, "Silver manicure holding an Aesthetic Lab card"), "h-full w-full object-cover object-[60%_45%] lg:object-[60%_center]", "(min-width: 1024px) 34rem, 100vw", false)
 			</div>

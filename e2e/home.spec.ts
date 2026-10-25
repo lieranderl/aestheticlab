@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 
 const localeRedirectPattern = /\/[a-z]{2}-[A-Z]{2}(?:\/|$)/;
@@ -298,6 +299,148 @@ test("language menu trigger is present", async ({ page }) => {
 	await expect(
 		page.getByRole("button", { name: /select.*language/i }),
 	).toBeVisible({ timeout: 15000 });
+});
+
+// Safari 27.0 closed the menu straight after opening it once the page was
+// scrolled. Opening must hold, and closing stays where visitors expect it.
+test("language menu opens on a scrolled page and closes on outside click or Escape", async ({
+	page,
+}) => {
+	await page.setViewportSize({ width: 1280, height: 800 });
+	await page.addInitScript((key) => {
+		window.localStorage.setItem(
+			key,
+			JSON.stringify({
+				version: 1,
+				analytics: false,
+				updatedAt: new Date().toISOString(),
+			}),
+		);
+	}, consentStorageKey);
+	await page.goto("/en-BE/");
+	await page.mouse.wheel(0, 1500);
+	await expect
+		.poll(() => page.evaluate(() => window.scrollY))
+		.toBeGreaterThan(400);
+
+	const trigger = page.getByRole("button", { name: /select.*language/i });
+	const menu = page.getByRole("list", { name: /language options/i });
+
+	await trigger.click();
+	await expect(menu).toBeVisible();
+	await page.waitForTimeout(300);
+	await expect(menu).toBeVisible();
+	const [button, list] = await Promise.all([
+		trigger.boundingBox(),
+		menu.boundingBox(),
+	]);
+	expect(list?.y ?? 0).toBeGreaterThanOrEqual(
+		(button?.y ?? 0) + (button?.height ?? 0) - 1,
+	);
+
+	await page.mouse.click(200, 500);
+	await expect(menu).toBeHidden();
+
+	await trigger.click();
+	await expect(menu).toBeVisible();
+	await page.keyboard.press("Escape");
+	await expect(menu).toBeHidden();
+
+	await trigger.click();
+	await expect(menu).toBeVisible();
+	await trigger.click();
+	await expect(menu).toBeHidden();
+});
+
+/** Scrolls framed photo `index`'s frame `fromCentre` px below the middle of
+ * the screen and returns the photo's offset; it is drawn 60px above its
+ * frame, so 0 means centred. */
+async function photoOffset(page: Page, index: number, fromCentre: number) {
+	return page.evaluate(
+		async ({ index, fromCentre }) => {
+			const photo = document.querySelectorAll<HTMLElement>(
+				"figure > .\\-top-15",
+			)[index];
+			const frame = photo.parentElement as HTMLElement;
+			const centre =
+				frame.getBoundingClientRect().top +
+				window.scrollY +
+				frame.offsetHeight / 2;
+			window.scrollTo({
+				top: centre - window.innerHeight / 2 - fromCentre,
+				behavior: "instant",
+			});
+			await new Promise((r) => requestAnimationFrame(r));
+			return (
+				photo.getBoundingClientRect().top -
+				frame.getBoundingClientRect().top +
+				60
+			);
+		},
+		{ index, fromCentre },
+	);
+}
+
+/** Scrolls to `y` and returns the hero's motion: the video's and the text's
+ * vertical shift, and the text's opacity. */
+async function heroMotion(page: Page, y: number) {
+	return page.evaluate(async (y) => {
+		window.scrollTo({ top: y, behavior: "instant" });
+		await new Promise((r) => setTimeout(r, 300));
+		const video = document.querySelector(".parallax-top") as HTMLElement;
+		const text = document.querySelector(".parallax-fade") as HTMLElement;
+		return {
+			video: Math.round(new DOMMatrix(getComputedStyle(video).transform).m42),
+			text: Math.round(new DOMMatrix(getComputedStyle(text).transform).m42),
+			opacity: Number(getComputedStyle(text).opacity),
+		};
+	}, y);
+}
+
+// The visit and closing photos lag behind the scroll: shifted up while their
+// frame is below the middle of the screen, down once it is above. The Go site
+// draws this with CSS scroll-driven animation, and a script where the browser
+// lacks it (Firefox). The Qwik site starts its motion once a photo is in
+// view, after loading that code, so the offsets are polled.
+test("framed photos drift against the scroll", async ({ page }) => {
+	await page.setViewportSize({ width: 1280, height: 800 });
+	await page.goto("/en-BE/");
+	const count = await page.locator("figure > .\\-top-15").count();
+	expect(count).toBe(2);
+	for (let index = 0; index < count; index++) {
+		await expect
+			.poll(() => photoOffset(page, index, 300), {
+				message: `photo ${index} below centre`,
+			})
+			.toBeLessThan(-20);
+		await expect
+			.poll(() => photoOffset(page, index, -300), {
+				message: `photo ${index} above centre`,
+			})
+			.toBeGreaterThan(20);
+	}
+});
+
+// Go site: the hero video lags at a quarter of the scroll speed for the first
+// screen, and the text drifts up and fades out over the first 420px; the
+// same curves in every browser, by CSS or by script.
+test("the hero lags behind and its text fades as the page scrolls", async ({
+	page,
+}) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto("/en-BE/");
+	// biome-ignore lint/suspicious/noSkippedTests: the Qwik site measures its hero from the frame, not the page; this pins the Go curves.
+	test.skip(
+		(await page.locator(".parallax-top").count()) === 0,
+		"the Qwik site measures its hero differently",
+	);
+
+	const halfway = await heroMotion(page, 210);
+	expect(halfway.video).toBeCloseTo(53, -1);
+	expect(halfway.text).toBeCloseTo(-32, -1);
+	expect(halfway.opacity).toBeCloseTo(0.5, 1);
+
+	expect(await heroMotion(page, 0)).toEqual({ video: 0, text: 0, opacity: 1 });
 });
 
 test.describe("cookie consent banner", () => {

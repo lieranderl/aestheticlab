@@ -182,7 +182,9 @@ func languageChanged(ctx context.Context) string {
 }
 
 // languageSwitcher is the header's language menu: a popover anchored under
-// its button.
+// its button. The popover is manual and closes itself on an outside click or
+// Escape: Safari 27.0 light-dismissed an auto popover the moment its button
+// opened it once the page was scrolled. The button still toggles it.
 templ languageSwitcher() {
 	<button
 		type="button"
@@ -198,10 +200,12 @@ templ languageSwitcher() {
 	</button>
 	<ul
 		id="language-menu"
-		popover="auto"
+		popover="manual"
 		class="dropdown menu menu-sm z-50 mt-1 w-44 border border-base-300 bg-base-100 p-1.5 text-base-content shadow-lg [position-anchor:--language-menu] [inset:auto] [top:anchor(bottom)]"
 		aria-label={ tr(ctx, "Language options") }
 		data-on:click={ languageChanged(ctx) }
+		data-on:click__outside="el.matches(':popover-open') && !evt.target.closest('[popovertarget=language-menu]') && el.hidePopover()"
+		data-on:keydown__window="evt.key === 'Escape' && el.matches(':popover-open') && el.hidePopover()"
 	>
 		for _, l := range localeLinks(ctx) {
 			<li>
@@ -359,7 +363,7 @@ templ Footer(readyBand, bookingBar bool) {
 	if readyBand {
 		<section aria-labelledby="ready-title" class="bg-base-200 px-4 py-12 sm:px-6 md:px-10 lg:px-16 lg:py-18 xl:px-28">
 			<div class="mx-auto grid max-w-7xl gap-7 md:grid-cols-2 md:items-stretch lg:gap-16">
-				<figure class="relative h-60 overflow-hidden bg-sage-200 md:h-auto md:min-h-80">
+				<figure class="parallax-frame relative h-60 overflow-hidden bg-sage-200 md:h-auto md:min-h-80">
 					<div class="parallax-center absolute inset-x-0 -top-15 h-[calc(100%+7.5rem)]">
 						@Picture("hero/taupe-manicure.jpg", tr(ctx, "Glossy taupe manicure resting on linen"), "h-full w-full object-cover object-[50%_45%]", "(min-width: 768px) 45vw, 100vw", false)
 					</div>

@@ -231,12 +231,14 @@
   }
 }
 
-/* A framed photo drifts at most 60px either way around the frame's centre
-   while the frame crosses the screen; it is drawn 120px taller than the
-   frame, so its edges never show. */
+/* A framed photo lags behind the scroll at 15% of its speed, at most 60px
+   either way of the frame's centre (src/shared/scroll-motion.ts): the drift
+   runs over the 800px of scrolling around the moment the frame is centred
+   on screen. The photo is drawn 120px taller than its frame, so its edges
+   never show. */
 @keyframes parallax-center {
-  from { transform: translate3d(0, 60px, 0); }
-  to { transform: translate3d(0, -60px, 0); }
+  from { transform: translate3d(0, -60px, 0); }
+  to { transform: translate3d(0, 60px, 0); }
 }
 /* The hero lags behind the scroll at 25% of its speed. */
 @keyframes parallax-top {
@@ -248,9 +250,15 @@
 }
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
+    /* The frame, not the photo, is the timeline's subject: the photo moves,
+       and the frame's overflow-hidden would make it its own scroller. */
+    .parallax-frame {
+      view-timeline: --parallax-frame;
+    }
     .parallax-center {
       animation: parallax-center linear both;
-      animation-timeline: view();
+      animation-timeline: --parallax-frame;
+      animation-range: cover calc(50% - 400px) cover calc(50% + 400px);
     }
     .parallax-top {
       animation: parallax-top linear both;

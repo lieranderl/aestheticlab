@@ -8,7 +8,7 @@ func fileURL(name string) string {
 	case "Bird.svg":
 		return "/static/dist/media/Bird.02de9cbcb0.svg"
 	case "app.css":
-		return "/static/dist/app.a5d255adb9.css"
+		return "/static/dist/app.0a8097d3ab.css"
 	case "datastar.js":
 		return "/static/dist/datastar.727844adfc.js"
 	case "fonts/QESTERO-Regular.ttf":
@@ -40,7 +40,7 @@ func fileURL(name string) string {
 	case "fonts/onest-vietnamese-wght-normal.woff2":
 		return "/static/dist/fonts/onest-vietnamese-wght-normal.d852d4d094.woff2"
 	case "site.js":
-		return "/static/dist/site.bd06937af4.js"
+		return "/static/dist/site.a2759e8c8f.js"
 	case "video/cateye-poster.jpg":
 		return "/static/dist/media/video/cateye-poster.6b3602984d.jpg"
 	case "video/cateye.mp4":

@@ -120,6 +120,17 @@ func TestThePortDefaultsTo3000(t *testing.T) {
 	}
 }
 
+// Cloud Run sets K_SERVICE and serves HTTPS; anywhere else (make go-dev,
+// a local binary or container) the server is reached over plain HTTP.
+func TestOnlyOffCloudRunIsTheServerReachedOverPlainHTTP(t *testing.T) {
+	if !plainHTTP(env(nil)) {
+		t.Error("without K_SERVICE: plainHTTP = false, want true")
+	}
+	if plainHTTP(env(map[string]string{"K_SERVICE": "aestheticlab-web"})) {
+		t.Error("on Cloud Run: plainHTTP = true, want false")
+	}
+}
+
 func TestAnInvalidPortStopsTheServerBeforeItStarts(t *testing.T) {
 	for _, port := range []string{"web", "0", "70000"} {
 		var logs syncBuffer

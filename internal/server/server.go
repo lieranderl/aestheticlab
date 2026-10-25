@@ -23,6 +23,10 @@ type Config struct {
 	// /dependencyz checks; nil serves the embedded snapshot and fails
 	// /dependencyz.
 	Content *content.Store
+	// PlainHTTP leaves upgrade-insecure-requests out of the
+	// Content-Security-Policy, for a server reached without TLS (off Cloud
+	// Run). Every other directive stays.
+	PlainHTTP bool
 }
 
 // New returns the site's HTTP handler, wrapped in Middleware.
@@ -62,7 +66,11 @@ func New(cfg Config) http.Handler {
 		mux.HandleFunc("GET /"+string(l)+"/notice", pages)
 	}
 	mux.HandleFunc("/", pages)
-	return Middleware(log, withLocale(mux))
+	policy := contentSecurityPolicy
+	if cfg.PlainHTTP {
+		policy = localContentSecurityPolicy
+	}
+	return middleware(log, policy, withLocale(mux))
 }
 
 // probe answers a health probe, never from a cache.

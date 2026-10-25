@@ -2100,7 +2100,7 @@ func contact(c content.Contact) templ.Component {
 		ctx = templ.ClearChildren(ctx)
 		street, city := addressLines(c.Location.Address)
 		days := tr(ctx, "Monday") + " – " + tr(ctx, "Saturday")
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 145, "<section id=\"contact\" aria-labelledby=\"contact-title\" class=\"scroll-mt-16 bg-sage-200 text-primary-content lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(20rem,30rem)]\"><figure class=\"relative h-42.5 overflow-hidden lg:order-last lg:h-auto\"><div class=\"parallax-center absolute inset-x-0 -top-15 h-[calc(100%+7.5rem)]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 145, "<section id=\"contact\" aria-labelledby=\"contact-title\" class=\"scroll-mt-16 bg-sage-200 text-primary-content lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(20rem,30rem)]\"><figure class=\"parallax-frame relative h-42.5 overflow-hidden lg:order-last lg:h-auto\"><div class=\"parallax-center absolute inset-x-0 -top-15 h-[calc(100%+7.5rem)]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
