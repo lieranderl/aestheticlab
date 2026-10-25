@@ -55,9 +55,12 @@ func slashed(u *url.URL) (string, bool) {
 	if p == "" || strings.HasSuffix(p, "/") || strings.Contains(path.Base(p), ".") {
 		return "", false
 	}
+	if strings.HasPrefix(p, "//") || strings.ContainsAny(p, `\`) || strings.ContainsFunc(p, unicode.IsControl) {
+		return "", false
+	}
+	// The Location itself: a path on this site, never //host or /\host.
 	escaped := u.EscapedPath()
-	if strings.HasPrefix(p, "//") || strings.ContainsAny(p, `\`) || strings.ContainsFunc(p, unicode.IsControl) ||
-		!strings.HasPrefix(escaped, "/") || strings.HasPrefix(escaped, "//") {
+	if len(escaped) < 2 || escaped[0] != '/' || escaped[1] == '/' || escaped[1] == '\\' {
 		return "", false
 	}
 	target := escaped + "/"
