@@ -2,7 +2,10 @@ package views
 
 import (
 	"context"
+	"strconv"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/lieranderl/aestheticlab/internal/i18n"
 )
@@ -42,6 +45,17 @@ func TestCategoryImagesFollowTheEnglishName(t *testing.T) {
 	} {
 		if got := coverImage(name); got != want {
 			t.Errorf("coverImage(%q) = %q, want %q", name, got, want)
+		}
+	}
+}
+
+// Each locale's slogan length has its own literal size class.
+func TestSloganSizesCoverEveryLocale(t *testing.T) {
+	for _, l := range i18n.Supported() {
+		slogan := tr(i18n.WithLocale(context.Background(), l), "The art of natural beauty")
+		want := "(" + strconv.Itoa(utf8.RuneCountInString(slogan)) + "*0.46)"
+		if got := sloganSize(slogan); !strings.Contains(got, want) {
+			t.Errorf("%s: sloganSize(%q) = %s, want a case for %d characters", l, slogan, got, utf8.RuneCountInString(slogan))
 		}
 	}
 }

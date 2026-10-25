@@ -15,12 +15,13 @@ type PageMeta struct {
 
 // pageSignals are the signals every page shares:
 //   - cookies: the cookie banner shows (no choice stored yet, or reopened);
-//   - booking*: the booking dialog's widget URL, load state and the
-//     analytics parameters of the button that opened it (JSON);
+//   - booking*: the booking dialog's widget URL, its title (the text of the
+//     button that opened it), load state and that button's analytics
+//     parameters (JSON);
 //   - menu: the phone menu is open;
 //   - scrolled, overHero, bar, progress, section: the header's scroll state
 //     (see scrollState).
-const pageSignals = `{cookies: false, bookingUrl: '', bookingLoaded: false, bookingEvent: '{}', menu: false, scrolled: false, overHero: false, bar: false, progress: 0, section: ''}`
+const pageSignals = `{cookies: false, bookingUrl: '', bookingTitle: '', bookingLoaded: false, bookingEvent: '{}', menu: false, scrolled: false, overHero: false, bar: false, progress: 0, section: ''}`
 
 // Layout is the document shell: the head with the page's SEO and
 // link-preview tags, then the page, the cookie banner and the one booking
@@ -145,10 +146,11 @@ templ bookingDialog() {
 		id="booking"
 		class="modal modal-bottom sm:modal-middle"
 		aria-labelledby="booking-title"
+		aria-modal="true"
 		data-on:close="$bookingUrl = ''; $bookingLoaded = false"
 	>
 		<div class="modal-box relative flex min-h-[70vh] w-full max-w-5xl flex-col bg-base-100 p-2 pt-12 sm:min-h-[50vh] sm:w-[calc(100%-1rem)]">
-			<h2 id="booking-title" class="sr-only">{ tr(ctx, "Book your appointment") }</h2>
+			<h2 id="booking-title" class="sr-only" data-text="$bookingTitle">{ tr(ctx, "Book your appointment") }</h2>
 			<form method="dialog">
 				<button type="submit" class="btn btn-ghost btn-square absolute right-1 top-1 min-h-11 min-w-11" aria-label={ tr(ctx, "Close") }>
 					<span aria-hidden="true">✕</span>

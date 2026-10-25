@@ -1,0 +1,433 @@
+package views
+
+import (
+	"strconv"
+
+	"github.com/lieranderl/aestheticlab/internal/assets"
+	"github.com/lieranderl/aestheticlab/internal/content"
+)
+
+// Home is the landing page: hero, treatments, work, team, FAQ and visit.
+templ Home(loc *content.Localized) {
+	@Layout(PageMeta{
+		Title:       tr(ctx, "Aesthetic Lab — Manicure · Pedicure · Brows · Lashes · Laser in Leuven"),
+		Description: tr(ctx, "Manicure, pedicure, brows, lashes, and laser in Leuven. Book your appointment online."),
+	}) {
+		<div class="min-h-screen">
+			<a href="#main-content" class="btn btn-neutral btn-sm fixed top-3 left-4 z-50 -translate-y-24 opacity-0 transition-[opacity,transform] duration-150 focus-visible:translate-y-0 focus-visible:opacity-100 motion-reduce:transition-none">
+				{ tr(ctx, "Skip to main content") }
+			</a>
+			@Navigation(true, true)
+			<main id="main-content" tabindex="-1">
+				@hero()
+				@servicesSection(loc, requestOf(ctx).query)
+				@gallery()
+				@team(loc.Staff)
+				@faq(loc)
+				@contact(loc.Contact)
+			</main>
+			@Footer(true, true)
+			@ScrollToTop("", tr(ctx, "Scroll to top"))
+		</div>
+	}
+}
+
+// sectionWrapper is a home section: its spacing, background and, with a
+// watermark, the faint drifting wordmark behind its heading.
+templ sectionWrapper(id, background, watermark string) {
+	<section
+		id={ id }
+		class={ "scroll-mt-24 overflow-x-clip pb-16 md:pb-24 lg:pb-28", background,
+			templ.KV("pt-6 md:pt-10", watermark != ""), templ.KV("pt-16 md:pt-24 lg:pt-28", watermark == "") }
+	>
+		if watermark != "" {
+			<p aria-hidden="true" class="drift-word -mb-5 font-qestero text-[clamp(5rem,16vw,15rem)] leading-[0.82] whitespace-nowrap text-linen select-none md:-mb-[clamp(2.5rem,6vw,5.75rem)]">{ watermark }</p>
+		}
+		<div class="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+			{ children... }
+		</div>
+	</section>
+}
+
+// hero is the opening screen: the video full-bleed behind the text on
+// phones, framed beside it on desktop.
+templ hero() {
+	{{ slogan := tr(ctx, "The art of natural beauty") }}
+	<section id="hero" class="relative isolate grid min-h-svh overflow-hidden bg-sage-200 lg:min-h-[max(46rem,100svh)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16 xl:gap-24 lg:bg-primary lg:px-[max(2.5rem,calc((100vw-82.5rem)/2+3.5rem))] lg:pt-28 lg:pb-20">
+		<!-- The media only slides; its size never changes. -->
+		<div class="absolute inset-0 -z-10 overflow-hidden bg-sage-200 lg:relative lg:inset-auto lg:z-auto lg:order-2 lg:bg-sage-500">
+			<div class="parallax-top h-full lg:absolute lg:inset-x-0 lg:-top-20 lg:h-[calc(100%+5rem)]">
+				@inViewVideo("hero-video", "video/reset.mp4", "video/reset-poster.jpg", tr(ctx, "Pink gel manicure being washed with soft foam"),
+					"-ml-15 block h-full w-[calc(100%+3.75rem)] max-w-none object-cover motion-safe:animate-media-slide", "auto")
+			</div>
+		</div>
+		<!-- Above the text layer, so it stays reachable on phones too. -->
+		@videoControl("hero-video", "", "absolute top-[calc(env(safe-area-inset-top)+4.75rem)] right-4 z-10 lg:top-auto lg:right-[calc(max(2.5rem,calc((100vw-82.5rem)/2+3.5rem))+1rem)] lg:bottom-24")
+		<!-- Phones: a light fade keeps the dark text readable on the pale video. -->
+		<div aria-hidden="true" class="absolute inset-x-0 top-0 -z-10 h-36 bg-linear-to-b from-linen/85 to-transparent lg:hidden"></div>
+		<div aria-hidden="true" class="absolute inset-x-0 bottom-0 -z-10 h-[72%] bg-linear-to-t from-sage-200 from-45% via-sage-200/85 via-70% to-transparent lg:hidden"></div>
+		<div class="flex flex-col justify-end text-ink">
+			<div class="parallax-fade flex flex-col gap-4.5 px-6 pt-28 pb-[calc(env(safe-area-inset-bottom)+2.5rem)] lg:gap-7 lg:px-0 lg:pt-0 lg:pb-3">
+				<!-- Phones: one centred line, sized from the slogan's length so every locale fits. -->
+				<h1 class={ "overflow-clip pb-[0.06em] text-center font-cormorant leading-[0.9] font-medium tracking-[-0.02em] text-balance lg:text-left lg:text-[clamp(4rem,5.6vw,6rem)]", sloganSize(slogan) }>
+					<span class="block motion-safe:animate-line-up [animation-delay:160ms]">{ slogan }</span>
+				</h1>
+				<p class="max-w-[30rem] font-main text-[0.9375rem] [@media(max-height:620px)]:max-lg:hidden leading-relaxed motion-safe:animate-fade-rise [animation-delay:500ms] lg:text-lg">
+					{ tr(ctx, "Manicure, pedicure, brows, lashes and laser, in a calm studio in the heart of Leuven.") }
+				</p>
+				<div class="flex flex-col gap-3 motion-safe:animate-fade-rise [animation-delay:600ms] lg:flex-row lg:items-center lg:gap-7">
+					@BookButton(Booking{ID: "hero-book-btn", Text: tr(ctx, "Book appointment"), Placement: "hero",
+						Class: "btn btn-accent h-13.5 min-h-13.5 px-8 font-main text-[0.9375rem] font-semibold lg:h-14 lg:min-h-14"})
+					<a href={ templ.SafeURL(href(ctx, "pricelist/")) } data-on:click={ pricingClicked("hero") } class="group inline-flex min-h-11 items-center justify-center gap-2.5 font-main text-[0.9375rem] font-semibold">
+						{ tr(ctx, "See prices") }
+						<span aria-hidden="true" class="transition-transform duration-500 ease-(--ease-quint) group-hover:translate-x-1.5">→</span>
+					</a>
+				</div>
+				<a
+					href={ templ.SafeURL(googlePlaceURL) }
+					target="_blank"
+					rel="noopener noreferrer"
+					data-on:click={ track("google_reviews_clicked", map[string]string{"placement": "hero", "link_url": googlePlaceURL}) }
+					class="inline-flex min-h-11 items-center justify-center font-main text-sm font-medium motion-safe:animate-fade-rise [animation-delay:700ms] hover:underline lg:justify-start lg:border-t lg:border-ink/30 lg:pt-5"
+				>
+					{ ratingLabel(ctx) }
+				</a>
+				<div class="motion-safe:animate-fade-rise [animation-delay:800ms]">
+					@Kicker("sage", "mb-0 justify-center lg:justify-start") {
+						{ tr(ctx, "Leuven · since 2024") }
+					}
+				</div>
+			</div>
+		</div>
+	</section>
+}
+
+// inViewVideo is a short silent clip that plays once when it scrolls into
+// view, pauses off screen and never loops (aesthetic.playInView). Tapping
+// it pauses, resumes or replays it; the keyboard path is its videoControl.
+templ inViewVideo(id, video, poster, label, class, preload string) {
+	<video
+		id={ id }
+		src={ assets.URL(video) }
+		poster={ assets.URL(poster) }
+		muted
+		playsinline
+		preload={ preload }
+		aria-label={ label }
+		class={ "cursor-pointer", class }
+		data-signals={ "{" + videoSignal(id) + ": 'paused'}" }
+		data-init="aesthetic.playInView(el)"
+		data-on:play={ "$" + videoSignal(id) + " = aesthetic.videoState(el)" }
+		data-on:playing={ "$" + videoSignal(id) + " = aesthetic.videoState(el)" }
+		data-on:pause={ "$" + videoSignal(id) + " = aesthetic.videoState(el)" }
+		data-on:ended={ "$" + videoSignal(id) + " = aesthetic.videoState(el)" }
+		data-on:click={ "aesthetic.toggleVideo(" + jsString(id) + ")" }
+	></video>
+}
+
+// videoControl pauses, plays and replays a clip (WCAG 2.2.2).
+templ videoControl(id, name, class string) {
+	<button
+		type="button"
+		aria-controls={ id }
+		aria-label={ videoLabelText(ctx, name) }
+		title={ videoLabelText(ctx, name) }
+		data-attr:aria-label={ videoLabel(ctx, id, name) }
+		data-attr:title={ videoLabel(ctx, id, name) }
+		data-on:click={ "aesthetic.toggleVideo(" + jsString(id) + ")" }
+		class={ "flex size-11 cursor-pointer items-center justify-center border border-ink/15 bg-linen/60 text-ink/80 transition-colors duration-300 ease-(--ease-smooth) hover:bg-linen/70 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none", class }
+	>
+		<span class="hidden" data-class={ "{hidden: $" + videoSignal(id) + " !== 'playing'}" }>
+			@Icon("mini/pause", "size-5")
+		</span>
+		<span class="hidden" data-class={ "{hidden: $" + videoSignal(id) + " !== 'ended'}" }>
+			@Icon("mini/arrow-path", "size-5")
+		</span>
+		<span data-class={ "{hidden: $" + videoSignal(id) + " !== 'paused'}" }>
+			@Icon("mini/play", "size-5")
+		</span>
+	</button>
+}
+
+// gallery is recent work: a photo grid with a lightbox, then studio clips.
+templ gallery() {
+	@sectionWrapper("gallery", "bg-base-100", "") {
+		<div class="mb-4.5 grid gap-6 md:mb-14 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-end lg:gap-16" data-signals="{lightbox: 0}">
+			@FadeUp(0, false, "") {
+				@Kicker("", "") {
+					{ tr(ctx, "Our work") }
+				}
+				<h2 class="text-balance font-cormorant text-[2.875rem] leading-[0.95] text-base-content md:text-7xl lg:text-[5.5rem] lg:leading-[0.9]">{ tr(ctx, "Recent work") }</h2>
+			}
+			<div class="hidden flex-col gap-4.5 lg:flex">
+				<p class="font-cormorant text-[1.375rem] leading-snug text-base-content italic">{ tr(ctx, "Fresh sets and studio moments. More every week on Instagram.") }</p>
+				<a href={ templ.SafeURL(instagram) } target="_blank" rel="noopener noreferrer" data-on:click={ instagramClicked() } class="btn btn-outline h-13 min-h-13 gap-2.5 self-start border-neutral px-6 font-main text-sm font-semibold">
+					@Icon("brand/instagram", "size-4.5")
+					{ "@aestheticlabbe" }
+				</a>
+			</div>
+		</div>
+		<ul class="grid grid-cols-2 gap-2 md:h-[min(46rem,72vw)] md:grid-cols-4 md:grid-rows-3 md:gap-4" aria-label={ tr(ctx, "Gallery of recent work") }>
+			for i, item := range galleryItems(ctx) {
+				<li class={ "group overflow-hidden bg-base-300 md:h-auto", item.Class }>
+					<button
+						id={ "gallery-lightbox-trigger-" + strconv.Itoa(i) }
+						type="button"
+						class="block h-full w-full cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-3 focus-visible:outline-base-content"
+						data-on:click={ lightboxOpen(i) }
+						aria-label={ tr(ctx, "Enlarge image") }
+					>
+						@Picture(item.Image, item.Alt, "h-full w-full object-cover "+item.ImageClass, item.Sizes, false)
+					</button>
+				</li>
+			}
+		</ul>
+		<ul class="-mx-4 mt-2 flex snap-x snap-mandatory scroll-px-4 gap-2 overflow-x-auto overscroll-x-contain px-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 md:mx-0 md:mt-4 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-4 md:overflow-visible md:px-0" aria-label={ tr(ctx, "Studio clips") }>
+			for _, c := range clips(ctx) {
+				<li class="relative h-96 w-[62vw] max-w-64 shrink-0 snap-start overflow-hidden bg-sage-200 md:h-[34rem] md:w-auto md:max-w-none">
+					@inViewVideo(c.ID, c.Video, c.Poster, c.Label, "h-full w-full object-cover", "metadata")
+					<span class="absolute bottom-3.5 left-3.5 bg-linen/92 px-3 py-1.5 font-main text-xs font-semibold tracking-[0.1em] text-ink uppercase">{ c.Tag }</span>
+					@videoControl(c.ID, c.Tag, "absolute right-3.5 bottom-3.5")
+				</li>
+			}
+		</ul>
+		@lightbox()
+		<a data-testid="instagram-link" href={ templ.SafeURL(instagram) } target="_blank" rel="noopener noreferrer" data-on:click={ instagramClicked() } class="btn btn-outline mt-4.5 h-13 min-h-13 w-full justify-between border-neutral px-4.5 font-main text-[0.9375rem] font-semibold lg:hidden">
+			{ tr(ctx, "More on Instagram") } · { "@aestheticlabbe" }
+			@arrow("size-4.5")
+		</a>
+	}
+}
+
+// lightbox shows one gallery photo at a time ($lightbox), with previous,
+// next and the arrow keys. As a modal dialog, it returns focus to the
+// photo that opened it.
+templ lightbox() {
+	{{ images := lightboxImages(ctx) }}
+	{{ first := galleryItems(ctx)[0] }}
+	{{ img, _ := assets.Lookup(first.Image) }}
+	<dialog
+		id="gallery-lightbox"
+		class="modal bg-black/90 p-0 backdrop:bg-black/90"
+		aria-label={ tr(ctx, "Gallery image viewer") }
+		data-on:click="evt.target === el && el.close()"
+		data-on:keydown="if (evt.key === 'ArrowLeft' || evt.key === '<') { evt.preventDefault(); $lightbox = ($lightbox + 7) % 8 } else if (evt.key === 'ArrowRight' || evt.key === '>') { evt.preventDefault(); $lightbox = ($lightbox + 1) % 8 }"
+	>
+		<div class="modal-box flex h-dvh max-h-none w-screen max-w-none items-center justify-center overflow-hidden rounded-none bg-transparent p-4 shadow-none">
+			<form method="dialog">
+				<button type="submit" autofocus class="btn btn-ghost btn-square absolute top-4 right-4 z-10 min-h-11 min-w-11 text-white hover:bg-white/10" aria-label={ tr(ctx, "Close") }>
+					<span aria-hidden="true" class="text-2xl">×</span>
+				</button>
+			</form>
+			<span class="absolute top-4 left-4 z-10 font-main text-sm text-white/70" data-text="($lightbox + 1) + ' / 8'">1 / 8</span>
+			<button type="button" class="btn btn-ghost btn-square absolute left-2 z-20 min-h-12 min-w-12 touch-manipulation text-white hover:bg-white/10 md:left-4" data-on:click="$lightbox = ($lightbox + 7) % 8" aria-label={ tr(ctx, "Previous") }>
+				<span aria-hidden="true" class="text-3xl">‹</span>
+			</button>
+			<img
+				src={ img.Src }
+				srcset={ img.SrcSet }
+				sizes="90vw"
+				alt={ first.Alt }
+				class="max-h-[85vh] max-w-[90vw] object-contain"
+				data-attr:src={ images + "[$lightbox].src" }
+				data-attr:srcset={ images + "[$lightbox].srcset" }
+				data-attr:alt={ images + "[$lightbox].alt" }
+			/>
+			<button type="button" class="btn btn-ghost btn-square absolute right-2 z-20 min-h-12 min-w-12 touch-manipulation text-white hover:bg-white/10 md:right-4" data-on:click="$lightbox = ($lightbox + 1) % 8" aria-label={ tr(ctx, "Next") }>
+				<span aria-hidden="true" class="text-3xl">›</span>
+			</button>
+		</div>
+	</dialog>
+}
+
+// team is the people, with a Book link opening the widget on each.
+templ team(staff []content.Member) {
+	@sectionWrapper("team", "bg-base-200", "") {
+		<div class="mb-4.5 grid gap-6 md:mb-14 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-end lg:gap-16">
+			@FadeUp(0, false, "") {
+				@Kicker("", "") {
+					{ tr(ctx, "Who you'll meet") }
+				}
+				<h2 class="text-balance font-cormorant text-[2.875rem] leading-[0.95] text-base-content md:text-7xl lg:text-[5.5rem] lg:leading-[0.9]">{ tr(ctx, "The team") }</h2>
+			}
+			<p class="hidden font-cormorant text-[1.375rem] leading-snug text-base-content italic lg:block">
+				{ tr(ctx, "Opened in 2024 with a simple promise: beautiful work in a space that feels calm, honest and welcoming. We listen first, then create.") }
+			</p>
+		</div>
+		<ul class="grid grid-cols-2 gap-x-2.5 gap-y-4.5 md:gap-x-6 md:gap-y-10 lg:grid-cols-4" aria-label={ tr(ctx, "The team") }>
+			for _, m := range staff {
+				<li class="group">
+					<div class="flex flex-col gap-2 md:gap-3.5">
+						<figure class="aspect-9/10 overflow-hidden bg-base-300 md:aspect-3/4">
+							if photo, ok := teamPhoto(m.Photo); ok {
+								@Picture(photo, m.Name, teamImage, "(min-width: 1280px) 19rem, (min-width: 1024px) 23vw, 50vw", false)
+							} else if m.Photo != "" {
+								<img src={ m.Photo } alt={ m.Name } width="400" height="533" class={ teamImage } loading="lazy"/>
+							} else {
+								<div class="flex h-full w-full items-center justify-center bg-base-200">
+									<span class="font-cormorant text-6xl text-base-content/30">{ initial(m.Name) }</span>
+								</div>
+							}
+						</figure>
+						<div class="flex items-baseline justify-between gap-3 md:border-b md:border-neutral md:pb-3">
+							<h3 class="font-cormorant text-2xl leading-none text-base-content md:text-4xl">{ m.Name }</h3>
+							@BookButton(Booking{ID: "modal_tech_" + strconv.FormatInt(m.ID, 10), Text: tr(ctx, "Book"),
+								AriaLabel: trf(ctx, "Book with %v", m.Name), Staff: strconv.FormatInt(m.ID, 10),
+								Placement: "team", ServiceCategory: "staff", ServiceID: strconv.FormatInt(m.ID, 10), ServiceName: teamServiceName(m),
+								Class: "link inline-flex min-h-11 items-center font-main text-sm font-semibold underline-offset-4"})
+						</div>
+						<p class="font-main text-sm font-semibold text-base-content/80">{ teamRole(ctx, m) }</p>
+					</div>
+				</li>
+			}
+		</ul>
+	}
+}
+
+const teamImage = "h-full w-full object-cover object-[center_22%] transition-transform duration-700 ease-(--ease-smooth) group-hover:scale-[1.03] motion-reduce:transition-none"
+
+// faq is "Good to know": DaisyUI collapses that open one at a time.
+templ faq(loc *content.Localized) {
+	<section id="faq" aria-labelledby="faq-title" class="scroll-mt-24 bg-sage-50 py-16 md:py-24 lg:py-28">
+		<div class="mx-auto grid w-full max-w-7xl gap-4.5 px-4 sm:px-6 lg:grid-cols-[minmax(0,25rem)_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:gap-x-26 lg:gap-y-10 lg:px-8">
+			@FadeUp(0, false, "") {
+				@Kicker("", "") {
+					{ tr(ctx, "Before your visit") }
+				}
+				<h2 id="faq-title" class="text-balance font-cormorant text-[2.875rem] leading-[0.95] text-base-content md:text-7xl lg:text-[5.5rem] lg:leading-[0.9]">{ tr(ctx, "Good to know") }</h2>
+			}
+			@FadeUp(80, false, "lg:col-start-2 lg:row-span-2 lg:row-start-1") {
+				<div class="border-t border-neutral">
+					<div class="collapse collapse-plus border-b border-base-300">
+						<input type="radio" name="landing-page-faq" checked aria-labelledby="faq-question-booking"/>
+						<div id="faq-question-booking" class={ faqQuestion }>
+							<span class={ faqNumber }>01</span>
+							{ tr(ctx, "How do I book an appointment?") }
+						</div>
+						<div class={ faqAnswer }>
+							<p>{ tr(ctx, "Tap any Book button to see live availability, then choose your treatment and your preferred artist.") }</p>
+							@BookButton(Booking{ID: "faq-book-btn", Text: tr(ctx, "Book appointment"), Placement: "faq_booking",
+								Class: "btn btn-accent btn-sm mt-3 h-11 min-h-11 px-5 font-main text-xs font-semibold tracking-[0.16em] uppercase"})
+						</div>
+					</div>
+					for i, item := range faqItems(ctx, loc) {
+						<div class="collapse collapse-plus border-b border-base-300">
+							<input type="radio" name="landing-page-faq" aria-labelledby={ "faq-question-" + strconv.Itoa(i) }/>
+							<div id={ "faq-question-" + strconv.Itoa(i) } class={ faqQuestion }>
+								<span class={ faqNumber }>{ twoDigits(i + 2) }</span>
+								{ item.Question }
+							</div>
+							<div class={ faqAnswer }>
+								<!-- The answers are the site's own translated HTML (links). -->
+								<p class="max-w-150">
+									@templ.Raw(item.Answer)
+								</p>
+							</div>
+						</div>
+					}
+				</div>
+			}
+			@FadeUp(160, false, "lg:col-start-1 lg:row-start-2 lg:self-end") {
+				<aside class="flex flex-col gap-1.5 bg-sage-200 px-5 py-4.5 text-primary-content lg:gap-2.5 lg:px-7 lg:py-6">
+					<p class="font-cormorant text-[1.375rem] leading-tight italic lg:text-2xl">{ tr(ctx, "Still have a question?") }</p>
+					<p class="hidden font-main text-sm leading-normal lg:block">{ trf(ctx, "Message us on Instagram or email %v.", siteEmail) }</p>
+					<a href={ templ.SafeURL(instagramMessage) } target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 items-center font-main text-xs font-semibold tracking-[0.16em] uppercase underline-offset-4 hover:underline lg:btn lg:btn-neutral lg:mt-1.5 lg:h-12 lg:min-h-12 lg:self-start lg:px-5.5 lg:tracking-[0.18em] lg:no-underline">
+						<span class="lg:hidden">{ tr(ctx, "Message us on Instagram") }</span>
+						<span class="hidden lg:inline">{ tr(ctx, "Ask us") }</span>
+					</a>
+				</aside>
+			}
+		</div>
+	</section>
+}
+
+const (
+	faqQuestion = "collapse-title grid min-h-15 grid-cols-[1.875rem_minmax(0,1fr)] items-baseline gap-2.5 py-3.5 ps-0 pe-10 font-cormorant text-[1.375rem] leading-[1.15] text-base-content after:end-1! after:top-[0.95rem]! after:text-xl after:leading-none md:after:top-[1.55rem]! md:grid-cols-[3rem_minmax(0,1fr)] md:gap-4 md:py-5 md:text-3xl"
+	faqNumber   = "font-main text-[0.6875rem] font-semibold tracking-[0.14em] text-primary-content/80 md:text-[0.8125rem] md:tracking-[0.16em]"
+	faqAnswer   = "collapse-content ps-10 pe-0 font-main text-[0.9375rem] leading-relaxed text-base-content md:ps-16 md:text-base md:leading-[1.65] [&_a]:link"
+)
+
+// contact is "Visit the studio": address, hours, parking and the ways to
+// get in touch.
+templ contact(c content.Contact) {
+	{{ street, city := addressLines(c.Location.Address) }}
+	{{ days := tr(ctx, "Monday") + " – " + tr(ctx, "Saturday") }}
+	<section id="contact" aria-labelledby="contact-title" class="scroll-mt-16 bg-sage-200 text-primary-content lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(20rem,30rem)]">
+		<figure class="relative h-42.5 overflow-hidden lg:order-last lg:h-auto">
+			<div class="parallax-center absolute inset-x-0 -top-15 h-[calc(100%+7.5rem)]">
+				@Picture("gallery/universal.jpg", tr(ctx, "Silver manicure holding an Aesthetic Lab card"), "h-full w-full object-cover object-[60%_45%] lg:object-[60%_center]", "(min-width: 1024px) 34rem, 100vw", false)
+			</div>
+		</figure>
+		<div class="flex flex-col gap-4.5 px-5.5 pt-6.5 pb-16 md:px-10 md:py-20 lg:min-h-[46rem] lg:gap-10 lg:py-26 lg:pr-24 lg:pl-16 xl:pl-28">
+			@FadeUp(0, false, "") {
+				@Kicker("sage", "") {
+					{ tr(ctx, "Visit the studio") }
+				}
+				<h2 id="contact-title" class="font-cormorant text-[2.5rem] leading-none md:text-6xl lg:text-[clamp(3.5rem,5.5vw,5rem)] lg:leading-[0.95]">
+					if city != "" {
+						{ street },
+						<br/>
+						{ city }
+					} else {
+						{ street }
+					}
+				</h2>
+			}
+			@FadeUp(80, false, "") {
+				<dl class="border-t border-primary-content lg:grid lg:grid-cols-3 lg:gap-8 lg:border-0">
+					<div class={ factRow }>
+						<dt class={ factLabel }>
+							<span class="lg:hidden">{ days }</span>
+							<span class="hidden lg:inline">{ tr(ctx, "Opening hours") }</span>
+						</dt>
+						<dd class="text-right lg:text-left lg:leading-normal">
+							<span class="hidden lg:inline">
+								{ days }
+								<br/>
+							</span>
+							{ c.Hours.From } – { c.Hours.To }
+						</dd>
+					</div>
+					<div class={ factRow }>
+						<dt class={ factLabel }>{ tr(ctx, "Bookings") }</dt>
+						<dd class="text-right lg:text-left lg:leading-normal">{ tr(ctx, "By appointment only") }</dd>
+					</div>
+					if len(c.Parking) > 0 {
+						<div class={ factRow }>
+							<dt class={ factLabel }>{ tr(ctx, "Parking") }</dt>
+							<dd class="flex flex-wrap justify-end gap-x-2 text-right lg:flex-col lg:justify-start lg:text-left lg:leading-normal">
+								for _, p := range c.Parking {
+									<a href={ templ.SafeURL(p.Link) } target="_blank" rel="noopener noreferrer" class="link link-hover" data-on:click={ parkingClicked(p) }>{ p.Name }</a>
+								}
+							</dd>
+						</div>
+					}
+				</dl>
+			}
+			@FadeUp(160, false, "lg:mt-auto") {
+				<div class="grid grid-cols-2 gap-2 lg:flex lg:flex-wrap lg:gap-3">
+					@BookButton(Booking{ID: "contact-book-btn", Text: tr(ctx, "Book appointment"), Placement: "contact_section",
+						Class: "btn btn-accent hidden h-14 min-h-14 px-6 font-main text-[0.9375rem] font-semibold lg:inline-flex"})
+					<a href={ templ.SafeURL(c.Location.Link) } target="_blank" rel="noopener noreferrer" data-on:click={ track("directions_clicked", map[string]string{"placement": "contact_section", "link_url": c.Location.Link}) } class={ outlineAction, "col-span-2 justify-between lg:justify-center" }>
+						{ tr(ctx, "Get directions") }
+						@arrow("size-4.5 lg:hidden")
+					</a>
+					<a href={ templ.SafeURL(instagramMessage) } target="_blank" rel="noopener noreferrer" data-on:click={ track("instagram_clicked", map[string]string{"placement": "contact_section", "target_type": "message", "link_url": instagramMessage}) } class={ outlineAction }>
+						<span class="lg:hidden">Instagram</span>
+						<span class="hidden lg:inline">{ tr(ctx, "Message on Instagram") }</span>
+					</a>
+					<a href={ templ.SafeURL("mailto:" + c.Email) } data-on:click={ track("contact_email_clicked", map[string]string{"placement": "contact_section", "contact_method": "email"}) } class={ outlineAction }>
+						<span class="lg:hidden">{ tr(ctx, "Email") }</span>
+						<span class="hidden lg:inline">{ tr(ctx, "Email us") }</span>
+					</a>
+				</div>
+			}
+		</div>
+	</section>
+}
+
+const (
+	factRow       = "flex justify-between gap-4 border-b border-primary-content/30 py-3 font-main text-sm lg:flex-col lg:justify-start lg:gap-2.5 lg:border-0 lg:border-t lg:border-primary-content lg:pt-4 lg:pb-0 lg:text-base"
+	factLabel     = "lg:text-[0.6875rem] lg:font-semibold lg:tracking-[0.22em] lg:uppercase"
+	outlineAction = "btn btn-outline h-13 min-h-13 border-primary-content px-4.5 font-main text-[0.9375rem] font-semibold text-primary-content hover:bg-primary-content hover:text-sage-200 lg:h-14 lg:min-h-14 lg:px-5 lg:text-xs lg:tracking-[0.14em]"
+)

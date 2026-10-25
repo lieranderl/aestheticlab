@@ -20,9 +20,9 @@ func withLocale(next http.Handler) http.Handler {
 	})
 }
 
-// home sends / to the default locale's home page, as the Qwik site does
+// root sends / to the default locale's home page, as the Qwik site does
 // (302: the default could change).
-func home(w http.ResponseWriter, r *http.Request) {
+func root(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/"+string(i18n.Default)+"/", http.StatusFound)
 }
 

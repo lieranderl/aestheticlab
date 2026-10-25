@@ -394,7 +394,7 @@ Status (2026-10-25): code and IaC on `feat/go-content`; the IaC apply, the impor
 4. Run the shared Playwright specs under the Go config, and add that run to CI next to the Qwik run.
 5. Capture screenshots (every page × 5 locales × mobile/desktop) and Lighthouse LCP/CLS/TBT for `/en-BE/` and `/en-BE/pricelist/` from local production builds of both stacks, side by side and under the same conditions. Review every difference.
 
-Status (2026-10-25): split into three PRs. 6a (shell and pricelist) is on `feat/go-pages`; 6b (home sections) and 6c (policies and the branded 404) follow.
+Status (2026-10-25): split into three PRs. 6a (shell and pricelist) is #246 on `feat/go-pages`, 6b (home sections) is on `feat/go-home`, and 6c (policies and the branded 404) follows.
 
 - **6a: shell and pricelist.**
   - The layout carries the head of `router-head.tsx`: canonical, five alternates plus x-default, Open Graph and Twitter tags with the per-language share image, and JSON-LD as a data block, which CSP doesn't block.
@@ -409,6 +409,18 @@ Status (2026-10-25): split into three PRs. 6a (shell and pricelist) is on `feat/
   - The bird logo is generated into the icon table (`logo/bird`), drawn in `currentColor`.
   - Routes are registered per literal locale. `/de-BE/pricelist/` is a 404, and `/en-BE/pricelist` gets the Qwik site's 301 rather than the mux's 307.
 - **Compared with the live site** in the browser: at 1024 px the pricelist matches pixel for pixel except the price spacing, now fixed. Tabs, the URL update, rows, laser areas, the booking widget and rejecting analytics all work, with no CSP violations.
+- **6b: home sections** (`feat/go-home`, stacked on 6a): hero, treatments, work, team, FAQ and visit.
+  - **Treatments:** the overview, a category and the laser areas are server-rendered states of one section, chosen by `?treatment=` and `?treatmentArea=`.
+    - A tap pushes the URL and `@get`s the same path. The server answers Datastar requests (`Datastar-Request: true`) with an SSE patch of `#services-body` only, through `github.com/starfederation/datastar-go`, which adds 0.85 MB to the binary.
+    - The patched body scrolls itself into view and focuses its heading. The back button re-fetches through `popstate`.
+    - A reload or shared link renders the same state on the server, and unknown values fall back to the overview.
+  - **Clips:** `aesthetic.playInView` (play once at 40% in view, pause off screen, nothing with reduced motion) and `aesthetic.toggleVideo` in `site.js`. Each control's icon and label follow a per-clip state signal updated by the video's events.
+  - **Lightbox:** a native modal dialog over a `$lightbox` index. The photo's `src`, `srcset` and `alt` come from a JSON array, with arrow keys, Previous/Next, and focus returned to the opener by the browser.
+  - **Hero slogan:** sized from its length with one literal class per locale, because the Qwik site's inline `--slogan-chars` style is blocked by the CSP. `TestSloganSizesCoverEveryLocale` fails if a translation's length gets no class.
+  - **Book buttons** carry their booking ID as their `id` (`#bottom-bar-book-btn`), where the Qwik site put it on each button's own dialog. The shared dialog takes the button's text as its accessible name.
+  - **FAQ answers** are the translations' own HTML, rendered raw (`<a href='./pricelist'>`).
+  - **Compared with aestheticlab.be** in headless Chromium with reduced motion: page heights are identical (7200 px at 1280 wide, 6959 px at 390), and every section screenshot differs in under 0.1% of pixels. Neither site logs a console error.
+  - **Interactions checked:** opening a category and the back button, laser areas, invalid state falling back to the overview, the phone booking bar, the booking dialog, the lightbox (Next, arrow keys, Escape, focus return), the phone menu from the keyboard, and the French labels.
 - **Left for Phase 7:** `/favicon.ico`, `/favicon.svg`, `/icon-192.svg` and `/manifest.json` at the root. The head links `/static/favicon.svg` until then.
 
 ### Phase 7: Compatibility
