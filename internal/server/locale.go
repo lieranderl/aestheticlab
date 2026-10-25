@@ -30,6 +30,10 @@ func root(w http.ResponseWriter, r *http.Request) {
 // trailing slash is redirected to it (301, query kept), as Qwik City does;
 // anything else is a 404 in the path's locale.
 func pages(w http.ResponseWriter, r *http.Request) {
+	if isQwikRouteData(r.URL.Path) {
+		qwikRouteData(w, r)
+		return
+	}
 	if r.Method == http.MethodGet || r.Method == http.MethodHead {
 		if target, ok := slashed(r.URL); ok {
 			// #nosec G710 -- target is this request's own escaped path plus

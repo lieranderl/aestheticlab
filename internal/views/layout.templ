@@ -34,7 +34,9 @@ templ Layout(meta PageMeta) {
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ meta.Title }</title>
 			@seoHead(meta)
-			<link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>
+			<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+			<link rel="apple-touch-icon" href="/icon-192.svg"/>
+			<link rel="manifest" href="/manifest.json"/>
 			<meta name="theme-color" content="#8b9687"/>
 			<link rel="stylesheet" href={ assets.URL("app.css") }/>
 			@templ.Raw(jsonLDScript())

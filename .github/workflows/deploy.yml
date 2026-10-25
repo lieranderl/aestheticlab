@@ -398,10 +398,13 @@ jobs:
 
           # Version skew: a candidate page requesting its hashed assets from the previous
           # revision gets 404s the 5xx gate cannot see. Count only previous-revision 404s
-          # for paths the candidate really serves, so arbitrary /build/ or /assets/ probes
-          # cannot force a rollback. Session affinity should keep this near zero; the
+          # for paths the candidate really serves as a hashed asset (200, cached immutable),
+          # so arbitrary probes cannot force a rollback. That covers both stacks during the
+          # Qwik-to-Go release: Qwik serves /build/ and /assets/, Go serves /static/, and
+          # Go's answers to Qwik paths (the /build/ reload shim, the /assets/ redirects) are
+          # never immutable 200s. Session affinity should keep this near zero; the
           # allowance absorbs best-effort affinity breaks.
-          PREVIOUS_ASSET_404S=$(gcloud logging read "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"$PROD_SERVICE\" AND resource.labels.revision_name=\"$PREVIOUS\" AND httpRequest.status=404 AND (httpRequest.requestUrl:\"/build/\" OR httpRequest.requestUrl:\"/assets/\") AND timestamp>=\"$canary_started_at\"" --project="$GCP_PROJECT" --limit=200 --format='value(httpRequest.requestUrl)')
+          PREVIOUS_ASSET_404S=$(gcloud logging read "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"$PROD_SERVICE\" AND resource.labels.revision_name=\"$PREVIOUS\" AND httpRequest.status=404 AND (httpRequest.requestUrl:\"/build/\" OR httpRequest.requestUrl:\"/assets/\" OR httpRequest.requestUrl:\"/static/\") AND timestamp>=\"$canary_started_at\"" --project="$GCP_PROJECT" --limit=200 --format='value(httpRequest.requestUrl)')
           declare -A candidate_status=()
           checked_paths=0
           skew_count=0
@@ -410,7 +413,7 @@ jobs:
             [[ -n "$request_url" ]] || continue
             path="/${request_url#*://*/}"
             path="${path%%\?*}"
-            if [[ ! "$path" =~ ^/(build|assets)/[A-Za-z0-9._/-]+$ ]]; then
+            if [[ ! "$path" =~ ^/(build|assets|static)/[A-Za-z0-9._/-]+$ ]]; then
               continue
             fi
             # These were already broken in the previous revision's own HTML,
@@ -424,9 +427,9 @@ jobs:
                 continue
               fi
               checked_paths=$((checked_paths + 1))
-              candidate_status[$path]=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 "$CANDIDATE_URL$path" || true)
+              candidate_status[$path]=$(curl --silent --output /dev/null --write-out '%{http_code} %header{cache-control}' --max-time 5 "$CANDIDATE_URL$path" || true)
             fi
-            if [[ "${candidate_status[$path]}" == "200" ]]; then
+            if [[ "${candidate_status[$path]}" == "200 "*immutable* ]]; then
               skew_count=$((skew_count + 1))
               skew_examples+="$path"$'\n'
             fi

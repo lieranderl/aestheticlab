@@ -38,7 +38,7 @@ status="$(curl "${curl_args[@]}" --dump-header "$work_dir/headers" --output /dev
 test "$status" = 302
 grep -Eiq '^location:[[:space:]]*/en-BE/[[:space:]]*$' "$work_dir/headers"
 
-curl "${curl_args[@]}" --output /dev/null "$base_url/static/favicon.svg"
+curl "${curl_args[@]}" --output /dev/null "$base_url/favicon.svg"
 grep -oE '/static/[^" ,]+' "$repo_root/internal/assets/manifest_gen.go" | sort -u > "$work_dir/assets"
 test -s "$work_dir/assets"
 

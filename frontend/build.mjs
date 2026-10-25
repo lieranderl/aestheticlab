@@ -236,8 +236,20 @@ async function build() {
 
 	// Public link-preview URLs are stable; overwrite changed bytes and use
 	// the server's short cache rather than the immutable hashed-file cache.
-	for (const src of walk("public/og")) {
-		const rel = `og/${basename(src)}`;
+	// The same holds for the files the Qwik site served at the root, which
+	// internal/server serves from root/ at their old URLs.
+	const rootFiles = [
+		"favicon.svg",
+		"icon-192.svg",
+		"icon-512.svg",
+		"manifest.json",
+		"robots.txt",
+		"sitemap.xml",
+	];
+	for (const [src, rel] of [
+		...walk("public/og").map((src) => [src, `og/${basename(src)}`]),
+		...rootFiles.map((name) => [join("public", name), `root/${name}`]),
+	]) {
 		const destination = join(distDir, rel);
 		mkdirSync(dirname(destination), { recursive: true });
 		writeIfChanged(destination, readFileSync(src));

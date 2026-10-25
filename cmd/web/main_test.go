@@ -73,14 +73,14 @@ func TestTheServerAnswersHealthzThenStopsCleanlyWhenSignalled(t *testing.T) {
 	}
 
 	// The embedded static files are served.
-	res, err := http.Get("http://127.0.0.1:" + strconv.Itoa(port) + "/static/favicon.svg")
+	res, err := http.Get("http://127.0.0.1:" + strconv.Itoa(port) + "/favicon.svg")
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, _ = io.Copy(io.Discard, res.Body)
 	_ = res.Body.Close()
 	if res.StatusCode != http.StatusOK || res.Header.Get("Content-Type") != "image/svg+xml" {
-		t.Errorf("/static/favicon.svg = %d %q, want 200 image/svg+xml", res.StatusCode, res.Header.Get("Content-Type"))
+		t.Errorf("/favicon.svg = %d %q, want 200 image/svg+xml", res.StatusCode, res.Header.Get("Content-Type"))
 	}
 
 	stop()

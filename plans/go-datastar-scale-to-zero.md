@@ -394,7 +394,7 @@ Status (2026-10-25): code and IaC on `feat/go-content`; the IaC apply, the impor
 4. Run the shared Playwright specs under the Go config, and add that run to CI next to the Qwik run.
 5. Capture screenshots (every page × 5 locales × mobile/desktop) and Lighthouse LCP/CLS/TBT for `/en-BE/` and `/en-BE/pricelist/` from local production builds of both stacks, side by side and under the same conditions. Review every difference.
 
-Status (2026-10-25): 6a (shell and pricelist, #246), 6b (home sections, #247), 6c (policies and the branded 404, #249) and the shared browser specs in CI (#250) are merged. The screenshot and Lighthouse comparison (step 5) is done on `chore/phase6-visual-parity`. It found that Go served pages uncompressed, so that branch also adds on-the-fly gzip, and it hyphenates the long privacy heading.
+Status (2026-10-26): done. 6a (shell and pricelist, #246), 6b (home sections, #247), 6c (policies and the branded 404, #249), the shared browser specs in CI (#250), the screenshot and Lighthouse comparison with on-the-fly gzip (#251), and the Safari fixes found afterwards (#252: local CSP, language menu, photo parallax with a script fallback for Firefox) are merged.
 
 Screenshot and Lighthouse comparison (2026-10-25):
 
@@ -493,7 +493,7 @@ Scope: the existing privacy policy, care notes and branded 404, plus the depende
   - **FAQ answers** are the translations' own HTML, rendered raw (`<a href='./pricelist'>`).
   - **Compared with aestheticlab.be** in headless Chromium with reduced motion: page heights are identical (7200 px at 1280 wide, 6959 px at 390), and every section screenshot differs in under 0.1% of pixels. Neither site logs a console error.
   - **Interactions checked:** opening a category and the back button, laser areas, invalid state falling back to the overview, the phone booking bar, the booking dialog, the lightbox (Next, arrow keys, Escape, focus return), the phone menu from the keyboard, and the French labels.
-- **Left for Phase 7:** `/favicon.ico`, `/favicon.svg`, `/icon-192.svg` and `/manifest.json` at the root. The head links `/static/favicon.svg` until then.
+- **Left for Phase 7:** `/favicon.svg`, `/icon-192.svg` and `/manifest.json` at the root. The head links `/static/favicon.svg` until then. (Done in Phase 7. The Qwik site never served `/favicon.ico`.)
 
 ### Phase 7: Compatibility
 
@@ -501,6 +501,34 @@ Scope: the existing privacy policy, care notes and branded 404, plus the depende
 2. 301 redirects from current and legacy hashed `/assets/<hash>-<name>.<ext>` URLs to the canonical new variant, covering `legacy-image-request.ts` cases.
 3. Same paths for `robots.txt`, `sitemap.xml`, `manifest.json`, `favicon.svg`, icons and `og/*`.
 4. Revise the canary skew gate and `.github/DEPLOYMENT.md` for the cross-stack release.
+
+Status (2026-10-26): done on `feat/go-compat`; `internal/server/compat.go` holds the Qwik URLs.
+
+- **Root files (step 3):** `frontend/build.mjs` copies `favicon.svg`, `icon-192.svg`, `icon-512.svg`, `manifest.json`, `robots.txt` and `sitemap.xml` from `public/` to `static/dist/root/`. The server answers each at its old root URL with an hour's cache and a pinned content type. `static/favicon.svg` is gone, and the head links `/favicon.svg`, `/icon-192.svg` (apple-touch-icon) and `/manifest.json`, as the Qwik head did. `og/*` was already served.
+- **Asset redirects (step 2):** `/assets/<8-character hash>-<name>.<ext>` gets a 301 to the file built from the source with that base name: an image's largest variant, or the hashed copy of a poster, clip or font. `/fonts/<name>` does the same for the fonts the Qwik stylesheet loads from `public/fonts`.
+  - The table is derived from the manifest, so any hash of a known name works: current, older releases, and the pre-v4.0.1 `lazer1` name (aliased to `universal`).
+  - A name two sources share redirects nowhere. Anything else is an uncached 404, including Qwik's own CSS and bundle graph.
+  - Redirects are cached for a day, because their hashed targets change with the files.
+  - A Go test covers every `/assets/` name aestheticlab.be rendered on 2026-10-25 and checks each target is embedded.
+- **Open tabs (step 1):**
+  - **Chunks:** any `/build/…/*.js` returns a module that calls `location.reload()`, with `no-store`.
+  - **Route data:** `…/q-data.json` is a plain-text 404. Qwik City (1.20, `loadClientData`) loads the page itself when route data isn't JSON. This site has no client-side navigation (no `<Link>` or `nav()`), so route data is only fetched in edge cases.
+  - **Service worker:** `/service-worker.js` installs at once, deletes the Cache Storage entries (only Qwik used them), then unregisters itself. The Qwik worker handled no fetches.
+- **Open-tab spec:** `playwright.handoff.config.ts` runs the Qwik production build against the mock Supabase and the Go binary, behind `e2e/handoff/proxy.ts`. The proxy is HTTPS like production, and `PUT /__handoff/go` switches its upstream. The certificate helper (`e2e/local-tls.ts`) is now shared with `e2e/serve-go.ts`. The spec checks four things:
+  - every `/assets/` URL in the Qwik home and pricelist HTML reaches a Go image or clip;
+  - a link in an open tab leads to the Go page with no page errors;
+  - a chunk imported after the switch reloads the tab into the Go page;
+  - the service worker removes itself (Firefox and WebKit; Chromium registers no worker over a self-signed certificate).
+  - Runs: 33 of 33 passed over three repeats (3 skipped). CI runs it in the `go` job (`bun run test.e2e.handoff`) until Phase 10.
+  - **Observed:** a Qwik tab usually reloads into the Go page by itself within a second or two of the switch, as soon as Qwik loads a chunk it had not preloaded. Until then it keeps working, its images coming through the redirects.
+- **Skew gate (step 4):** `deploy.yml` counts previous-revision 404s under `/build/`, `/assets/` and `/static/` only when the candidate answers the same path with a hashed-asset 200 (`immutable` in `Cache-Control`).
+  - Go pages' `/static/` requests that reach the Qwik revision count.
+  - Qwik paths that reach Go get the `no-store` shim or a 301, so they don't count.
+  - Qwik-to-Qwik and Go-to-Go releases are unaffected, since both stacks mark hashed assets `immutable`. `.github/DEPLOYMENT.md` says so.
+- **Verified:**
+  - `make ci` passes. govulncheck was run against a local copy of the vulnerability database, since this machine can't reach vuln.go.dev; it reports only the uncalled `golang.org/x/crypto` finding already on staging.
+  - The Go browser specs (96), the Qwik typecheck, `biome ci` (one existing warning in `e2e/pricelist.spec.ts`) and the handoff spec pass.
+  - The built binary was checked with curl for each new route.
 
 ### Phase 8: Cutover on Staging
 
