@@ -8,44 +8,44 @@
 
 ## Commands
 
-| Task | Command |
-| --- | --- |
-| Install local deps | `bun install` |
-| Install CI deps | `bun ci` |
-| Local dev | `bun run dev` |
-| Format/lint fix | `bun run biome` |
-| Format/lint check | `bunx --bun biome ci .` |
-| Typecheck | `bun run build.types` |
-| Unit tests | `bun run test` |
-| Unit coverage | `bun run test.coverage` |
-| E2E tests | `bun run test.e2e` |
-| Production build | `bun run build` |
-| Main local verification | `bun run verify` |
-| Go site gate (rewrite) | `make ci` |
-| Go site dev (Air) | `make go-dev` |
+| Task                                       | Command                                                                                                           |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| Install local deps                         | `bun install`                                                                                                     |
+| Install CI deps                            | `bun ci`                                                                                                          |
+| Local dev                                  | `bun run dev`                                                                                                     |
+| Format/lint fix                            | `bun run biome`                                                                                                   |
+| Format/lint check                          | `bunx --bun biome ci .`                                                                                           |
+| Typecheck                                  | `bun run build.types`                                                                                             |
+| Unit tests                                 | `bun run test`                                                                                                    |
+| Unit coverage                              | `bun run test.coverage`                                                                                           |
+| E2E tests                                  | `bun run test.e2e`                                                                                                |
+| Production build                           | `bun run build`                                                                                                   |
+| Main local verification                    | `bun run verify`                                                                                                  |
+| Go site gate (rewrite)                     | `make ci`                                                                                                         |
+| Go site dev (Air)                          | `make go-dev`                                                                                                     |
 | Go site assets (CSS, fonts, icons, images) | `make assets` (`bun run assets`), then commit `internal/assets/manifest_gen.go` and `internal/views/icons_gen.go` |
-| Translation extraction | `bun run qwik-speak-extract` |
+| Translation extraction                     | `bun run qwik-speak-extract`                                                                                      |
 
 ## File-Scoped Commands
 
-| Task | Command |
-| --- | --- |
-| Check/fix source file | `bunx --bun biome check --write path/to/file` |
-| Check source file only | `bunx --bun biome check path/to/file` |
-| Unit test file | `bunx vitest run path/to/file.test.ts` |
-| E2E spec | `bunx playwright test path/to/file.spec.ts` |
-| Markdown | `markdownlint --disable MD013 -- path/to/file.md` |
+| Task                   | Command                                           |
+| ---------------------- | ------------------------------------------------- |
+| Check/fix source file  | `bunx --bun biome check --write path/to/file`     |
+| Check source file only | `bunx --bun biome check path/to/file`             |
+| Unit test file         | `bunx vitest run path/to/file.test.ts`            |
+| E2E spec               | `bunx playwright test path/to/file.spec.ts`       |
+| Markdown               | `markdownlint --disable MD013 -- path/to/file.md` |
 
 ## Verification Matrix
 
-| Change | Required verification |
-| --- | --- |
-| Docs only | `markdownlint --disable MD013 -- <changed-files>` |
-| App, dependencies, build, deployment | `bun run verify` |
-| Go site (`cmd/`, `internal/`, `static/`) | `make ci` |
-| User-facing flow | Relevant Playwright spec; manual browser check for styling |
-| Translation keys | Extraction plus affected locale assets |
-| IaC | Format, validate, and review plan for each affected environment |
+| Change                                   | Required verification                                           |
+| ---------------------------------------- | --------------------------------------------------------------- |
+| Docs only                                | `markdownlint --disable MD013 -- <changed-files>`               |
+| App, dependencies, build, deployment     | `bun run verify`                                                |
+| Go site (`cmd/`, `internal/`, `static/`) | `make ci`                                                       |
+| User-facing flow                         | Relevant Playwright spec; manual browser check for styling      |
+| Translation keys                         | Extraction plus affected locale assets                          |
+| IaC                                      | Format, validate, and review plan for each affected environment |
 
 ## Repository Boundaries
 

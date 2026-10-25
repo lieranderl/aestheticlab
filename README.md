@@ -22,18 +22,18 @@ Aesthetic Lab is a multilingual marketing and booking site for a beauty studio i
 
 ## Stack
 
-| Area | Technology |
-| --- | --- |
-| Runtime | Bun `1.4.2` |
-| Framework | Qwik `1.20`, Qwik City |
-| Language | TypeScript `7` |
-| Styling | Tailwind CSS `4`, DaisyUI `5` |
-| Data | Supabase SSR `0.12` |
-| i18n | Qwik Speak |
-| Tests | Vitest with V8 coverage, Playwright |
-| Quality | Biome |
-| Hosting | Google Cloud Run |
-| Infrastructure | OpenTofu |
+| Area           | Technology                          |
+| -------------- | ----------------------------------- |
+| Runtime        | Bun `1.4.2`                         |
+| Framework      | Qwik `1.20`, Qwik City              |
+| Language       | TypeScript `7`                      |
+| Styling        | Tailwind CSS `4`, DaisyUI `5`       |
+| Data           | Supabase SSR `0.12`                 |
+| i18n           | Qwik Speak                          |
+| Tests          | Vitest with V8 coverage, Playwright |
+| Quality        | Biome                               |
+| Hosting        | Google Cloud Run                    |
+| Infrastructure | OpenTofu                            |
 
 ## Local Setup
 
@@ -68,21 +68,21 @@ Open [http://localhost:5173](http://localhost:5173).
 
 ## Commands
 
-| Command | Description |
-| --- | --- |
-| `bun ci` | Install dependencies exactly as CI does. |
-| `bun run dev` | Start the Qwik City dev server. |
-| `bun run build` | Build the production app. |
-| `bun run build.types` | Run TypeScript checks. |
-| `bun run test` | Run Vitest tests. |
-| `bun run test.coverage` | Run Vitest with enforced V8 coverage thresholds. |
-| `bun run test.e2e` | Run Playwright tests. |
-| `bun run verify` | Run Biome, type checks, unit coverage, and production build. |
-| `bun run biome` | Run Biome with fixes. |
-| `bunx --bun biome ci .` | Check formatting and lint without modifying files. |
-| `bun run qwik-speak-extract` | Extract translation keys into locale files. |
-| `bun run docker.build` | Build local Docker image `aestheticlab:local`. |
-| `make help` | Show Makefile targets. |
+| Command                      | Description                                                  |
+| ---------------------------- | ------------------------------------------------------------ |
+| `bun ci`                     | Install dependencies exactly as CI does.                     |
+| `bun run dev`                | Start the Qwik City dev server.                              |
+| `bun run build`              | Build the production app.                                    |
+| `bun run build.types`        | Run TypeScript checks.                                       |
+| `bun run test`               | Run Vitest tests.                                            |
+| `bun run test.coverage`      | Run Vitest with enforced V8 coverage thresholds.             |
+| `bun run test.e2e`           | Run Playwright tests.                                        |
+| `bun run verify`             | Run Biome, type checks, unit coverage, and production build. |
+| `bun run biome`              | Run Biome with fixes.                                        |
+| `bunx --bun biome ci .`      | Check formatting and lint without modifying files.           |
+| `bun run qwik-speak-extract` | Extract translation keys into locale files.                  |
+| `bun run docker.build`       | Build local Docker image `aestheticlab:local`.               |
+| `make help`                  | Show Makefile targets.                                       |
 
 ## Project Structure
 
@@ -137,12 +137,12 @@ written to the ignored `coverage/` directory.
 
 CI enforces these global minimums:
 
-| Metric | Minimum | Current baseline |
-| --- | ---: | ---: |
-| Statements | 80% | 80.44% |
-| Branches | 75% | 75.87% |
-| Functions | 90% | 90.47% |
-| Lines | 84% | 84.64% |
+| Metric     | Minimum | Current baseline |
+| ---------- | ------: | ---------------: |
+| Statements |     80% |           80.44% |
+| Branches   |     75% |           75.87% |
+| Functions  |     90% |           90.47% |
+| Lines      |     84% |           84.64% |
 
 Playwright coverage is reported separately as passed browser scenarios; it is
 not mixed into the unit-coverage percentage. The deterministic suite currently
@@ -157,14 +157,14 @@ markdownlint --disable MD013 -- <changed-files>
 
 For focused checks:
 
-| Change | Command |
-| --- | --- |
-| Source file | `bunx --bun biome check --write path/to/file` |
-| Source file check only | `bunx --bun biome check path/to/file` |
-| Unit test | `bunx vitest run path/to/file.test.ts` |
-| Unit coverage | `bun run test.coverage` |
-| E2E spec | `bunx playwright test path/to/file.spec.ts` |
-| Infrastructure | `tofu -chdir=infra fmt -check -recursive`, `tofu -chdir=infra init -backend=false -input=false`, `tofu -chdir=infra validate` |
+| Change                 | Command                                                                                                                       |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Source file            | `bunx --bun biome check --write path/to/file`                                                                                 |
+| Source file check only | `bunx --bun biome check path/to/file`                                                                                         |
+| Unit test              | `bunx vitest run path/to/file.test.ts`                                                                                        |
+| Unit coverage          | `bun run test.coverage`                                                                                                       |
+| E2E spec               | `bunx playwright test path/to/file.spec.ts`                                                                                   |
+| Infrastructure         | `tofu -chdir=infra fmt -check -recursive`, `tofu -chdir=infra init -backend=false -input=false`, `tofu -chdir=infra validate` |
 
 ## Deployment
 
@@ -184,11 +184,11 @@ Do not reuse or move release tags. Publish a new patch version if a release need
 
 ## Runtime Health
 
-| Endpoint | Purpose |
-| --- | --- |
-| `/healthz` | Process health. |
-| `/readyz` | Runtime configuration readiness. |
-| `/dependencyz` | Supabase dependency readiness. |
+| Endpoint       | Purpose                          |
+| -------------- | -------------------------------- |
+| `/healthz`     | Process health.                  |
+| `/readyz`      | Runtime configuration readiness. |
+| `/dependencyz` | Supabase dependency readiness.   |
 
 The deployment smoke test also checks localized public pages and security headers.
 
