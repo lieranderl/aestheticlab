@@ -1,0 +1,13 @@
+# Secret scanning (CI runs gitleaks over the whole history on every pull
+# request). Only made-up test values and documentation examples are allowed
+# here; a real key must never be added to this list: remove it and rotate it.
+title = "Aesthetic Lab"
+
+[extend]
+useDefault = true
+
+# The classic single [allowlist] works with every gitleaks 8 release (the CI
+# action pins its own); any one of the conditions below allows a finding.
+[allowlist]
+description = "The what-not-to-do examples of the vendored Go security skill"
+paths = ['''^\.agents/skills/golang-security/references/secrets\.md$''']

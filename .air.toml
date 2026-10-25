@@ -1,0 +1,19 @@
+# Air hot reload for the Go site (make go-dev): regenerates templ code and
+# rebuilds cmd/web on changes under cmd/, internal/ and static/.
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  bin = "./tmp/web"
+  cmd = "go tool templ generate && go build -o ./tmp/web ./cmd/web"
+  delay = 500
+  exclude_dir = ["tmp", "bin", "node_modules", ".git"]
+  exclude_regex = ["_test.go", ".*_templ.go"]
+  include_dir = ["cmd", "internal", "static"]
+  include_ext = ["go", "templ", "css", "js", "svg"]
+  log = "build-errors.log"
+  send_interrupt = true
+  stop_on_error = true
+
+[misc]
+  clean_on_exit = true

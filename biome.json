@@ -139,7 +139,10 @@
 			"e2e/**/*.{js,ts,tsx,json}",
 			"adapters/**/*.{js,cjs,cts,mjs,ts,mts,jsx,tsx}",
 			"*.{js,ts,tsx,json,md}",
-			"!src/global.css"
+			"!src/global.css",
+			"!cmd",
+			"!internal",
+			"!static"
 		]
 	}
 }

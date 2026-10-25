@@ -21,6 +21,8 @@
 | E2E tests | `bun run test.e2e` |
 | Production build | `bun run build` |
 | Main local verification | `bun run verify` |
+| Go site gate (rewrite) | `make ci` |
+| Go site dev (Air) | `make go-dev` |
 | Translation extraction | `bun run qwik-speak-extract` |
 
 ## File-Scoped Commands
@@ -39,6 +41,7 @@
 | --- | --- |
 | Docs only | `markdownlint --disable MD013 -- <changed-files>` |
 | App, dependencies, build, deployment | `bun run verify` |
+| Go site (`cmd/`, `internal/`, `static/`) | `make ci` |
 | User-facing flow | Relevant Playwright spec; manual browser check for styling |
 | Translation keys | Extraction plus affected locale assets |
 | IaC | Format, validate, and review plan for each affected environment |
@@ -50,6 +53,7 @@
 - `src/shared/` owns Supabase, runtime config, security headers, logging, locale, and service helpers.
 - `i18n/` contains Qwik Speak locale assets; update all five locales through extraction when keys change.
 - `infra/` owns OpenTofu-managed GCP resources; `.github/workflows/` owns delivery automation.
+- `cmd/`, `internal/`, `static/`, `Dockerfile.web` and `.agents/skills/` (Go, Datastar, DaisyUI, TDD) belong to the Go + Datastar rewrite in `plans/go-datastar-scale-to-zero.md`, which replaces the Qwik site; write Go test-first at public seams with `net/http/httptest`.
 - `plans/` holds durable execution plans; `docs/prompt-pack.md` holds reusable prompts, not policy.
 
 ## Key Conventions

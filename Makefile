@@ -81,3 +81,54 @@ gcloud-promote: ## Promote a verified Cloud Run revision (requires REVISION)
 		--to-revisions=$(REVISION)=100 \
 		--region=$(GCP_REGION) \
 		--project=$(GCP_PROJECT)
+
+# Go site (cmd/web) ------------------------------------------------------------
+# The Go + templ + Datastar rewrite (plans/go-datastar-scale-to-zero.md) lives
+# beside the Qwik site until Phase 10. Until then dev, lint and build stay
+# Qwik's, and the Go equivalents are go-dev, go-lint and go-build.
+GO ?= go
+AIR ?= air
+GOLANGCI_LINT ?= $(GO) tool golangci-lint
+GO_DIRS := cmd internal static
+
+.PHONY: templ templ-check go-lint test security go-build ci go-dev assets assets-check firestore snapshot
+
+templ: ## Go: generate Go code from templ templates
+	$(GO) tool templ generate
+
+templ-check: ## Go: fail when generated templ code is out of date
+	$(GO) tool templ generate -check
+
+go-lint: templ-check ## Go: go vet, staticcheck, golangci-lint and gofmt
+	$(GO) vet ./...
+	$(GO) tool staticcheck ./...
+	$(GOLANGCI_LINT) run ./...
+	@test -z "$$(gofmt -l $(GO_DIRS))" || (echo "Unformatted Go files:" && gofmt -l $(GO_DIRS) && exit 1)
+
+test: ## Go: race-enabled test suite
+	$(GO) test -race -count=1 ./...
+
+security: ## Go: govulncheck and gosec
+	$(GO) tool govulncheck ./...
+	$(GO) tool gosec -quiet ./...
+
+go-build: ## Go: build the static site binary at bin/web
+	mkdir -p bin
+	CGO_ENABLED=0 $(GO) build -trimpath -ldflags "-s -w" -o bin/web ./cmd/web
+
+ci: templ-check go-lint test security go-build ## Go: the complete quality gate (CI runs it)
+
+go-dev: ## Go: run the site with Air on http://localhost:3000 (PORT changes it)
+	$(AIR)
+
+assets: ## Go: build CSS, icons and image variants (TODO: Phase 3)
+	@echo "make $@ is not implemented yet: plans/go-datastar-scale-to-zero.md, Phase 3" >&2; exit 1
+
+assets-check: ## Go: fail when built assets are out of date (TODO: Phase 3)
+	@echo "make $@ is not implemented yet: plans/go-datastar-scale-to-zero.md, Phase 3" >&2; exit 1
+
+firestore: ## Go: start the Firestore emulator (TODO: Phase 5)
+	@echo "make $@ is not implemented yet: plans/go-datastar-scale-to-zero.md, Phase 5" >&2; exit 1
+
+snapshot: ## Go: refresh the embedded content snapshot (TODO: Phase 5)
+	@echo "make $@ is not implemented yet: plans/go-datastar-scale-to-zero.md, Phase 5" >&2; exit 1

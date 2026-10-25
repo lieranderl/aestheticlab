@@ -242,14 +242,32 @@ The 7-day startup distribution replaced the planned five spaced cold requests: i
 3. Deploy and promote so the change reaches serving revisions: a merge to `staging` for staging, the next published release for production.
 4. Re-measure staging cold starts and `startup_latencies`. Expected: well under 1 s, against 5.1 s at Phase 0.
 
-Status: merged in [#235](https://github.com/lieranderl/qwik-aestheticlab/pull/235) as `757bcdc`. The plan-only run showed only the probe fields changing. The apply was awaiting approval when Phase 0 ran.
+Status:
+
+- Merged in [#235](https://github.com/lieranderl/qwik-aestheticlab/pull/235) as `757bcdc`; applied by infrastructure run 40195855239 (0 added, 2 changed, 0 destroyed; only the probe fields). The [#237](https://github.com/lieranderl/qwik-aestheticlab/pull/237) staging deploy copied the template, so staging's serving revision `stage-aestheticlab-web-candidate-40199687517-1` probes every 1 s. Production picks it up with the next release.
+- Measured 2026-10-25 14:25 UTC on staging after 18+ min idle, with a new instance confirmed in Cloud Run logs: cold first byte 1.68 s (was 5.58 s), Cloud Run request latency 1.53 s, warm 0.14–0.18 s. The instance went from start to ready in about 1.1 s (was about 5.1 s): `Starting new instance` 14:25:58.32 → Bun `server_started` +0.72 s → probe passed on attempt 2, +0.37 s.
+- Gate met. Qwik still misses the Go targets (startup p95 ≤ 700 ms, cold first byte ≤ 1.2 s) mainly because of Bun's 0.7 s boot.
 
 ### Phase 2: Go Scaffold
 
 1. `go.mod` (`github.com/lieranderl/aestheticlab`), `cmd/web`, `internal/server` with health endpoints, security headers, structured JSON logging matching today's event names, and an embedded static handler with range support (MP4 seeking).
 2. Copy and adapt from Moviestracker: `.golangci.yml`, `.gitleaks.toml`, `.agents/skills/` (Go, Datastar, DaisyUI, TDD), `docs/` guide structure, Makefile targets (`templ`, `templ-check`, `assets`, `assets-check`, `lint`, `test`, `security`, `ci`, `dev` with Air, `firestore` emulator, `snapshot`).
-3. `Dockerfile.go` (Bun assets stage → Go build stage → distroless). The existing `Dockerfile` stays Qwik until cutover.
+3. `Dockerfile.web` (Bun assets stage → Go build stage → distroless). The existing `Dockerfile` stays Qwik until cutover. It can't be named `Dockerfile.go`: the Go tool would parse it as Go source in the module root and fail `go vet ./...`.
 4. Add a Go quality job to `quality.yml` (lint, `go test -race`, govulncheck, gosec, templ/assets diff checks, Firestore emulator tests). Exclude the Go directories in `biome.json`. The existing Qwik jobs, including Qwik e2e, stay unchanged.
+
+Status (2026-10-25): scaffold on `feat/go-scaffold`.
+
+- `cmd/web` serves `/healthz`, `/readyz` and a `/dependencyz` stub (200 until Phase 5), the security headers with the CSP target, the `/static/` handler (ranges, a year's `immutable` caching for `<name>.<8+ hex>.<ext>` names, an hour for the rest, no folder listings), and Cloud Logging JSON (`severity`, `message`): `server_started`, `server_stopping`, `server_stopped`, `http_request` and `http_panic`.
+- The Qwik Makefile keeps `dev`, `lint` and `build`, so the Go targets are `go-dev`, `go-lint` and `go-build` until Phase 10. `make ci` runs `templ-check`, `go-lint`, `test`, `security` and `go-build`. `assets`, `assets-check`, `firestore` and `snapshot` are stubs that fail with a pointer to Phases 3 and 5.
+- The CI job runs `make ci`. The assets stage, assets diff check and emulator tests come with Phases 3 and 5.
+- Measured on an Apple M-series Mac:
+
+  | Measure | Go scaffold | Qwik (Phase 0) |
+  | --- | --- | --- |
+  | Process exec to first `/healthz` 200, local binary (40 runs) | median 4.9 ms, p95 6.5 ms (first run 217 ms, macOS first-exec check) | — |
+  | `container run` to first 200, Apple `container` CLI (5 runs, includes its per-container VM boot) | 851–1,079 ms | — |
+  | Image, compressed (`linux/amd64`) | 3.75 MB (13 layers) | 56.9 MB (21 layers) |
+  | Binary (`darwin/arm64`, `-s -w`) | 6.7 MB | — |
 
 ### Phase 3: Assets
 

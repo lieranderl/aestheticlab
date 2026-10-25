@@ -105,3 +105,6 @@ infra/terraform/*.yaml
 Makefile_old
 create_gcloud.sh
 .agents/
+
+# Go site (cmd/web)
+/bin/
