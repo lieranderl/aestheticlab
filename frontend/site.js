@@ -163,6 +163,70 @@
 		return sectionRequest;
 	}
 
+	/**
+	 * Scroll-linked motion where CSS scroll-driven animations are missing
+	 * (Firefox): the same curves app.css draws with animation-timeline, as
+	 * src/shared/scroll-motion.ts wrote them for the Qwik site. Written in
+	 * requestAnimationFrame, and only when a value changes. Nothing moves
+	 * with reduced motion.
+	 */
+	function scrollMotion() {
+		if (
+			CSS.supports("animation-timeline", "view()") ||
+			window.matchMedia("(prefers-reduced-motion: reduce)").matches
+		) {
+			return;
+		}
+		const items = [
+			...document.querySelectorAll(
+				".parallax-center, .parallax-top, .parallax-fade",
+			),
+		].map((el) => ({ el, last: "" }));
+		if (items.length === 0) return;
+
+		function motion(el) {
+			const scrolled = window.scrollY;
+			if (el.classList.contains("parallax-top")) {
+				return {
+					y: Math.min(scrolled, window.innerHeight) * 0.25,
+				};
+			}
+			if (el.classList.contains("parallax-fade")) {
+				const progress = Math.min(1, scrolled / 420);
+				return { y: -63 * progress, opacity: 1 - progress };
+			}
+			// .parallax-center: 15% of the scroll, at most 60px either way of
+			// the frame's centre.
+			const frame = el.parentElement.getBoundingClientRect();
+			const fromCentre = frame.top + frame.height / 2 - window.innerHeight / 2;
+			return { y: Math.max(-60, Math.min(60, -fromCentre * 0.15)) };
+		}
+
+		let ticking = false;
+		function update() {
+			ticking = false;
+			for (const item of items) {
+				const { y, opacity } = motion(item.el);
+				const next = `${y.toFixed(1)}|${opacity ?? ""}`;
+				if (next === item.last) continue;
+				item.last = next;
+				item.el.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0)`;
+				if (opacity !== undefined) {
+					item.el.style.opacity = String(Math.round(opacity * 1000) / 1000);
+				}
+			}
+		}
+		function onScroll() {
+			if (ticking) return;
+			ticking = true;
+			requestAnimationFrame(update);
+		}
+		update();
+		window.addEventListener("scroll", onScroll, { passive: true });
+		window.addEventListener("resize", onScroll, { passive: true });
+	}
+	scrollMotion();
+
 	window.aesthetic = {
 		/** True when the cookie banner should show: no choice stored yet. */
 		needsConsent: () => stored() === null,

@@ -65,7 +65,7 @@ func run(ctx context.Context, getenv func(string) string, logOut io.Writer) erro
 	store.Prefetch()
 
 	srv := &http.Server{
-		Handler:           server.New(server.Config{Static: static.Files, Logger: log, Content: store}),
+		Handler:           server.New(server.Config{Static: static.Files, Logger: log, Content: store, PlainHTTP: plainHTTP(getenv)}),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       120 * time.Second,
 		MaxHeaderBytes:    1 << 20,
@@ -109,6 +109,13 @@ func openContent(ctx context.Context, getenv func(string) string, log *slog.Logg
 		return content.NewStore(content.Options{Logger: log}), func() {}
 	}
 	return content.NewStore(content.Options{Source: db, Logger: log}), func() { _ = db.Close() }
+}
+
+// plainHTTP reports whether browsers reach this server without TLS: Cloud
+// Run, which always sets K_SERVICE, serves HTTPS; make go-dev, a local
+// binary and a local container do not.
+func plainHTTP(getenv func(string) string) bool {
+	return getenv("K_SERVICE") == ""
 }
 
 // listenPort is the port Cloud Run gives in PORT, else 3000 (the

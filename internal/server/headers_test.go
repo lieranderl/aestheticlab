@@ -31,3 +31,19 @@ func TestEveryResponseCarriesTheSecurityHeaders(t *testing.T) {
 		}
 	}
 }
+
+// Safari upgrades even http://localhost requests under
+// upgrade-insecure-requests, and a local server has no TLS, so the page
+// would load without its CSS and scripts. Off Cloud Run the policy keeps
+// every other directive.
+func TestALocalServerDoesNotAskBrowsersToUpgradeToHTTPS(t *testing.T) {
+	h := server.New(server.Config{PlainHTTP: true})
+	want := "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; " +
+		"script-src 'self' 'unsafe-eval' https://www.googletagmanager.com; style-src 'self'; img-src 'self' data: https:; font-src 'self' data:; " +
+		"connect-src 'self' https://www.googletagmanager.com https://*.google-analytics.com; frame-src https://bookings.gettimely.com"
+	for _, path := range []string{"/healthz", "/nope"} {
+		if got := get(t, h, path).Header().Get("Content-Security-Policy"); got != want {
+			t.Errorf("%s Content-Security-Policy = %q, want %q", path, got, want)
+		}
+	}
+}

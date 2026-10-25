@@ -47,7 +47,11 @@ func severity(level slog.Level) string {
 // Middleware wraps a handler in the site's security headers, request log
 // and panic recovery.
 func Middleware(log *slog.Logger, next http.Handler) http.Handler {
-	return securityHeaders(logRequests(log, recoverPanics(log, next)))
+	return middleware(log, contentSecurityPolicy, next)
+}
+
+func middleware(log *slog.Logger, policy string, next http.Handler) http.Handler {
+	return securityHeaders(policy, logRequests(log, recoverPanics(log, next)))
 }
 
 // logRequests logs each request as http_request, an error when it failed
