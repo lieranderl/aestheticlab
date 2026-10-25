@@ -40,8 +40,9 @@ func TestProbesAnswerOKWithoutCaching(t *testing.T) {
 	}
 }
 
+// (/nope itself is first redirected to /nope/, as on the Qwik site.)
 func TestUnknownPathIsNotFound(t *testing.T) {
-	res := get(t, server.New(server.Config{}), "/nope")
+	res := get(t, server.New(server.Config{}), "/nope/")
 	if res.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", res.Code)
 	}

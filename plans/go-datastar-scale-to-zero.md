@@ -313,6 +313,31 @@ Status (2026-10-25): on `feat/go-assets`.
 3. Locale routing that matches today's: `/` → 302 `/en-BE/`; an unknown path keeps the locale of its first segment for the 404 page; trailing slashes as now.
 4. Test: every interface text has a translation in all four non-English locales, as Moviestracker's `TestEveryInterfaceTextHasARussianTranslation` does.
 
+Status (2026-10-25): on `feat/go-i18n`.
+
+- **Converter:** `cmd/i18n-convert` (Go) writes `internal/i18n/messages_gen.go` from `i18n/*/app.json`, through `go/format`.
+  - It keeps only the 227 keys `src/` uses, as 223 distinct English texts; the other 134 keys in the files are stale and are dropped.
+  - `runtime.json` is empty in every locale.
+- **The English comes from `i18n/en-BE/app.json`, not the `@@Default` texts in code.** The site renders the JSON, and 40 code defaults are out of date (for example "Hours" where the site shows "Opening hours").
+- **Change from step 1:** the JSON stays the source until Phase 10, while the Qwik site is still the one being edited. `make i18n-check` (part of `make ci`) fails when the Go tables are stale. Go becomes the hand-edited source only when the JSON is deleted.
+- **Keys are English text,** as in Moviestracker. Two English texts are translated differently by where they appear. They get explicit contexts, through `i18n.C` and `trc`:
+  - "Open navigation menu" means the menu button in one place and the navigation landmark in another;
+  - "Back to categories" means the price list link in one place and the treatment overview in another.
+
+  The converter fails on any new collision, so a new one needs a decision.
+- **Placeholders:** `{{name}}` becomes `%v`, or `%[1]v`, `%[2]v` when a text has several. Every translation keeps the English order, and the converter checks that each translation has the same placeholders.
+- **No plurals (change from step 2):** no text needs plural forms. The one count, Google reviews, is phrased in ru/uk to avoid them ("Отзывов в Google: N"). So there's no `trn` yet; add it, with ru/uk rules, when a text needs one.
+- **Template helpers:** `internal/views` has `tr`, `trf`, `trc`, `trJS` and `pageLang`.
+- **Routing (`internal/server`) matches staging's measured behaviour:**
+  - `/` returns 302 to `/en-BE/`.
+  - A page path without its trailing slash gets a 301, query kept; file-like paths (`/favicon.svg`) don't.
+  - Locale codes are case-sensitive (`/en-be/` is English).
+  - Unknown pages are 404s in the path's locale, with `Content-Language` and `no-store`.
+  - The slash redirect never builds `//host` or `/\host` Locations.
+
+  The 404 body is a localized placeholder until Phase 6's branded page.
+- **Completeness test:** `TestEveryInterfaceTextHasATranslationInEveryLocale` scans templates and handlers for translated texts. Its minimum match count, 2 today (the 404 texts), rises as Phase 6 adds pages. `i18n` also checks every generated text in every locale.
+
 ### Phase 5: Content on Firestore
 
 1. IaC through the infrastructure workflow: declare the Firestore API, create `site-production` and `site-staging`, and add runtime IAM conditioned on each database. Review the saved plan to confirm it doesn't touch `(default)` or `aestheticlab-income`.

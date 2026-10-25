@@ -91,7 +91,7 @@ AIR ?= air
 GOLANGCI_LINT ?= $(GO) tool golangci-lint
 GO_DIRS := cmd internal static
 
-.PHONY: templ templ-check go-lint test security go-build ci go-dev assets assets-check frontend-test firestore snapshot
+.PHONY: templ templ-check go-lint test security go-build ci go-dev assets assets-check frontend-test i18n i18n-check firestore snapshot
 
 templ: ## Go: generate Go code from templ templates
 	$(GO) tool templ generate
@@ -116,7 +116,7 @@ go-build: ## Go: build the static site binary at bin/web
 	mkdir -p bin
 	CGO_ENABLED=0 $(GO) build -trimpath -ldflags "-s -w" -o bin/web ./cmd/web
 
-ci: assets-check frontend-test templ-check go-lint test security go-build ## Go: the complete quality gate (CI runs it)
+ci: assets-check i18n-check frontend-test templ-check go-lint test security go-build ## Go: the complete quality gate (CI runs it)
 
 go-dev: assets ## Go: run the site with Air on http://localhost:3000 (PORT changes it)
 	$(AIR)
@@ -134,6 +134,17 @@ assets-check: assets ## Go: fail when the manifest or icon code differs from wha
 
 frontend-test: ## Go: unit tests for the asset and icon generators
 	bun run test.frontend
+
+# The Go site's texts come from the Qwik site's locale files until Phase 10
+# (plans/go-datastar-scale-to-zero.md): change those, then make i18n.
+I18N_GENERATED := internal/i18n/messages_gen.go
+
+i18n: ## Go: write the Go text tables from i18n/*/app.json
+	$(GO) run ./cmd/i18n-convert
+
+i18n-check: i18n ## Go: fail when the Go text tables differ from what git has
+	@git diff --quiet -- $(I18N_GENERATED) && test -z "$$(git ls-files --others --exclude-standard -- $(I18N_GENERATED))" || \
+		(echo "Out of date (run make i18n, then git add):" && git status --short -- $(I18N_GENERATED) && exit 1)
 
 firestore: ## Go: start the Firestore emulator (TODO: Phase 5)
 	@echo "make $@ is not implemented yet: plans/go-datastar-scale-to-zero.md, Phase 5" >&2; exit 1

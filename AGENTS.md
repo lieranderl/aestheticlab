@@ -24,6 +24,7 @@
 | Go site gate (rewrite)                     | `make ci`                                                                                                         |
 | Go site dev (Air)                          | `make go-dev`                                                                                                     |
 | Go site assets (CSS, fonts, icons, images) | `make assets` (`bun run assets`), then commit `internal/assets/manifest_gen.go` and `internal/views/icons_gen.go` |
+| Go site texts (from i18n/*/app.json)       | `make i18n`, then commit `internal/i18n/messages_gen.go`                                                          |
 | Translation extraction                     | `bun run qwik-speak-extract`                                                                                      |
 
 ## File-Scoped Commands
@@ -38,14 +39,14 @@
 
 ## Verification Matrix
 
-| Change                                   | Required verification                                           |
-| ---------------------------------------- | --------------------------------------------------------------- |
-| Docs only                                | `markdownlint --disable MD013 -- <changed-files>`               |
-| App, dependencies, build, deployment     | `bun run verify`                                                |
-| Go site (`cmd/`, `internal/`, `static/`) | `make ci`                                                       |
-| User-facing flow                         | Relevant Playwright spec; manual browser check for styling      |
-| Translation keys                         | Extraction plus affected locale assets                          |
-| IaC                                      | Format, validate, and review plan for each affected environment |
+| Change                                   | Required verification                                                      |
+| ---------------------------------------- | -------------------------------------------------------------------------- |
+| Docs only                                | `markdownlint --disable MD013 -- <changed-files>`                          |
+| App, dependencies, build, deployment     | `bun run verify`                                                           |
+| Go site (`cmd/`, `internal/`, `static/`) | `make ci`                                                                  |
+| User-facing flow                         | Relevant Playwright spec; manual browser check for styling                 |
+| Translation keys                         | Extraction plus affected locale assets, then `make i18n` for the Go tables |
+| IaC                                      | Format, validate, and review plan for each affected environment            |
 
 ## Repository Boundaries
 
