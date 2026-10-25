@@ -370,7 +370,7 @@ async function photoOffset(page: Page, index: number, fromCentre: number) {
 				top: centre - window.innerHeight / 2 - fromCentre,
 				behavior: "instant",
 			});
-			await new Promise((r) => setTimeout(r, 300));
+			await new Promise((r) => requestAnimationFrame(r));
 			return (
 				photo.getBoundingClientRect().top -
 				frame.getBoundingClientRect().top +
@@ -400,21 +400,24 @@ async function heroMotion(page: Page, y: number) {
 // The visit and closing photos lag behind the scroll: shifted up while their
 // frame is below the middle of the screen, down once it is above. The Go site
 // draws this with CSS scroll-driven animation, and a script where the browser
-// lacks it (Firefox).
+// lacks it (Firefox). The Qwik site starts its motion once a photo is in
+// view, after loading that code, so the offsets are polled.
 test("framed photos drift against the scroll", async ({ page }) => {
 	await page.setViewportSize({ width: 1280, height: 800 });
 	await page.goto("/en-BE/");
 	const count = await page.locator("figure > .\\-top-15").count();
 	expect(count).toBe(2);
 	for (let index = 0; index < count; index++) {
-		expect(
-			await photoOffset(page, index, 300),
-			`photo ${index} below centre`,
-		).toBeLessThan(-20);
-		expect(
-			await photoOffset(page, index, -300),
-			`photo ${index} above centre`,
-		).toBeGreaterThan(20);
+		await expect
+			.poll(() => photoOffset(page, index, 300), {
+				message: `photo ${index} below centre`,
+			})
+			.toBeLessThan(-20);
+		await expect
+			.poll(() => photoOffset(page, index, -300), {
+				message: `photo ${index} above centre`,
+			})
+			.toBeGreaterThan(20);
 	}
 });
 
