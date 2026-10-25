@@ -199,8 +199,12 @@ func parkingClicked(p content.Place) string {
 }
 
 // lightboxOpen is a gallery photo's expression: open the lightbox on it.
+// Safari does not focus clicked buttons. Focus the opener first so the
+// native dialog restores it, and focus Close after the dialog is rendered.
 func lightboxOpen(i int) string {
-	return "$lightbox = " + strconv.Itoa(i) + "; document.getElementById('gallery-lightbox').showModal()"
+	return "$lightbox = " + strconv.Itoa(i) +
+		"; el.focus({preventScroll: true}); const dialog = document.getElementById('gallery-lightbox');" +
+		" dialog.showModal(); requestAnimationFrame(() => dialog.querySelector('[autofocus]').focus({preventScroll: true}))"
 }
 
 // instagramClicked records the gallery's Instagram link.

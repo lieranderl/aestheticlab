@@ -394,7 +394,25 @@ Status (2026-10-25): code and IaC on `feat/go-content`; the IaC apply, the impor
 4. Run the shared Playwright specs under the Go config, and add that run to CI next to the Qwik run.
 5. Capture screenshots (every page × 5 locales × mobile/desktop) and Lighthouse LCP/CLS/TBT for `/en-BE/` and `/en-BE/pricelist/` from local production builds of both stacks, side by side and under the same conditions. Review every difference.
 
-Status (2026-10-25): 6a (shell and pricelist, #246) and 6b (home sections, #247) are merged. 6c (policies and the branded 404) is on `feat/go-policies`, rebased onto `staging` after 6b's squash merge.
+Status (2026-10-25): 6a (shell and pricelist, #246), 6b (home sections, #247) and 6c (policies and the branded 404, #249) are merged. The 6c staging deployment passed. Shared browser-test integration is implemented and verified locally on `codex/go-playwright`; publication and merge are authorized, with remote CI and staging promotion still to be verified.
+
+Shared browser-test integration:
+
+1. Add a Go Playwright configuration over the existing `e2e/` specs, using the built binary and embedded snapshot. Use local HTTPS so WebKit can load assets with the production CSP intact, and isolate third-party services consistently for both stacks.
+2. Run the shared suite against Go and fix observable regressions at the HTTP/browser boundary. Keep assertions about user behavior; allow equivalent canonical navigation links with a trailing slash. Any compatibility prerequisite moved forward from Phase 7 must be recorded here and tested.
+3. Run the Go browser suite next to Qwik in CI, preserve separate reports, and document a local command. Verify both configurations, `make ci`, `bun run verify`, formatting and Markdown.
+
+Scope: browser-test configuration, deterministic local services, regressions exposed by shared specs, and CI/documentation integration. Full screenshot/Lighthouse comparison remains the next Phase 6 step. No cloud resource or content changes are needed.
+
+Commit strategy: one feature commit with agent attribution; push the feature branch, open a PR to `staging`, wait for every check, then squash-merge and monitor the staging deployment through smoke testing and promotion.
+
+Integration decisions and verification:
+
+- The first shared Chromium run passed 26/29 cases. Two exact link assertions now accept the equivalent trailing-slash form; the remaining failure reproduced missing `/og/*.jpg` at the HTTP boundary. Share images are copied byte-for-byte into the embedded build, served at their advertised public URLs with a one-hour cache, and included by `Dockerfile.web`. This prerequisite moves forward from Phase 7; its other compatibility work stays there.
+- The full Go browser run exposed Safari leaving focus on the body when a clicked gallery button opens the native dialog. Focus the opener before opening and Close on the next frame; the existing browser regression verifies opening focus, keyboard navigation and focus return in all three engines.
+- `make test-e2e` runs all 29 shared specs in Chromium, Firefox and WebKit over local HTTPS with the embedded snapshot. The Go CI job runs the same command after its existing gates and Firestore integration test. Qwik and Go use separate report/result directories and the same isolated Google/Timely boundary.
+- JavaScript page errors are an additional Go migration gate; CSP violations are checked on both stacks. Qwik's dev-server run exposed module-load/overlay errors during repeated full-page navigation; this task does not claim production Qwik JavaScript-error parity or change its existing functional contract.
+- Final local checks: 87/87 Go browser cases and 87/87 Qwik browser cases pass without retries, `make ci` and `bun run verify` pass, and formatting, Markdown, workflow YAML syntax and diff checks pass. Whole-change review and review of the fixture option found no actionable issues. Remote CI and the container build remain unrun for these unpublished changes; the screenshot/Lighthouse matrix is still next.
 
 6c completion sequence:
 

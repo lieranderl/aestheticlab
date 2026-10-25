@@ -24,6 +24,7 @@
 		"test.coverage": "vitest run --coverage",
 		"test.watch": "vitest",
 		"test.e2e": "playwright test",
+		"test.e2e.go": "playwright test --config playwright.go.config.ts",
 		"precommit": "lint-staged --concurrent false && bun run build.types",
 		"prepush": "bun run verify",
 		"deploy": "echo 'Run \"npm run qwik add\" to install a server adapter'",

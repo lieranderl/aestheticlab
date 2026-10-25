@@ -32,6 +32,17 @@ var encodings = []struct{ name, suffix string }{
 	{"gzip", ".gz"},
 }
 
+// shareImages keeps the public preview URLs advertised by the page head.
+// Their unhashed names get staticFiles' short cache and no directory listings.
+func shareImages(files fs.FS) http.HandlerFunc {
+	serve := staticFiles(files)
+	return func(w http.ResponseWriter, r *http.Request) {
+		forwarded := r.Clone(r.Context())
+		forwarded.URL.Path = "/static/dist" + r.URL.Path
+		serve(w, forwarded)
+	}
+}
+
 // staticFiles serves files under /static/ from files: hashed names are
 // cached for a year, others for an hour, and Range requests let videos seek.
 // A text file with precompressed siblings is served in the best encoding the

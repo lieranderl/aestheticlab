@@ -234,6 +234,16 @@ async function build() {
 	// Consent Mode and analytics (window.aesthetic), loaded before Datastar.
 	files.set("site.js", await copy("frontend/site.js", "site.js"));
 
+	// Public link-preview URLs are stable; overwrite changed bytes and use
+	// the server's short cache rather than the immutable hashed-file cache.
+	for (const src of walk("public/og")) {
+		const rel = `og/${basename(src)}`;
+		const destination = join(distDir, rel);
+		mkdirSync(dirname(destination), { recursive: true });
+		writeIfChanged(destination, readFileSync(src));
+		written.add(rel);
+	}
+
 	// Media: raster images become WebP variants; videos, their posters and
 	// SVGs are copied.
 	for (const src of walk(mediaDir)) {
