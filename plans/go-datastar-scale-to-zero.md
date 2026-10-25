@@ -394,7 +394,45 @@ Status (2026-10-25): code and IaC on `feat/go-content`; the IaC apply, the impor
 4. Run the shared Playwright specs under the Go config, and add that run to CI next to the Qwik run.
 5. Capture screenshots (every page × 5 locales × mobile/desktop) and Lighthouse LCP/CLS/TBT for `/en-BE/` and `/en-BE/pricelist/` from local production builds of both stacks, side by side and under the same conditions. Review every difference.
 
-Status (2026-10-25): 6a (shell and pricelist, #246), 6b (home sections, #247) and 6c (policies and the branded 404, #249) are merged. The 6c staging deployment passed. Shared browser-test integration is implemented and verified locally on `codex/go-playwright`; publication and merge are authorized, with remote CI and staging promotion still to be verified.
+Status (2026-10-25): 6a (shell and pricelist, #246), 6b (home sections, #247), 6c (policies and the branded 404, #249) and the shared browser specs in CI (#250) are merged. The screenshot and Lighthouse comparison (step 5) is done on `chore/phase6-visual-parity`. It found that Go served pages uncompressed, so that branch also adds on-the-fly gzip, and it hyphenates the long privacy heading.
+
+Screenshot and Lighthouse comparison (2026-10-25):
+
+- **Setup:** both stacks ran as local production builds, side by side.
+  - Qwik: `bun run build`, then `bun server/entry.bun.js`, reading production Supabase through `.env`.
+  - Go: `bin/web` with the embedded snapshot, which is the Phase 5 export of the same rows.
+  - Browser: headless Chromium 1248 in light mode with reduced motion, with Google and Timely stubbed for both stacks.
+- **Screenshots:** `scripts/visual-parity.ts` captures full-page screenshots and diffs each pair into `test-results/visual-parity/` (not committed). A pixel counts as changed when any channel differs by more than 32.
+  - Matrix: home, pricelist, privacy policy, care notes and the 404 page × 5 locales × 1280 and 390 px, so 50 pairs.
+  - Page heights match in 49 pairs. 42 pairs differ in under 0.11% of pixels, and all ten 404 pairs are identical.
+  - Console: neither stack logs a CSP violation or a page error. The only console error, on both stacks, is the 404 page's own status.
+- **Every difference, reviewed:**
+  1. **Russian privacy policy, 390 px (32%; 4,404 vs 4,784 px tall).** Qwik's unbroken "конфиденциальности" widens the page to 420 px, and Go wraps it (the 6c `wrap-anywhere` fix). Intended.
+  2. **Privacy heading at 1280 px in nl, fr, ru and uk (0.25–0.33%).** Qwik keeps the long word on one line, past its 243 px column; in Russian it runs over the body text. Go broke the word without a hyphen ("confidentia / lité"). **Fixed:** the heading now has `hyphens-auto` as well as `wrap-anywhere`, and the page's `lang` selects the dictionary.
+     - Rechecked in Chromium, Firefox and WebKit at 1280, 1024, 390 and 320 px in all five locales (60 cases). Each break falls at a syllable with a hyphen ("confiden‑tialité", "конфиден‑циально‑сти", "конфіден‑ційності", "Privacybe‑leid"), and nothing overflows the page or the column.
+     - An engine with no hyphenation dictionary for a locale falls back to the earlier `wrap-anywhere` break, so the heading never overflows.
+  3. **First gallery tile, home at 1280 px in en, fr and ru (about 2.8%).** Go's tile is sometimes blank in Chromium's full-page capture. The `<img>` attributes are identical on both stacks, and Go's image is complete and renders in every in-view screenshot (4 of 4). This is a capture artefact, not something a visitor sees.
+  4. **en-BE prices** ("€ 35" vs "€35") on the pricelist and service badges. The locally run Qwik build formats prices differently from Qwik in production; Go matches production (see 6a).
+  5. **Photo edges** (closing call-to-action, some team and gallery photos) and **one-pixel rows** at section edges. These come from re-encoded image variants (Phase 3: within 1 px of height rounding) and subpixel layout.
+- **Lighthouse 13.5.0:** default mobile and desktop presets, simulated throttling, third parties blocked, median of 3 runs. Times in ms; KiB is total transfer.
+
+  | Page | Stack | Score | FCP | LCP | TBT | CLS | KiB | Requests |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | `/en-BE/` mobile | Qwik | 85 | 2,258 | 3,985 | 0 | 0 | 3,499 | 142 |
+  | | Go | 92 | 1,952 | 3,182 | 0 | 0 | 3,172 | 39 |
+  | `/en-BE/` desktop | Qwik | 98 | 484 | 1,004 | 0 | 0 | 3,575 | 140 |
+  | | Go | 100 | 442 | 712 | 0 | 0 | 2,762 | 37 |
+  | `/en-BE/pricelist/` mobile | Qwik | 82 | 2,406 | 4,286 | 0 | 0 | 774 | 94 |
+  | | Go | 87 | 1,952 | 3,857 | 0 | 0 | 465 | 21 |
+  | `/en-BE/pricelist/` desktop | Qwik | 98 | 544 | 1,010 | 0 | 0 | 781 | 95 |
+  | | Go | 100 | 441 | 792 | 0 | 0 | 465 | 21 |
+
+- **Compression fix:** the first Go run regressed on mobile: pricelist LCP 4,907 ms and FCP 3,002 ms. The cause was HTML: Go sent the pricelist's 250 KB uncompressed, while Qwik gzips it to 56 KB. The cold-start design (item 5) already called for HTML gzip on the fly; it had never been built.
+  - `internal/server` now gzips `text/html` and Datastar's `text/event-stream` responses through `github.com/klauspost/compress/gzhttp`, which was already an indirect dependency.
+  - Gzip only; zstd is off. `/static/` and `/og/` skip the wrapper, because they are precompressed or media and set their own `Vary`.
+  - Go now sends 30 KB for the pricelist (Qwik 56 KB) and 25 KB for home (Qwik 41 KB). The table above is after the fix.
+  - Tests in `internal/server/compress_test.go` cover: pages and the 404 gzipped with `Vary`; identity, `br`-only and `gzip;q=0` requests getting no gzip; a Datastar patch gzipped; media never gzipped; static files with exactly one `Vary`.
+- **Verification:** `make test-e2e` passed 87 of 87 with the compressed Datastar patches. Every `make ci` step passed. Go's dialer couldn't reach vuln.go.dev from this machine (curl could), so govulncheck ran against a local copy of today's database. It reports only GO-2026-5932 in `golang.org/x/crypto`: not called, no fix released, and staging reports it too.
 
 Shared browser-test integration:
 
