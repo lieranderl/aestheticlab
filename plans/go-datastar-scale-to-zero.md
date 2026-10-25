@@ -17,19 +17,20 @@ The rewrite follows the scaffolding, conventions and agent instructions of `/Use
 | Repository | This repo; module path `github.com/lieranderl/aestheticlab`; rename the GitHub repo after Qwik is removed | Infra, workflows, plans and smoke tests stay. |
 | Startup probe | Ship Phase 1 now on the Qwik site | Helps today's cold starts and carries over unchanged. |
 | Supabase project | Leave untouched | Out of scope. The site stops reading it at cutover. It also holds unused `public.clients` and `public.bookings` data, protected by RLS with no policies. |
+| Firestore databases | New named databases `site-production` and `site-staging`; leave `(default)` and `aestheticlab-income` alone | `(default)` holds the free tier but belongs to a Telegram calendar bot; `aestheticlab-income` holds accounting data. Separate databases let an IAM condition keep the site's service account away from both. Reads cost $0.33 per million in Belgium (Cloud Billing catalog, 2026-10-25), so even the modeled worst case is about $0.44/month. |
 
 ## Success Criteria
 
-Targets marked *provisional* are confirmed or adjusted against the Phase 0 baseline.
+Targets come from the Phase 0 baseline (2026-10-25). Moviestracker's Go web app on Cloud Run sets the reachable level.
 
 - Production `run.googleapis.com/container/instance_count` reaches 0 during quiet hours. The serving revision itself must have min instances 0, not just the IaC template.
-- Cloud Run `container/startup_latencies` p95 ≤ 300 ms (*provisional*).
-- Cold-path first-byte time for `/en-BE/` from Europe ≤ 1 s, including Cloud Run provisioning (*provisional*).
-- Warm-path behavior is no worse than today: the existing p95 latency alert (2 s) stays quiet and Lighthouse LCP/CLS/TBT do not regress on any page.
+- Cloud Run `container/startup_latencies` p95 ≤ 700 ms (today 5,370 ms; Moviestracker 667 ms).
+- Cold-path first-byte time for `/en-BE/` from Europe ≤ 1.2 s, including Cloud Run provisioning (today 5.58 s; Moviestracker 1.08 s).
+- Warm-path behavior is no worse than today: 2xx `request_latencies` p95 ≤ 190 ms (today's value), the existing p95 latency alert (2 s) stays quiet, and Lighthouse LCP/CLS/TBT do not regress on any page.
 - Visual and behavioral parity: all existing Playwright specs pass against the Go server, and screenshot comparison against the Qwik site shows no unreviewed differences.
 - Every current public URL keeps working: localized pages, `robots.txt`, `sitemap.xml`, `manifest.json`, `og/*`, fonts, icons, and pre-rewrite hashed image URLs. A Qwik tab left open across the cutover recovers to the Go site instead of breaking.
 - No serving or rollback-target revision references the Supabase secret once it is deleted. The runtime holds no database credentials.
-- Modeled worst-case production Firestore reads stay under the 50k/day free quota (see the read model below), and actual reads are monitored.
+- Production Firestore reads match the read model below and are monitored. The site's databases are outside the free tier, so the budget is cost, not quota.
 
 ## Scope
 
@@ -56,7 +57,7 @@ Targets marked *provisional* are confirmed or adjusted against the Phase 0 basel
 - Cloud Run request-based billing (`cpu_idle = true`) stays. Min instances are billed while idle; other instances are billed only while serving requests. CPU is disabled or severely limited once a request finishes, so no work may depend on running after the response ([Cloud Run tips](https://docs.cloud.google.com/run/docs/tips/general)).
 - IaC changes to the Cloud Run template create a revision with **no traffic**. `traffic` and the image are in `ignore_changes` (`infra/main.tf:363`). A template change reaches users only with the next CI deploy, which copies the template, and its promotion. For production, that means a published release.
 - Revisions that bind a secret as an environment variable cannot start an instance if retrieving it fails ([Cloud Run secrets](https://docs.cloud.google.com/run/docs/configuring/services/secrets)). With scale-to-zero, every cold start retrieves it.
-- Firestore's free quota (50k reads/day) applies to one database per project: the first one created in a project that has no free-tier database yet ([Firestore quotas](https://docs.cloud.google.com/firestore/quotas)). It is not tied to the name `(default)`.
+- Firestore's free quota applies to one database per project ([Firestore quotas](https://docs.cloud.google.com/firestore/quotas)). In this project, `(default)` already holds it, so the site's new databases are billed from the first read.
 - Content is small and changes rarely. The Supabase `gettimely` schema has 1 contact, 8 service groups, 77 services and 4 staff rows. It has no edge functions or cron jobs, and since stats were last reset it shows 12 inserts and 0 updates, so edits are manual.
 - The container keeps port 3000. A Go image can then be deployed as a no-traffic tagged revision of the existing staging service with no Cloud Run IaC change.
 - `package.json` stays (for Tailwind, DaisyUI, Lucide, sharp and Playwright) and its `version` stays the release-tag source that `deploy.yml` validates.
@@ -74,6 +75,28 @@ Targets marked *provisional* are confirmed or adjusted against the Phase 0 basel
 - `quality.yml` runs Playwright against `bun run dev` with `e2e/mock-supabase.ts` (`playwright.config.ts`).
 - Source media is about 15 MB: gallery, services, hero, team photos and five MP4 clips.
 - Supabase project `aestheticlab` is in eu-central-1 on the free plan. Anon RLS policies expose only active services and staff, so a copy made with the publishable key would miss inactive rows.
+
+## Phase 0 Results (2026-10-25)
+
+Measured with the old probe (`period_seconds = 5`) still serving. Metrics are Cloud Run's 7-day distributions, merged across series. Cloud Run reports percentiles from histogram buckets, so values that land in the same bucket can come out identical.
+
+| Measure | Staging (Qwik) | Production (Qwik) | Moviestracker web (Go) |
+| --- | --- | --- | --- |
+| `startup_latencies` p50 / p95 / p99 | 5,149 / 5,370 / 5,389 ms | 5,149 / 5,370 / 5,389 ms | 513 / 667 / 826 ms |
+| Cold first byte, single request | 5.58 s (idle ~50 min) | — (min 1, never cold) | 1.08 s (idle 79 min) |
+| Warm first byte, `/en-BE/` | 0.14–0.23 s | — | 0.045 s |
+| 2xx `request_latencies` p95 | 165 ms | 190 ms | 372 ms |
+| Memory utilization p99 (of 1 GiB) | 3% | 5% (~54 MB) | 9% |
+| Requests, 7 days | 2,435 | 52,487 | 7,881 |
+| Active instances, hourly max | min 0 / mean 0.79 / max 2 | min 1 / mean 1.03 / max 2 | min 0 / mean 0.99 / max 3 |
+| Image, compressed | 56.9 MB (21 layers) | 56.9 MB | 9.0 MB (13 layers) |
+| HTML, `/en-BE/` | 172 KB | — | — |
+
+- **Startup is one probe period.** Startup latency sits at about 5.1 s, almost exactly the 5 s probe interval: the first probe misses and the next one is 5 s later. Phase 1 (probe every 1 s) should remove most of it on its own. Re-measure once the new probe is on a serving revision.
+- **Production traffic is mostly synthetic.** At about 7.5k requests/day, the uptime checks account for roughly 5.2k (`/healthz` 1/min and `/dependencyz` 1/5 min from three regions). Real traffic, including assets, is around 2.3k requests/day. That's why one instance is always active.
+- **Memory headroom is large.** Qwik peaks near 54 MB, so 256 MiB is safe even before the Go rewrite.
+- **Firestore is already in use.** `(default)` (europe-west1, free tier, created 2026-04-27) holds `calendar_telegram_*` collections from a Telegram calendar bot. `aestheticlab-income` (europe-west1, created 2026-10-08) holds an accounting app's `users`, `accounts`, `ledger`, `audit` and related collections. Neither is managed in `infra/`. Only collection names were listed; no documents were read.
+- **Lighthouse and screenshots are deferred.** PageSpeed Insights' shared daily quota was exhausted. Since Qwik stays in the repo until Phase 10, both are captured side by side from local builds of each stack in Phase 6.
 
 ## Target Architecture
 
@@ -99,10 +122,8 @@ Pinned toolchain, as in Moviestracker: Go 1.27.x, `github.com/a-h/templ`, `githu
 
 ### Content on Firestore
 
-- **Databases:** both Native mode in `europe-west1`, managed in OpenTofu with delete protection.
-  - Phase 0 lists the project's existing Firestore databases. If one already holds the free tier, either use it for production or accept that production is billed.
-  - If none exists, create the production database first, alone in its own apply, so it receives the free tier. Create the staging database in a later apply.
-  - Names: `(default)` for production and `staging` for staging, unless Phase 0 finds an existing free-tier database to reuse.
+- **Databases:** `site-production` and `site-staging`, Native mode in `europe-west1`, managed in OpenTofu with delete protection. Both are billed per read, since `(default)` holds the project's free tier.
+- **Neighbors:** `(default)` (Telegram calendar bot) and `aestheticlab-income` (accounting data) are not the site's. OpenTofu must not manage, import or modify them. The site's identities never get an unconditioned `datastore` role, because a project-wide grant would expose the accounting data.
 - **Data model:** keep Supabase column names as field names (`name`, `name_en`, `name_nl`, `name_fr`, `name_ru`, `name_uk`, `priority`, `active`, `price`, `duration`, …) so parsing and projection port directly.
   - Collections: `service_groups`, `services`, `staff`.
   - Single document: `site/contact`.
@@ -141,12 +162,12 @@ Cache and `singleflight` are per instance, so reads scale with how many instance
 | TTL refreshes, worst case | 3 instances (`max_instances`) plus 1 canary candidate, each busy around the clock: 96 refreshes × 90 documents × 4 | 34,560 |
 | Cold starts | Each new instance fetches once: budget 100 starts/day × 90 | 9,000 |
 | `/dependencyz` and smoke tests | One bounded read per probe, a few dozen per deploy | < 500 |
-| **Worst case total** | | **≈ 44,000** |
-| Realistic | Mostly zero or one instance, intermittent traffic | < 10,000 |
+| **Worst case total** | | **≈ 44,000 (≈ $0.44/month)** |
+| Realistic | About 2.3k real requests/day (Phase 0), mostly zero or one instance | < 10,000 (≈ $0.10/month) |
 
-- The worst case sits under the 50k free quota with little headroom. If Phase 0 traffic or Phase 9 metrics exceed the assumptions, raise the TTL or publish the content as one document, which costs one read per refresh.
-- Add an alert on production Firestore document reads above 40k/day.
-- Staging's database is outside the free tier and is billed per read. At staging traffic this should be negligible; confirm the current read price in Phase 5.
+- At $0.33 per million reads, cost is negligible at any plausible traffic. The 40k/day alert below catches a bug, such as a refresh loop or a broken cache, not normal growth.
+- If reads ever matter, raise the TTL or publish the content as one document, which costs one read per refresh.
+- Staging's database is billed the same way, at staging traffic.
 
 ### Frontend Mapping (Datastar First, DaisyUI First)
 
@@ -182,10 +203,9 @@ A Qwik tab opened before the cutover keeps running Qwik code. On interaction it 
 | Resource | Change | When |
 | --- | --- | --- |
 | `startup_probe` | `period_seconds` 5 → 1, `timeout_seconds` 3 → 1, `failure_threshold` 12 → 60 (same 60 s budget) | Phase 1 |
-| `google_project_service` | Enable `firestore.googleapis.com` | Phase 5 |
-| `google_firestore_database` (production) | Native mode, `europe-west1`, delete protection; created alone, first | Phase 5 |
-| `google_firestore_database` (staging) | Same settings; created in a later apply | Phase 5 |
-| Runtime IAM | `roles/datastore.viewer` per environment, conditioned on its database | Phase 5 |
+| `google_project_service` | Declare `firestore.googleapis.com` (already enabled for the neighboring apps; `disable_on_destroy = false` as for the other APIs) | Phase 5 |
+| `google_firestore_database` | `site-production` and `site-staging`, Native mode, `europe-west1`, delete protection | Phase 5 |
+| Runtime IAM | `roles/datastore.viewer` per environment, conditioned on its own database | Phase 5 |
 | Cloud Run env | Add `FIRESTORE_DATABASE` (and `GOOGLE_CLOUD_PROJECT` if not inferred) | Phase 8 |
 | Cloud Run env | Remove `SUPABASE_URL` and the `SUPABASE_KEY` secret binding | Phase 9b |
 | `google_secret_manager_secret.supabase_key` and runtime IAM | Remove | Phase 9c, after the Qwik rollback window closes |
@@ -203,22 +223,26 @@ A Qwik tab opened before the cutover keeps running Qwik code. On interaction it 
 
 ## Phases
 
-### Phase 0: Baseline
+### Phase 0: Baseline (Done 2026-10-25)
 
-1. Run `gcloud auth login` (the current token has expired).
-2. Measure the Qwik staging service (already min 0): five cold requests after ≥ 20 min idle (`curl -w '%{time_starttransfer}'`), plus `container/startup_latencies` and image size from Artifact Registry.
-3. Record warm p95 latency, peak memory, active instance counts over a typical week, and Lighthouse LCP/CLS/TBT for `/en-BE/` and `/en-BE/pricelist/` on production.
-4. Measure `moviestracker-web` cold starts the same way, for reference.
-5. List Firestore databases in the project (`gcloud firestore databases list`) and record whether one already holds the free tier.
-6. Capture Qwik screenshots for every page × 5 locales × mobile/desktop as the parity reference.
-7. Write the numbers into this plan, finalize the provisional targets, and re-check the read model against the instance counts.
+Results are in "Phase 0 Results" above. Done:
+
+- staging cold and warm requests;
+- 7-day startup and request latency, memory, request and instance metrics for staging, production and `moviestracker-web`;
+- image sizes;
+- the Firestore database list;
+- final targets and the read model.
+
+The 7-day startup distribution replaced the planned five spaced cold requests: it covers every cold start of the week, not five samples. Lighthouse and screenshots moved to Phase 6.
 
 ### Phase 1: Probe Quick Win (Qwik, Now)
 
 1. Change the startup probe to `period_seconds = 1`, `timeout_seconds = 1`, and `failure_threshold = 60`, keeping today's 60 s startup budget (12 × 5 s).
 2. Merge through the normal PR to `staging`, then apply through the infrastructure workflow.
 3. Deploy and promote so the change reaches serving revisions: a merge to `staging` for staging, the next published release for production.
-4. Re-measure staging cold starts.
+4. Re-measure staging cold starts and `startup_latencies`. Expected: well under 1 s, against 5.1 s at Phase 0.
+
+Status: merged in [#235](https://github.com/lieranderl/qwik-aestheticlab/pull/235) as `757bcdc`. The plan-only run showed only the probe fields changing. The apply was awaiting approval when Phase 0 ran.
 
 ### Phase 2: Go Scaffold
 
@@ -244,10 +268,7 @@ A Qwik tab opened before the cutover keeps running Qwik code. On interaction it 
 
 ### Phase 5: Content on Firestore
 
-1. IaC, in order, each through the infrastructure workflow:
-   1. Enable the API and create the production database (or adopt the free-tier database found in Phase 0).
-   2. Create the staging database and the runtime IAM.
-   3. Confirm that the production database holds the free tier, and check the current read price.
+1. IaC through the infrastructure workflow: declare the Firestore API, create `site-production` and `site-staging`, and add runtime IAM conditioned on each database. Review the saved plan to confirm it doesn't touch `(default)` or `aestheticlab-income`.
 2. Write `docs/CONTENT.md` (data model, field meanings, how to edit in the console, the ~15 min propagation delay).
 3. `cmd/content-import`: load an exported JSON into a target database idempotently (upsert by ID). Seed staging first, then production.
 4. Port parsing and projection from `src/shared/{supabase-data,locale-content,service-utils,service-catalog}.ts` and their specs as table-driven Go tests over Firestore documents.
@@ -266,7 +287,8 @@ A Qwik tab opened before the cutover keeps running Qwik code. On interaction it 
 1. Layout, `<head>` and SEO metadata per page (port `e2e/seo-head.spec.ts` expectations), Consent Mode v2 and the cookie banner.
 2. Pricelist first: it covers content, i18n and images together.
 3. Home sections (hero with video, services, gallery, team, FAQ, contact, footer), policies, 404.
-4. Run the shared Playwright specs under the Go config, and add that run to CI next to the Qwik run. Compare screenshots against the Phase 0 reference.
+4. Run the shared Playwright specs under the Go config, and add that run to CI next to the Qwik run.
+5. Capture screenshots (every page × 5 locales × mobile/desktop) and Lighthouse LCP/CLS/TBT for `/en-BE/` and `/en-BE/pricelist/` from local production builds of both stacks, side by side and under the same conditions. Review every difference.
 
 ### Phase 7: Compatibility
 
@@ -328,14 +350,14 @@ A Qwik tab opened before the cutover keeps running Qwik code. On interaction it 
 
 ## Phase-Wise Gating
 
-- Phase 0: baseline numbers, instance counts, Firestore database list and screenshots recorded here; targets and read model finalized.
-- Phase 1: OpenTofu format and validate pass, the saved plan shows only probe fields changing, and the staging smoke test passes. The promoted staging revision shows the new probe.
+- Phase 0 (met): baseline numbers, instance counts and the Firestore database list recorded here; targets and read model finalized.
+- Phase 1: OpenTofu format and validate pass, the saved plan shows only probe fields changing, and the staging smoke test passes. The promoted staging revision shows the new probe, and staging `startup_latencies` drops well below the 5.1 s baseline.
 - Phase 2: `make ci` passes; the container serves `/healthz` locally; local process-start-to-first-200 is measured; the Qwik CI jobs are unchanged and green.
 - Phase 3: `assets-check` shows no diff; a test checks that every manifest entry exists on disk with correct dimensions.
 - Phase 4: the translation-completeness test passes for all locales; locale routing tests cover `/`, each locale root, and unknown paths.
 - Phase 5:
-  - The production database holds the free tier.
-  - IaC plans reviewed for both environments.
+  - IaC plans reviewed for both environments, with no change to `(default)` or `aestheticlab-income`.
+  - The runtime service accounts cannot read either neighboring database (checked with a denied read).
   - Document counts per collection match the Supabase row counts (1 / 8 / 77 / 4 at time of writing).
   - Emulator tests cover the cold-path and in-request refresh cases.
   - `go test -race` passes, and both e2e configurations are green.
