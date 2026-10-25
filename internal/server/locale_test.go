@@ -28,6 +28,12 @@ func TestPagesWithoutATrailingSlashRedirectToTheirSlashedURL(t *testing.T) {
 		"/en-BE/pricelist":                "/en-BE/pricelist/",
 		"/nl-BE/pricelist?category=laser": "/nl-BE/pricelist/?category=laser",
 		"/xyz":                            "/xyz/",
+		// Escapes stay escapes: %3F is part of the path, not a query, and
+		// %23 not a fragment.
+		"/nl-BE/a%3Fb?x=1": "/nl-BE/a%3Fb/?x=1",
+		"/nl-BE/a%23b":     "/nl-BE/a%23b/",
+		"/nl-BE/a%2Fb":     "/nl-BE/a%2Fb/",
+		"/nl-BE/caf%C3%A9": "/nl-BE/caf%C3%A9/",
 	} {
 		res := get(t, h, path)
 		if res.Code != http.StatusMovedPermanently {
@@ -86,6 +92,11 @@ func TestTheSlashRedirectNeverLeavesTheSite(t *testing.T) {
 		{"//evil.example", "/%2Fevil.example"},
 		{"/\\evil.example", ""},
 		{"/\\evil.example", "/%5Cevil.example"},
+		// Browsers drop tabs and newlines from a URL, so /%09/evil.example
+		// must not come back as a Location of "/\t/evil.example/".
+		{"/\t/evil.example/x", "/%09/evil.example/x"},
+		{"/\n/evil.example/x", "/%0A/evil.example/x"},
+		{"/\r\n/evil.example", "/%0D%0A/evil.example"},
 	} {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.URL.Path, req.URL.RawPath = tc.path, tc.rawPath
@@ -96,6 +107,9 @@ func TestTheSlashRedirectNeverLeavesTheSite(t *testing.T) {
 		}
 		if !strings.HasPrefix(loc, "/") || strings.HasPrefix(loc, "//") || strings.HasPrefix(loc, "/\\") {
 			t.Errorf("%q (raw %q) redirected off the site: %d %q", tc.path, tc.rawPath, res.Code, loc)
+		}
+		if strings.ContainsFunc(loc, func(r rune) bool { return r <= ' ' || r == 0x7f }) {
+			t.Errorf("%q (raw %q): Location %q has control characters or spaces a browser would drop", tc.path, tc.rawPath, loc)
 		}
 	}
 }

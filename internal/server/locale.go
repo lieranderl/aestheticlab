@@ -3,8 +3,10 @@ package server
 import (
 	"io"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
+	"unicode"
 
 	"github.com/lieranderl/aestheticlab/internal/i18n"
 )
@@ -28,29 +30,41 @@ func home(w http.ResponseWriter, r *http.Request) {
 // trailing slash is redirected to it (301, query kept), as Qwik City does;
 // anything else is a 404 in the path's locale.
 func pages(w http.ResponseWriter, r *http.Request) {
-	p := r.URL.Path
-	if (r.Method == http.MethodGet || r.Method == http.MethodHead) && wantsSlash(p) {
-		target := p + "/"
-		if r.URL.RawQuery != "" {
-			target += "?" + r.URL.RawQuery
+	if r.Method == http.MethodGet || r.Method == http.MethodHead {
+		if target, ok := slashed(r.URL); ok {
+			// #nosec G710 -- target is this request's own escaped path plus
+			// "/", and slashed refuses anything a browser could read as
+			// another site (TestTheSlashRedirectNeverLeavesTheSite).
+			http.Redirect(w, r, target, http.StatusMovedPermanently)
+			return
 		}
-		// #nosec G710 -- target is this request's own path plus "/": wantsSlash
-		// refuses the //host and /\host paths a browser would read as another
-		// site (TestTheSlashRedirectNeverLeavesTheSite).
-		http.Redirect(w, r, target, http.StatusMovedPermanently)
-		return
 	}
 	notFound(w, r)
 }
 
-// wantsSlash reports whether p names a page that lacks its trailing slash:
-// not a file (/favicon.svg), and not a path a browser would read as another
-// site's (//evil.example, /\evil.example).
-func wantsSlash(p string) bool {
-	if p == "" || strings.HasSuffix(p, "/") || strings.HasPrefix(p, "//") || strings.Contains(p, `\`) {
-		return false
+// slashed is u's page URL with its trailing slash, if u names a page that
+// lacks one: not a file (/favicon.svg), and not a path a browser could read
+// as another site's (//evil.example, /\evil.example, /%09/evil.example).
+//
+// The path is used escaped, as the request sent it, so %3F, %23 and %2F
+// stay part of the path rather than becoming a query, a fragment or a
+// separator, and control characters stay encoded instead of reaching the
+// browser, which would drop them.
+func slashed(u *url.URL) (string, bool) {
+	p := u.Path
+	if p == "" || strings.HasSuffix(p, "/") || strings.Contains(path.Base(p), ".") {
+		return "", false
 	}
-	return !strings.Contains(path.Base(p), ".")
+	escaped := u.EscapedPath()
+	if strings.HasPrefix(p, "//") || strings.ContainsAny(p, `\`) || strings.ContainsFunc(p, unicode.IsControl) ||
+		!strings.HasPrefix(escaped, "/") || strings.HasPrefix(escaped, "//") {
+		return "", false
+	}
+	target := escaped + "/"
+	if u.RawQuery != "" {
+		target += "?" + u.RawQuery
+	}
+	return target, true
 }
 
 // notFound is the 404 answer, in the locale the path names. Phase 6 of
