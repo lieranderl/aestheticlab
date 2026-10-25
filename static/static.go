@@ -1,11 +1,11 @@
-// Package static embeds the site's built static files in the Go binary;
+// Package static embeds the site's static files in the Go binary;
 // internal/server serves them under /static/.
 package static
 
 import "embed"
 
-// Files holds the static files. Phase 3 adds the built CSS, scripts, fonts
-// and image variants.
+// Files holds favicon.svg and dist/, the content-hashed CSS, scripts, fonts
+// and media frontend/build.mjs builds (bun run assets).
 //
-//go:embed *.svg
+//go:embed favicon.svg all:dist
 var Files embed.FS

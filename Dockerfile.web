@@ -5,12 +5,26 @@
 #
 #   docker build -f Dockerfile.web -t aestheticlab-web:local .
 
+# Static assets (frontend/build.mjs): CSS, fonts, Datastar, icons and WebP
+# variants, content-hashed into static/dist/ for the Go binary to embed.
+FROM --platform=$BUILDPLATFORM oven/bun:1.4.2@sha256:9114c058aeae42162ee16dd5084b95fe9473970bb6bcb5b232ab1630f0546895 AS assets
+WORKDIR /src
+COPY package.json bun.lock ./
+RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache \
+	bun install --frozen-lockfile
+COPY frontend ./frontend
+COPY internal ./internal
+COPY src/media ./src/media
+COPY public/fonts ./public/fonts
+RUN bun run assets
+
 FROM --platform=$BUILDPLATFORM golang:1.27.3-bookworm@sha256:21ade014faf952365b9ecbd8dbdb87176fbacb82fac9fb132d9f2a7b8cc3f132 AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 COPY cmd ./cmd
 COPY internal ./internal
 COPY static ./static
+COPY --from=assets /src/static/dist ./static/dist
 # No `go mod download`: go.mod also lists the lint and security tools, and the
 # build fetches only the modules cmd/web imports.
 ARG TARGETOS TARGETARCH

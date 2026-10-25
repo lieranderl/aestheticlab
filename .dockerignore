@@ -39,3 +39,6 @@ npm-debug.log*
 *.swp
 *.swo
 *~
+# Built by the Dockerfile.web assets stage; local builds must not leak in.
+static/dist
+frontend/generated

@@ -122,7 +122,18 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: go.sum
 
-      # Same gate as locally: templ generate -check, go vet, staticcheck,
+      # make ci builds the static assets (frontend/build.mjs) before the Go
+      # tests that check them.
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun ci
+
+      # Same gate as locally: assets and their committed manifest, the
+      # generator tests, templ generate -check, go vet, staticcheck,
       # golangci-lint, gofmt, go test -race, govulncheck, gosec and the build.
       - name: Go quality gate
         run: make ci

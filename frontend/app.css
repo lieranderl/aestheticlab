@@ -1,0 +1,201 @@
+/* Aesthetic Lab's stylesheet for the Go site (cmd/web), built by
+   frontend/build.mjs with the Tailwind CLI. The theme, motion tokens and
+   utilities are src/global.css's, unchanged; only the font URLs (served from
+   /static/fonts/) and source scanning differ, and Lenis's stylesheet is gone
+   (native smooth scrolling, plans/go-datastar-scale-to-zero.md). */
+@import "tailwindcss" source(none);
+/* @font-face rules for Onest, written by frontend/build.mjs from
+   @fontsource-variable/onest with hashed /static/fonts/ URLs. */
+@import "./generated/fonts.css";
+
+@source "../internal/**/*.templ";
+@source "../internal/**/*.go";
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+:root {
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snappy: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Motion system: fades, photo slides and hovers. */
+  --ease-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@theme {
+  --font-qestero: "qestero", "Cormorant Garamond", serif;
+  --font-main: "Onest Variable", system-ui, sans-serif;
+  --font-cormorant: "Cormorant Garamond", serif;
+  /* Sage & Linen palette (design canvas "Aesthetic Lab — Motion & Type"). */
+  --color-sage-50: #f2f5f0;
+  --color-sage-100: #e6ebe3;
+  --color-sage-200: #d0d8cc;
+  --color-sage-300: #b0bbac;
+  --color-sage-400: #8b9687;
+  --color-sage-500: #737e70;
+  --color-sage-600: #5a6456;
+  --color-sage-700: #414b3e;
+  --color-sage-800: #2b3328;
+  --color-sage-900: #181f15;
+  --color-linen: #f7f5ef;
+  --color-oat: #efebe2;
+  --color-stone: #ddd8cc;
+  --color-ink: #1c211b;
+  --color-blush: #d9b3a6;
+  --color-rosewood: #8e5a4c;
+
+  /* Page opens: headline lines rise out of a mask, text fades up after them. */
+  --animate-line-up: line-up 1000ms var(--ease-smooth) both;
+  --animate-fade-rise: fade-rise 900ms var(--ease-quint) both;
+  /* Page opens: the hero media slides 60px inside its fixed frame (never resizes). */
+  --animate-media-slide: media-slide 1400ms var(--ease-quint) 120ms both;
+  --animate-fade-in: fade-in 200ms var(--ease-snappy) both;
+  /* Reviews: the next quote cross-fades in. */
+  --animate-quote-in: quote-in 500ms var(--ease-smooth) both;
+
+  @keyframes line-up {
+    from { transform: translateY(110%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes fade-rise {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes media-slide {
+    from { transform: translateX(60px); }
+    to { transform: translateX(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes quote-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* Cormorant Garamond - Weights 400, 500, 600 */
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/static/fonts/cormorant-garamond-400-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/static/fonts/cormorant-garamond-400.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/static/fonts/cormorant-garamond-500-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/static/fonts/cormorant-garamond-500.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/static/fonts/cormorant-garamond-600-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/static/fonts/cormorant-garamond-600.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "qestero";
+  src: url("/static/fonts/QESTERO-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+/* Light only: the Aesthetic theme below is the one theme, for everyone.
+   src/global.css also loads DaisyUI's built-in light and dark themes, and
+   since the Qwik site sets no data-theme, dark-mode visitors got DaisyUI's
+   dark base colours under the sage palette. That was a bug, fixed here
+   (plans/go-datastar-scale-to-zero.md, Decisions). */
+@plugin "daisyui" {
+  themes: false;
+  logs: false;
+}
+
+@plugin "daisyui/theme" {
+  name: "Aesthetic";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+  --color-base-100: #f7f5ef;
+  --color-base-200: #efebe2;
+  --color-base-300: #ddd8cc;
+  --color-base-content: #1c211b;
+  --color-primary: #8b9687;
+  --color-primary-content: #1c211b;
+  --color-secondary: #8e5a4c;
+  --color-secondary-content: #f7f5ef;
+  --color-accent: #d9b3a6;
+  --color-accent-content: #1c211b;
+  --color-neutral: #1c211b;
+  --color-neutral-content: #f7f5ef;
+  --color-info: #475569;
+  --color-info-content: #f1f6f8;
+  --color-success: #3a7a6a;
+  --color-success-content: #f9fbfa;
+  --color-warning: #b35934;
+  --color-warning-content: #fff9f0;
+  --color-error: #9e3a3a;
+  --color-error-content: #fce9e8;
+  --radius-selector: 0.25rem;
+  --radius-field: 0.375rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+
+
+/* Giant wordmark drifting sideways with scroll (Paxon-style). CSS scroll-driven
+   animation: no JS, and browsers without support simply show it still. */
+@keyframes drift-word {
+  from { transform: translateX(6%); }
+  to { transform: translateX(-22%); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .drift-word {
+      animation: drift-word linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+    }
+  }
+}

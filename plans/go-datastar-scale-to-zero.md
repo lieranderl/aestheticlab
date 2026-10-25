@@ -18,6 +18,7 @@ The rewrite follows the scaffolding, conventions and agent instructions of `/Use
 | Startup probe | Ship Phase 1 now on the Qwik site | Helps today's cold starts and carries over unchanged. |
 | Supabase project | Leave untouched | Out of scope. The site stops reading it at cutover. It also holds unused `public.clients` and `public.bookings` data, protected by RLS with no policies. |
 | Firestore databases | New named databases `site-production` and `site-staging`; leave `(default)` and `aestheticlab-income` alone | `(default)` holds the free tier but belongs to a Telegram calendar bot; `aestheticlab-income` holds accounting data. Separate databases let an IAM condition keep the site's service account away from both. Reads cost $0.33 per million in Belgium (Cloud Billing catalog, 2026-10-25), so even the modeled worst case is about $0.44/month. |
+| Dark mode | Light only: DaisyUI's built-in themes off, so the Aesthetic theme applies to every visitor | The Qwik site loads DaisyUI's light and dark themes and sets no `data-theme`, so visitors in dark mode get DaisyUI's dark base colours (`base-100` `#1d232a`) under the sage palette. That's a bug, not a design. The Go site fixes it, and `TestTheStylesheetIsLightOnlyWithTheAestheticTheme` guards against a regression. The fix ships with the cutover; Phase 6 screenshots compare in light mode. |
 
 ## Success Criteria
 
@@ -45,7 +46,7 @@ Targets come from the Phase 0 baseline (2026-10-25). Moviestracker's Go web app 
 
 ## Non-Goals
 
-- Visual redesign, new features or content changes.
+- Visual redesign, new features or content changes, apart from the light-only fix in Decisions.
 - A content admin UI; content is edited in the Firebase console.
 - Moving media to Cloud Storage or Cloud CDN; this is a follow-up if cold starts triggered by asset requests matter.
 - Changing, exporting or deleting anything in the Supabase project.
@@ -276,6 +277,34 @@ Status (2026-10-25): scaffold on `feat/go-scaffold`.
 3. `frontend/icons.mjs` → `internal/views/icons_gen.go` for the icons the templates use, as in Moviestracker.
 4. `frontend/images.mjs` (sharp): AVIF and WebP variants at the widths the layout uses, content-hashed names under `/static/`, and the generated `internal/assets/manifest_gen.go` with width, height and srcset per image. Byte-identical sources map to one canonical entry, keeping the existing invariant.
 5. Precompression of text assets. Vendor `datastar.js` at a pinned version.
+
+Status (2026-10-25): on `feat/go-assets`.
+
+- **One build, `bun run assets`** (`frontend/icons.mjs`, then `frontend/build.mjs`), writes content-hashed files to `static/dist/`. They are embedded with `go:embed all:dist` and served under `/static/dist/`.
+- **What is committed:** only the generated Go (`internal/assets/manifest_gen.go`, `internal/views/icons_gen.go`). Hashes come from source bytes and encoder settings, never from encoder output, so every machine writes the same manifest. `make assets-check` fails when it is stale, and `make ci` runs it first. The CI `go` job and `Dockerfile.web` (new Bun assets stage) build the assets themselves.
+- **CSS:** `frontend/app.css` is `src/global.css` unchanged, except:
+  - fonts load from `/static/` with hashed names;
+  - the Lenis import is gone, replaced by `scroll-behavior: smooth` outside reduced motion;
+  - only `internal/**/*.templ` and `*.go` are scanned.
+
+  Today it's 20.3 KB (4.7 KB Brotli), before any page classes. `custom-container` isn't defined anywhere in `src/global.css`, so there was nothing to carry over.
+- **Dark mode:** DaisyUI's built-in themes are off (`themes: false`), so the Aesthetic theme is the only one, with `color-scheme: light`. This fixes the Qwik site's dark-mode bug; see Decisions.
+- **Fonts:** Onest's seven subsets and `public/fonts` are copied with hashed names. The three Cormorant Garamond weights are byte-identical files, so they share two URLs, per the byte-identical rule.
+- **Images match Qwik City's own settings,** read from its vite-imagetools config:
+  - WebP at quality 75 and widths 200/400/600/800/1200, never enlarged;
+  - EXIF orientation applied (`white-shimmer.jpg` renders upright at 1200×1600);
+  - no AVIF, a deliberate change from step 4.
+
+  72 of the 104 variants the live pages use are byte-identical to Qwik's; the rest differ by at most 1 px of height rounding and under 2% in size. `lazer1.jpg` and `universal.jpg` share one variant set. Videos, posters and SVGs are copied with hashed names.
+- **Icons:** Heroicons outline and mini plus Simple Icons, not Lucide. These are the sets the Qwik site renders through `@qwikest/icons`, and the `Icon` templ component copies their 1em attributes. The seven icons Qwik uses today are always generated.
+- **Compression:** CSS, JS and SVG get `.br` and `.gz` siblings. `internal/server` serves the best one the browser accepts (honouring `q=0`), with `Vary: Accept-Encoding`. Datastar v1.0.4 is vendored in `frontend/vendor/datastar.js`, the same build Moviestracker pins.
+- **Media location:** sources still come from `src/media` and `public/fonts`. Phase 10 moves them when `src/` goes away.
+- **Measured:**
+  - full build 7.7 s, rebuild 0.5 s;
+  - 234 built files, 12 MB;
+  - binary 19.3 MB (from 6.7 MB);
+  - image about 14.2 MB compressed (arm64, Apple `container`);
+  - `container run` to first 200 in 1,040 ms, unchanged from Phase 2's 851–1,079 ms.
 
 ### Phase 4: i18n
 
