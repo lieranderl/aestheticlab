@@ -147,16 +147,18 @@ func readLocale(path string) (map[string]string, error) {
 }
 
 // formatText turns {{name}} placeholders into fmt verbs, in the order the
-// English text names them: %v for one, %[1]v, %[2]v… for more. A text with
-// placeholders has its literal % doubled; one without is left as it is.
+// English text names them: %v for one occurrence, %[1]v, %[2]v… for multiple
+// occurrences, including repeated arguments. A text with placeholders has
+// its literal % doubled; one without is left as it is.
 func formatText(text string, order []string) string {
 	if len(order) == 0 {
 		return text
 	}
 	text = strings.ReplaceAll(text, "%", "%%")
+	single := len(order) == 1 && len(placeholder.FindAllStringIndex(text, -1)) == 1
 	return placeholder.ReplaceAllStringFunc(text, func(m string) string {
 		name := placeholder.FindStringSubmatch(m)[1]
-		if len(order) == 1 {
+		if single {
 			return "%v"
 		}
 		return fmt.Sprintf("%%[%d]v", slices.Index(order, name)+1)

@@ -3,10 +3,13 @@ package server_test
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lieranderl/aestheticlab/internal/server"
 )
@@ -111,5 +114,33 @@ func TestAPanicAnswers500AndIsLoggedAsAnError(t *testing.T) {
 	}
 	if strings.Join(messages, ",") != "http_panic,http_request" {
 		t.Errorf("messages = %v, want http_panic then http_request", messages)
+	}
+}
+
+func TestAPanicAfterFlushingAbortsTheResponse(t *testing.T) {
+	var logs bytes.Buffer
+	h := server.Middleware(server.NewLogger(&logs), http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, "partial page")
+		w.(http.Flusher).Flush()
+		panic("render failed")
+	}))
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	client := srv.Client()
+	client.Timeout = 5 * time.Second
+	res, err := client.Get(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = res.Body.Close() }()
+	body, err := io.ReadAll(res.Body)
+	if !errors.Is(err, io.ErrUnexpectedEOF) {
+		t.Errorf("partial response read = %q, %v; want an aborted transfer", body, err)
+	}
+	// Close waits for the handler, so reading its log is race-free.
+	srv.Close()
+	got := entries(t, &logs)
+	if len(got) != 1 || got[0]["message"] != "http_panic" || got[0]["severity"] != "ERROR" {
+		t.Errorf("panic log = %v; want one http_panic error", got)
 	}
 }

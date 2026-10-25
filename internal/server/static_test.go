@@ -135,8 +135,8 @@ func TestFilesWithoutCompressedSiblingsAreServedAsTheyAre(t *testing.T) {
 	if got := res.Header().Get("Content-Encoding"); got != "" {
 		t.Errorf("Content-Encoding = %q, want none", got)
 	}
-	if got := res.Header().Get("Vary"); got != "" {
-		t.Errorf("Vary = %q, want none: there is only one encoding", got)
+	if got := res.Header().Get("Vary"); got != "Accept-Encoding" {
+		t.Errorf("Vary = %q, want Accept-Encoding: clients may reject identity", got)
 	}
 	if got := res.Body.String(); got != "RIFF" {
 		t.Errorf("body = %q", got)
@@ -153,5 +153,65 @@ func TestHeadRequestsGetStaticHeadersWithoutBody(t *testing.T) {
 	}
 	if got := res.Body.String(); got != "" {
 		t.Errorf("body = %q, want none", got)
+	}
+}
+
+func TestStaticResponsesRespectEncodingPreferencesAndExclusions(t *testing.T) {
+	for _, tc := range []struct {
+		name, accept, encoding string
+		status                 int
+	}{
+		{"prefer gzip", "gzip;q=1, br;q=0.1", "gzip", 200},
+		{"prefer identity", "identity;q=1, br;q=0.5", "", 200},
+		{"wildcard", "*;q=1, identity;q=0", "br", 200},
+		{"specific exclusion beats wildcard", "*;q=1, br;q=0, identity;q=0", "gzip", 200},
+		{"reject everything", "br;q=0,gzip;q=0,identity;q=0", "", 406},
+		{"wildcard exclusion", "*;q=0", "", 406},
+		{"explicit identity beats wildcard", "*;q=0, identity;q=0.5", "", 200},
+		{"smallest positive quality", "br;q=0.001, gzip;q=0", "br", 200},
+		{"tab whitespace", "br;\tq=0, gzip", "gzip", 200},
+		{"invalid quality", "br;q=bogus, gzip;q=1", "gzip", 200},
+		{"quality above one", "br;q=1.1, gzip;q=0.5", "gzip", 200},
+		{"too many quality digits", "br;q=0.0001, gzip", "gzip", 200},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			res := getWithEncoding(t, compressedSite(), "/static/dist/app.3f2a9c1b00.css", tc.accept)
+			if res.Code != tc.status || res.Header().Get("Content-Encoding") != tc.encoding {
+				t.Errorf("status/encoding = %d/%q, want %d/%q", res.Code, res.Header().Get("Content-Encoding"), tc.status, tc.encoding)
+			}
+			if res.Header().Get("Vary") != "Accept-Encoding" {
+				t.Error("response does not vary by Accept-Encoding")
+			}
+			if tc.status == 406 && res.Header().Get("Cache-Control") != "no-store" {
+				t.Error("unacceptable representation can be cached")
+			}
+		})
+	}
+}
+
+func TestEncodingPreferencesUseAllHeaderLinesAndAvailableFiles(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/static/dist/app.3f2a9c1b00.css", nil)
+	req.Header.Add("Accept-Encoding", "br;q=0.1")
+	req.Header.Add("Accept-Encoding", "gzip;q=1")
+	res := serve(t, compressedSite(), req)
+	if got := res.Header().Get("Content-Encoding"); got != "gzip" {
+		t.Errorf("encoding = %q, want gzip from the second header line", got)
+	}
+	res = getWithEncoding(t, compressedSite(), "/static/dist/photo.3f2a9c1b00.webp", "br, identity;q=0")
+	if res.Code != http.StatusNotAcceptable {
+		t.Errorf("uncompressed-only image status = %d, want 406", res.Code)
+	}
+}
+
+func TestUncompressedAssetsKeepEncodingExclusionsSafeAcrossCaches(t *testing.T) {
+	h := compressedSite()
+	path := "/static/dist/photo.3f2a9c1b00.webp"
+	accepted := getWithEncoding(t, h, path, "br")
+	if accepted.Code != http.StatusOK || accepted.Header().Get("Vary") != "Accept-Encoding" {
+		t.Errorf("cacheable identity response = %d, Vary %q; must not be reused for clients rejecting identity", accepted.Code, accepted.Header().Get("Vary"))
+	}
+	rejected := getWithEncoding(t, h, path, "br, identity;q=0")
+	if rejected.Code != http.StatusNotAcceptable || rejected.Header().Get("Cache-Control") != "no-store" {
+		t.Errorf("excluded identity response = %d, Cache-Control %q", rejected.Code, rejected.Header().Get("Cache-Control"))
 	}
 }
