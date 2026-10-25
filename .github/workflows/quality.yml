@@ -107,6 +107,26 @@ jobs:
       - name: Dependency audit
         run: bun audit --audit-level=high
 
+  go:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      # Same gate as locally: templ generate -check, go vet, staticcheck,
+      # golangci-lint, gofmt, go test -race, govulncheck, gosec and the build.
+      - name: Go quality gate
+        run: make ci
+
   secrets:
     runs-on: ubuntu-24.04
     timeout-minutes: 10

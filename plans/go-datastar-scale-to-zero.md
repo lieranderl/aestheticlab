@@ -248,8 +248,22 @@ Status: merged in [#235](https://github.com/lieranderl/qwik-aestheticlab/pull/23
 
 1. `go.mod` (`github.com/lieranderl/aestheticlab`), `cmd/web`, `internal/server` with health endpoints, security headers, structured JSON logging matching today's event names, and an embedded static handler with range support (MP4 seeking).
 2. Copy and adapt from Moviestracker: `.golangci.yml`, `.gitleaks.toml`, `.agents/skills/` (Go, Datastar, DaisyUI, TDD), `docs/` guide structure, Makefile targets (`templ`, `templ-check`, `assets`, `assets-check`, `lint`, `test`, `security`, `ci`, `dev` with Air, `firestore` emulator, `snapshot`).
-3. `Dockerfile.go` (Bun assets stage → Go build stage → distroless). The existing `Dockerfile` stays Qwik until cutover.
+3. `Dockerfile.web` (Bun assets stage → Go build stage → distroless). The existing `Dockerfile` stays Qwik until cutover. It can't be named `Dockerfile.go`: the Go tool would parse it as Go source in the module root and fail `go vet ./...`.
 4. Add a Go quality job to `quality.yml` (lint, `go test -race`, govulncheck, gosec, templ/assets diff checks, Firestore emulator tests). Exclude the Go directories in `biome.json`. The existing Qwik jobs, including Qwik e2e, stay unchanged.
+
+Status (2026-10-25): scaffold on `feat/go-scaffold`.
+
+- `cmd/web` serves `/healthz`, `/readyz` and a `/dependencyz` stub (200 until Phase 5), the security headers with the CSP target, the `/static/` handler (ranges, a year's `immutable` caching for `<name>.<8+ hex>.<ext>` names, an hour for the rest, no folder listings), and Cloud Logging JSON (`severity`, `message`): `server_started`, `server_stopping`, `server_stopped`, `http_request` and `http_panic`.
+- The Qwik Makefile keeps `dev`, `lint` and `build`, so the Go targets are `go-dev`, `go-lint` and `go-build` until Phase 10. `make ci` runs `templ-check`, `go-lint`, `test`, `security` and `go-build`. `assets`, `assets-check`, `firestore` and `snapshot` are stubs that fail with a pointer to Phases 3 and 5.
+- The CI job runs `make ci`. The assets stage, assets diff check and emulator tests come with Phases 3 and 5.
+- Measured on an Apple M-series Mac:
+
+  | Measure | Go scaffold | Qwik (Phase 0) |
+  | --- | --- | --- |
+  | Process exec to first `/healthz` 200, local binary (40 runs) | median 4.9 ms, p95 6.5 ms (first run 217 ms, macOS first-exec check) | — |
+  | `container run` to first 200, Apple `container` CLI (5 runs, includes its per-container VM boot) | 851–1,079 ms | — |
+  | Image, compressed (`linux/amd64`) | 3.75 MB (13 layers) | 56.9 MB (21 layers) |
+  | Binary (`darwin/arm64`, `-s -w`) | 6.7 MB | — |
 
 ### Phase 3: Assets
 
