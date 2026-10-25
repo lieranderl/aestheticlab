@@ -285,9 +285,9 @@ Status (2026-10-25): on `feat/go-assets`.
 - **CSS:** `frontend/app.css` is `src/global.css` unchanged, except:
   - fonts load from `/static/` with hashed names;
   - the Lenis import is gone, replaced by `scroll-behavior: smooth` outside reduced motion;
-  - only `internal/**/*.templ` and `*.go` are scanned.
+  - only templates (`internal/**/*.templ`) and the view helpers (`internal/views/*.go`) are scanned, with tests and generated Go left out; otherwise words in texts, test fixtures and SVG paths become DaisyUI CSS.
 
-  Today it's 20.3 KB (4.7 KB Brotli), before any page classes. `custom-container` isn't defined anywhere in `src/global.css`, so there was nothing to carry over.
+  Today it's 14.0 KB, before any page classes; scanning all Go files had produced 20.3 KB of mostly unused rules. `custom-container` isn't defined anywhere in `src/global.css`, so there was nothing to carry over.
 - **Dark mode:** DaisyUI's built-in themes are off (`themes: false`), so the Aesthetic theme is the only one, with `color-scheme: light`. This fixes the Qwik site's dark-mode bug; see Decisions.
 - **Fonts:** Onest's seven subsets and `public/fonts` are copied with hashed names. The three Cormorant Garamond weights are byte-identical files, so they share two URLs, per the byte-identical rule.
 - **Images match Qwik City's own settings,** read from its vite-imagetools config:
