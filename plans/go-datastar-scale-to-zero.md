@@ -18,6 +18,7 @@ The rewrite follows the scaffolding, conventions and agent instructions of `/Use
 | Startup probe | Ship Phase 1 now on the Qwik site | Helps today's cold starts and carries over unchanged. |
 | Supabase project | Leave untouched | Out of scope. The site stops reading it at cutover. It also holds unused `public.clients` and `public.bookings` data, protected by RLS with no policies. |
 | Firestore databases | New named databases `site-production` and `site-staging`; leave `(default)` and `aestheticlab-income` alone | `(default)` holds the free tier but belongs to a Telegram calendar bot; `aestheticlab-income` holds accounting data. Separate databases let an IAM condition keep the site's service account away from both. Reads cost $0.33 per million in Belgium (Cloud Billing catalog, 2026-10-25), so even the modeled worst case is about $0.44/month. |
+| Dark mode | Light only: DaisyUI's built-in themes off, so the Aesthetic theme applies to every visitor | The Qwik site loads DaisyUI's light and dark themes and sets no `data-theme`, so visitors in dark mode get DaisyUI's dark base colours (`base-100` `#1d232a`) under the sage palette. That's a bug, not a design. The Go site fixes it, and `TestTheStylesheetIsLightOnlyWithTheAestheticTheme` guards against a regression. The fix ships with the cutover; Phase 6 screenshots compare in light mode. |
 
 ## Success Criteria
 
@@ -45,7 +46,7 @@ Targets come from the Phase 0 baseline (2026-10-25). Moviestracker's Go web app 
 
 ## Non-Goals
 
-- Visual redesign, new features or content changes.
+- Visual redesign, new features or content changes, apart from the light-only fix in Decisions.
 - A content admin UI; content is edited in the Firebase console.
 - Moving media to Cloud Storage or Cloud CDN; this is a follow-up if cold starts triggered by asset requests matter.
 - Changing, exporting or deleting anything in the Supabase project.
@@ -286,8 +287,8 @@ Status (2026-10-25): on `feat/go-assets`.
   - the Lenis import is gone, replaced by `scroll-behavior: smooth` outside reduced motion;
   - only `internal/**/*.templ` and `*.go` are scanned.
 
-  Today it's 24.6 KB (5 KB Brotli), before any page classes. `custom-container` isn't defined anywhere in `src/global.css`, so there was nothing to carry over.
-- **Dark mode:** DaisyUI's plugin line is kept verbatim, built-in themes included. The Qwik site sets no `data-theme`, so dark-mode visitors get DaisyUI's dark base colours today. That's existing behaviour, flagged rather than changed.
+  Today it's 20.3 KB (4.7 KB Brotli), before any page classes. `custom-container` isn't defined anywhere in `src/global.css`, so there was nothing to carry over.
+- **Dark mode:** DaisyUI's built-in themes are off (`themes: false`), so the Aesthetic theme is the only one, with `color-scheme: light`. This fixes the Qwik site's dark-mode bug; see Decisions.
 - **Fonts:** Onest's seven subsets and `public/fonts` are copied with hashed names. The three Cormorant Garamond weights are byte-identical files, so they share two URLs, per the byte-identical rule.
 - **Images match Qwik City's own settings,** read from its vite-imagetools config:
   - WebP at quality 75 and widths 200/400/600/800/1200, never enlarged;

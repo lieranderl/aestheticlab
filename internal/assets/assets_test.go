@@ -115,6 +115,36 @@ func TestImagesFollowTheirEXIFOrientation(t *testing.T) {
 	}
 }
 
+// The site is light only: every visitor gets the Aesthetic theme, whatever
+// their system colour scheme. (The Qwik site also shipped DaisyUI's dark
+// theme, so dark-mode visitors got its base colours under the sage palette.)
+func TestTheStylesheetIsLightOnlyWithTheAestheticTheme(t *testing.T) {
+	requireBuilt(t)
+	css, err := fs.ReadFile(static.Files, embedded(t, assets.URL("app.css")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(css)
+	if strings.Contains(s, "prefers-color-scheme:dark") || strings.Contains(s, "prefers-color-scheme: dark") {
+		t.Error("app.css switches theme in dark mode")
+	}
+	for _, want := range []string{
+		":where(:root)",
+		"[data-theme=Aesthetic]",
+		"color-scheme:light",
+		"--color-base-100:#f7f5ef",
+		"--color-base-content:#1c211b",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("app.css lacks %s", want)
+		}
+	}
+	// DaisyUI's built-in dark theme sets base-100 to #1d232a.
+	if strings.Contains(s, "#1d232a") {
+		t.Error("app.css still carries DaisyUI's dark theme")
+	}
+}
+
 func TestUnknownNamesResolveToNothing(t *testing.T) {
 	if got := assets.URL("nope.css"); got != "" {
 		t.Errorf("URL(nope.css) = %q", got)

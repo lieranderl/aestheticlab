@@ -137,10 +137,15 @@
 }
 
 
-/* Kept exactly as src/global.css has it, built-in themes included: the Qwik
-   site sets no data-theme, so dark-mode visitors get DaisyUI's dark base
-   colours today. Changing that is a design decision, not part of the port. */
-@plugin "daisyui";
+/* Light only: the Aesthetic theme below is the one theme, for everyone.
+   src/global.css also loads DaisyUI's built-in light and dark themes, and
+   since the Qwik site sets no data-theme, dark-mode visitors got DaisyUI's
+   dark base colours under the sage palette. That was a bug, fixed here
+   (plans/go-datastar-scale-to-zero.md, Decisions). */
+@plugin "daisyui" {
+  themes: false;
+  logs: false;
+}
 
 @plugin "daisyui/theme" {
   name: "Aesthetic";
