@@ -91,7 +91,7 @@ AIR ?= air
 GOLANGCI_LINT ?= $(GO) tool golangci-lint
 GO_DIRS := cmd internal static
 
-.PHONY: templ templ-check go-lint test security go-build ci go-dev assets assets-check firestore snapshot
+.PHONY: templ templ-check go-lint test security go-build ci go-dev assets assets-check frontend-test firestore snapshot
 
 templ: ## Go: generate Go code from templ templates
 	$(GO) tool templ generate
@@ -116,16 +116,24 @@ go-build: ## Go: build the static site binary at bin/web
 	mkdir -p bin
 	CGO_ENABLED=0 $(GO) build -trimpath -ldflags "-s -w" -o bin/web ./cmd/web
 
-ci: templ-check go-lint test security go-build ## Go: the complete quality gate (CI runs it)
+ci: assets-check frontend-test templ-check go-lint test security go-build ## Go: the complete quality gate (CI runs it)
 
-go-dev: ## Go: run the site with Air on http://localhost:3000 (PORT changes it)
+go-dev: assets ## Go: run the site with Air on http://localhost:3000 (PORT changes it)
 	$(AIR)
 
-assets: ## Go: build CSS, icons and image variants (TODO: Phase 3)
-	@echo "make $@ is not implemented yet: plans/go-datastar-scale-to-zero.md, Phase 3" >&2; exit 1
+# Generated Go code the build writes and the repository keeps; the built
+# files themselves (static/dist/) are not committed.
+ASSETS_GENERATED := internal/assets/manifest_gen.go internal/views/icons_gen.go
 
-assets-check: ## Go: fail when built assets are out of date (TODO: Phase 3)
-	@echo "make $@ is not implemented yet: plans/go-datastar-scale-to-zero.md, Phase 3" >&2; exit 1
+assets: ## Go: build CSS, fonts, Datastar, icons and image variants into static/dist/
+	bun run assets
+
+assets-check: assets ## Go: fail when the manifest or icon code differs from what git has
+	@git diff --quiet -- $(ASSETS_GENERATED) && test -z "$$(git ls-files --others --exclude-standard -- $(ASSETS_GENERATED))" || \
+		(echo "Out of date (run make assets, then git add):" && git status --short -- $(ASSETS_GENERATED) && exit 1)
+
+frontend-test: ## Go: unit tests for the asset and icon generators
+	bun run test.frontend
 
 firestore: ## Go: start the Firestore emulator (TODO: Phase 5)
 	@echo "make $@ is not implemented yet: plans/go-datastar-scale-to-zero.md, Phase 5" >&2; exit 1

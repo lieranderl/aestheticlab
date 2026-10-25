@@ -107,6 +107,19 @@
 	},
 	"overrides": [
 		{
+			"includes": ["frontend/*.mjs"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"useQwikValidLexicalScope": "off"
+					},
+					"performance": {
+						"noDynamicNamespaceImportAccess": "off"
+					}
+				}
+			}
+		},
+		{
 			"includes": ["*.{js,cjs,cts,mjs,ts,mts,jsx,tsx}"],
 			"linter": {
 				"rules": {
@@ -138,6 +151,7 @@
 			"src/**/*.{js,cjs,cts,mjs,ts,mts,jsx,tsx,json,yml,yaml,md,html,css,sass,scss,less,vue,svelte}",
 			"e2e/**/*.{js,ts,tsx,json}",
 			"adapters/**/*.{js,cjs,cts,mjs,ts,mts,jsx,tsx}",
+			"frontend/*.mjs",
 			"*.{js,ts,tsx,json,md}",
 			"!src/global.css",
 			"!cmd",

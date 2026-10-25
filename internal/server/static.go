@@ -25,9 +25,17 @@ var contentTypes = map[string]string{
 	".woff2":       "font/woff2",
 }
 
+// encodings are the precompressed siblings frontend/build.mjs writes next to
+// text files (app.<hash>.css.br), in order of preference.
+var encodings = []struct{ name, suffix string }{
+	{"br", ".br"},
+	{"gzip", ".gz"},
+}
+
 // staticFiles serves files under /static/ from files: hashed names are
 // cached for a year, others for an hour, and Range requests let videos seek.
-// Folders are never listed.
+// A text file with precompressed siblings is served in the best encoding the
+// browser accepts. Folders are never listed.
 func staticFiles(files fs.FS) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name := strings.TrimPrefix(r.URL.Path, "/static/")
@@ -37,23 +45,58 @@ func staticFiles(files fs.FS) http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
-		defer func() { _ = f.Close() }()
 
+		h := w.Header()
 		if hashedName.MatchString(name) {
-			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			h.Set("Cache-Control", "public, max-age=31536000, immutable")
 		} else {
-			w.Header().Set("Cache-Control", "public, max-age=3600")
+			h.Set("Cache-Control", "public, max-age=3600")
 		}
 		ext := path.Ext(name)
 		if ct := contentTypes[ext]; ct != "" {
-			w.Header().Set("Content-Type", ct)
+			h.Set("Content-Type", ct)
 		} else if ct := mime.TypeByExtension(ext); ct != "" {
-			w.Header().Set("Content-Type", ct)
+			h.Set("Content-Type", ct)
 		}
+
+		varies := false
+		for _, enc := range encodings {
+			packed, ok := openFile(files, name+enc.suffix)
+			if !ok {
+				continue
+			}
+			varies = true
+			if accepts(r.Header.Get("Accept-Encoding"), enc.name) {
+				_ = f.Close()
+				f = packed
+				h.Set("Content-Encoding", enc.name)
+				break
+			}
+			_ = packed.Close()
+		}
+		if varies {
+			h.Add("Vary", "Accept-Encoding")
+		}
+		defer func() { _ = f.Close() }()
+
 		// Embedded files have no modification time; the hashed name (or
 		// the short max-age) stands in for validators.
 		http.ServeContent(w, r, name, time.Time{}, f)
 	}
+}
+
+// accepts reports whether an Accept-Encoding header allows coding: listed by
+// name (any case) without q=0.
+func accepts(header, coding string) bool {
+	for part := range strings.SplitSeq(header, ",") {
+		name, params, _ := strings.Cut(strings.TrimSpace(part), ";")
+		if !strings.EqualFold(strings.TrimSpace(name), coding) {
+			continue
+		}
+		q, found := strings.CutPrefix(strings.ReplaceAll(strings.ToLower(params), " ", ""), "q=")
+		return !found || strings.Trim(q, "0.") != ""
+	}
+	return false
 }
 
 // openFile opens the regular file name in files, if there is one.

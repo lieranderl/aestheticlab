@@ -277,6 +277,34 @@ Status (2026-10-25): scaffold on `feat/go-scaffold`.
 4. `frontend/images.mjs` (sharp): AVIF and WebP variants at the widths the layout uses, content-hashed names under `/static/`, and the generated `internal/assets/manifest_gen.go` with width, height and srcset per image. Byte-identical sources map to one canonical entry, keeping the existing invariant.
 5. Precompression of text assets. Vendor `datastar.js` at a pinned version.
 
+Status (2026-10-25): on `feat/go-assets`.
+
+- **One build, `bun run assets`** (`frontend/icons.mjs`, then `frontend/build.mjs`), writes content-hashed files to `static/dist/`. They are embedded with `go:embed all:dist` and served under `/static/dist/`.
+- **What is committed:** only the generated Go (`internal/assets/manifest_gen.go`, `internal/views/icons_gen.go`). Hashes come from source bytes and encoder settings, never from encoder output, so every machine writes the same manifest. `make assets-check` fails when it is stale, and `make ci` runs it first. The CI `go` job and `Dockerfile.web` (new Bun assets stage) build the assets themselves.
+- **CSS:** `frontend/app.css` is `src/global.css` unchanged, except:
+  - fonts load from `/static/` with hashed names;
+  - the Lenis import is gone, replaced by `scroll-behavior: smooth` outside reduced motion;
+  - only `internal/**/*.templ` and `*.go` are scanned.
+
+  Today it's 24.6 KB (5 KB Brotli), before any page classes. `custom-container` isn't defined anywhere in `src/global.css`, so there was nothing to carry over.
+- **Dark mode:** DaisyUI's plugin line is kept verbatim, built-in themes included. The Qwik site sets no `data-theme`, so dark-mode visitors get DaisyUI's dark base colours today. That's existing behaviour, flagged rather than changed.
+- **Fonts:** Onest's seven subsets and `public/fonts` are copied with hashed names. The three Cormorant Garamond weights are byte-identical files, so they share two URLs, per the byte-identical rule.
+- **Images match Qwik City's own settings,** read from its vite-imagetools config:
+  - WebP at quality 75 and widths 200/400/600/800/1200, never enlarged;
+  - EXIF orientation applied (`white-shimmer.jpg` renders upright at 1200×1600);
+  - no AVIF, a deliberate change from step 4.
+
+  72 of the 104 variants the live pages use are byte-identical to Qwik's; the rest differ by at most 1 px of height rounding and under 2% in size. `lazer1.jpg` and `universal.jpg` share one variant set. Videos, posters and SVGs are copied with hashed names.
+- **Icons:** Heroicons outline and mini plus Simple Icons, not Lucide. These are the sets the Qwik site renders through `@qwikest/icons`, and the `Icon` templ component copies their 1em attributes. The seven icons Qwik uses today are always generated.
+- **Compression:** CSS, JS and SVG get `.br` and `.gz` siblings. `internal/server` serves the best one the browser accepts (honouring `q=0`), with `Vary: Accept-Encoding`. Datastar v1.0.4 is vendored in `frontend/vendor/datastar.js`, the same build Moviestracker pins.
+- **Media location:** sources still come from `src/media` and `public/fonts`. Phase 10 moves them when `src/` goes away.
+- **Measured:**
+  - full build 7.7 s, rebuild 0.5 s;
+  - 234 built files, 12 MB;
+  - binary 19.3 MB (from 6.7 MB);
+  - image about 14.2 MB compressed (arm64, Apple `container`);
+  - `container run` to first 200 in 1,040 ms, unchanged from Phase 2's 851–1,079 ms.
+
 ### Phase 4: i18n
 
 1. One-off converter from `i18n/<locale>/{app,runtime}.json` (`key@@Default`) to Go tables keyed by English text. Afterwards Go is the source of truth and the JSON files are deleted in Phase 10.

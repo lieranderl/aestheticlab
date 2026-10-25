@@ -23,6 +23,7 @@
 | Main local verification | `bun run verify` |
 | Go site gate (rewrite) | `make ci` |
 | Go site dev (Air) | `make go-dev` |
+| Go site assets (CSS, fonts, icons, images) | `make assets` (`bun run assets`), then commit `internal/assets/manifest_gen.go` and `internal/views/icons_gen.go` |
 | Translation extraction | `bun run qwik-speak-extract` |
 
 ## File-Scoped Commands

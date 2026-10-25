@@ -108,3 +108,7 @@ create_gcloud.sh
 
 # Go site (cmd/web)
 /bin/
+# Built by frontend/build.mjs (bun run assets); internal/assets/manifest_gen.go is committed.
+/static/dist/*
+!/static/dist/.gitkeep
+/frontend/generated/
