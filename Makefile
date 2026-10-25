@@ -91,7 +91,7 @@ AIR ?= air
 GOLANGCI_LINT ?= $(GO) tool golangci-lint
 GO_DIRS := cmd internal static
 
-.PHONY: templ templ-check go-lint test security go-build ci go-dev assets assets-check frontend-test i18n i18n-check firestore test-content snapshot
+.PHONY: templ templ-check go-lint test test-e2e security go-build ci go-dev assets assets-check frontend-test i18n i18n-check firestore test-content snapshot
 
 templ: ## Go: generate Go code from templ templates
 	$(GO) tool templ generate
@@ -107,6 +107,9 @@ go-lint: templ-check ## Go: go vet, staticcheck, golangci-lint and gofmt
 
 test: ## Go: race-enabled test suite
 	$(GO) test -race -count=1 ./...
+
+test-e2e: ## Go: shared browser specs in Chromium, Firefox and WebKit
+	bun run test.e2e.go
 
 security: ## Go: govulncheck and gosec
 	$(GO) tool govulncheck ./...

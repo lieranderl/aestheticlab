@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const localeRedirectPattern = /\/[a-z]{2}-[A-Z]{2}(?:\/|$)/;
 const consentStorageKey = "aestheticlab_cookie_consent_v2";
@@ -25,7 +25,7 @@ test("keeps the current locale prefix in primary navigation links", async ({
 	).toHaveAttribute("href", "/en-BE/#services");
 	await expect(
 		page.getByRole("link", { name: "Privacy Policy", exact: true }),
-	).toHaveAttribute("href", "/en-BE/privacy-policy");
+	).toHaveAttribute("href", /^\/en-BE\/privacy-policy\/?$/);
 });
 
 test("uses the corporate light theme and keeps navigation aligned with page order", async ({
@@ -320,7 +320,7 @@ test.describe("cookie consent banner", () => {
 		).toBeVisible();
 		await expect(
 			page.getByRole("link", { name: "Read our Privacy Policy" }),
-		).toHaveAttribute("href", "/en-BE/privacy-policy");
+		).toHaveAttribute("href", /^\/en-BE\/privacy-policy\/?$/);
 
 		await page.getByRole("button", { name: "Accept analytics" }).click();
 		await expect(

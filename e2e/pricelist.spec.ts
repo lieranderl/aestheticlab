@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("pricelist shows one category at a time with expandable treatments", async ({
 	page,

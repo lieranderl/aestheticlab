@@ -22,6 +22,7 @@
 | Production build                           | `bun run build`                                                                                                   |
 | Main local verification                    | `bun run verify`                                                                                                  |
 | Go site gate (rewrite)                     | `make ci`                                                                                                         |
+| Go site browser tests                      | `make test-e2e` (shared Chromium, Firefox and WebKit specs; embedded snapshot, local HTTPS)                       |
 | Go site dev (Air)                          | `make go-dev`                                                                                                     |
 | Go site assets (CSS, fonts, icons, images) | `make assets` (`bun run assets`), then commit `internal/assets/manifest_gen.go` and `internal/views/icons_gen.go` |
 | Go site texts (from i18n/*/app.json)       | `make i18n`, then commit `internal/i18n/messages_gen.go`                                                          |

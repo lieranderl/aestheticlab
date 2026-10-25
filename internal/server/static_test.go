@@ -9,6 +9,36 @@ import (
 	"github.com/lieranderl/aestheticlab/internal/server"
 )
 
+func TestShareImagesAreAvailableAtTheirPublicURLs(t *testing.T) {
+	files := fstest.MapFS{}
+	for _, locale := range []string{"en-BE", "nl-BE", "fr-BE", "ru-BE", "uk-BE"} {
+		files["dist/og/"+locale+".jpg"] = &fstest.MapFile{Data: []byte("image for " + locale)}
+	}
+	h := server.New(server.Config{Static: files})
+	for _, locale := range []string{"en-BE", "nl-BE", "fr-BE", "ru-BE", "uk-BE"} {
+		t.Run(locale, func(t *testing.T) {
+			res := get(t, h, "/og/"+locale+".jpg")
+			if res.Code != http.StatusOK || res.Body.String() != "image for "+locale {
+				t.Fatalf("status %d, body %.100q; want the locale's image", res.Code, res.Body.String())
+			}
+			if got := res.Header().Get("Content-Type"); got != "image/jpeg" {
+				t.Errorf("Content-Type = %q, want image/jpeg", got)
+			}
+			if got := res.Header().Get("Cache-Control"); got != "public, max-age=3600" {
+				t.Errorf("Cache-Control = %q, want a short cache for an unhashed URL", got)
+			}
+		})
+	}
+	for _, path := range []string{"/og/", "/og/de-BE.jpg", "/og/en-BE.jpg/"} {
+		t.Run(path, func(t *testing.T) {
+			res := get(t, h, path)
+			if res.Code != http.StatusNotFound || res.Header().Get("Cache-Control") != "no-store" {
+				t.Errorf("%s: status %d, cache %q; want an uncached 404", path, res.Code, res.Header().Get("Cache-Control"))
+			}
+		})
+	}
+}
+
 // staticSite serves a few made-up static files.
 func staticSite() http.Handler {
 	return server.New(server.Config{Static: fstest.MapFS{

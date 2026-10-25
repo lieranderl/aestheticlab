@@ -31,7 +31,10 @@ export default defineConfig({
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
 	workers: 1,
-	reporter: "html",
+	outputDir: "test-results/qwik",
+	reporter: [
+		["html", { outputFolder: "playwright-report/qwik", open: "never" }],
+	],
 	// CI runners (WebKit on Linux in particular) render the dev server more slowly.
 	expect: { timeout: process.env.CI ? 10_000 : 5_000 },
 	use: {

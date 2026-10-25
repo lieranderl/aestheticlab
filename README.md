@@ -83,6 +83,16 @@ Open [http://localhost:5173](http://localhost:5173).
 | `bun run qwik-speak-extract` | Extract translation keys into locale files.                  |
 | `bun run docker.build`       | Build local Docker image `aestheticlab:local`.               |
 | `make help`                  | Show Makefile targets.                                       |
+| `make go-dev`                | Start the Go site with hot reload on port 3000.              |
+| `make test-e2e`              | Run the shared browser specs against the Go binary.          |
+
+The Go browser tests build assets and the binary, then start isolated test
+servers on ports 43122 and 43123 using the embedded content snapshot. They
+need Go, Bun, OpenSSL and Playwright's Chromium, Firefox and WebKit browsers
+(`bunx playwright install chromium firefox webkit`). Local HTTPS keeps the
+production CSP intact, including WebKit's insecure-request upgrades. The
+certificate is temporary and is removed when the test server exits. Reports
+are separate under `playwright-report/go/` and `playwright-report/qwik/`.
 
 ## Project Structure
 
