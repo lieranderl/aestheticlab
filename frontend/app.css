@@ -8,8 +8,14 @@
    @fontsource-variable/onest with hashed /static/fonts/ URLs. */
 @import "./generated/fonts.css";
 
+/* Classes live in templates and the view helpers that build them. Texts,
+   tests and generated Go are left out: words like "menu", "link" or "list"
+   in a translation or a test fixture would otherwise become DaisyUI CSS. */
 @source "../internal/**/*.templ";
-@source "../internal/**/*.go";
+@source "../internal/views/*.go";
+@source not "../internal/**/*_gen.go";
+@source not "../internal/**/*_templ.go";
+@source not "../internal/**/*_test.go";
 
 @media (prefers-reduced-motion: no-preference) {
   html {

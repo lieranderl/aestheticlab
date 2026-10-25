@@ -28,11 +28,13 @@ func New(cfg Config) http.Handler {
 	// TODO(Phase 5): one bounded Firestore read.
 	mux.HandleFunc("GET /dependencyz", probe)
 	mux.HandleFunc("GET /static/", staticFiles(cfg.Static))
+	mux.HandleFunc("GET /{$}", home)
+	mux.HandleFunc("/", pages)
 	log := cfg.Logger
 	if log == nil {
 		log = slog.Default()
 	}
-	return Middleware(log, mux)
+	return Middleware(log, withLocale(mux))
 }
 
 // probe answers a health probe, never from a cache.
