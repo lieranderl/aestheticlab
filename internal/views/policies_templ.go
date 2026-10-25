@@ -166,14 +166,14 @@ func Privacy() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<h1 class=\"font-cormorant text-[2.875rem] leading-[0.95] lg:text-[5rem] lg:leading-[0.9]\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<h1 class=\"font-cormorant text-[2.875rem] leading-[0.95] wrap-anywhere lg:text-[5rem] lg:leading-[0.9]\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Privacy Policy"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/policies.templ`, Line: 35, Col: 121}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/policies.templ`, Line: 35, Col: 135}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {

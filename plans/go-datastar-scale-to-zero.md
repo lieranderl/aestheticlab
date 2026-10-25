@@ -394,7 +394,23 @@ Status (2026-10-25): code and IaC on `feat/go-content`; the IaC apply, the impor
 4. Run the shared Playwright specs under the Go config, and add that run to CI next to the Qwik run.
 5. Capture screenshots (every page × 5 locales × mobile/desktop) and Lighthouse LCP/CLS/TBT for `/en-BE/` and `/en-BE/pricelist/` from local production builds of both stacks, side by side and under the same conditions. Review every difference.
 
-Status (2026-10-25): split into three PRs. 6a (shell and pricelist) is #246 on `feat/go-pages`, 6b (home sections) is on `feat/go-home`, and 6c (policies and the branded 404) follows.
+Status (2026-10-25): 6a (shell and pricelist, #246) and 6b (home sections, #247) are merged. 6c (policies and the branded 404) is on `feat/go-policies`, rebased onto `staging` after 6b's squash merge.
+
+6c completion sequence:
+
+1. Verify the existing policy and localized 404 implementation against the HTTP tests and the shared branded-404 browser spec.
+2. Upgrade the indirect `github.com/klauspost/compress` dependency from v1.18.0 to v1.18.7. Both #247's container check and the subsequent staging pipeline failed on CVE-2026-63209; the deployment stopped before building or promoting an image.
+3. Run `make ci`, the repository formatting check, and Markdown lint for this plan. Commit the verification record and dependency fix, push the rebased branch with an explicit lease, and open a PR targeting `staging`.
+4. Monitor every PR check, including `go` and `go-container`, and inspect any failure before reporting the pipeline result.
+
+Scope: the existing privacy policy, care notes and branded 404, plus the dependency patch needed by the container gate. The shared Go Playwright configuration/CI job and the full screenshot/Lighthouse matrix remain Phase 6 follow-up work. No cloud configuration or content changes are needed for 6c; local verification uses the embedded snapshot.
+
+6c verification (2026-10-25):
+
+- The privacy policy and care notes render in all five locales; `?tab=laser` selects the laser instructions. Unknown URLs return the branded localized 404 with `noindex`, one main element and no phone booking bar.
+- Browser verification caught the Russian privacy heading expanding a 390 px page to 419 px. `wrap-anywhere` fixes its intrinsic width; the same overflow assertion now passes in all three browsers.
+- Nine local Playwright cases passed across Chromium, Firefox and WebKit: the shared branded-404 assertions, and policy pages in all five locales at 1280 and 390 px, including radio-tab switching and reopening cookie settings. Local HTTPS preserves the production CSP; third-party requests are isolated. These temporary checks do not replace the shared Go configuration/CI follow-up.
+- Whole-branch review and the heading-fix review found no actionable issues. The required Go quality gate, formatting and Markdown checks are run before publishing the PR; its remote container scan is the final security-gate verification.
 
 - **6a: shell and pricelist.**
   - The layout carries the head of `router-head.tsx`: canonical, five alternates plus x-default, Open Graph and Twitter tags with the per-language share image, and JSON-LD as a data block, which CSP doesn't block.
