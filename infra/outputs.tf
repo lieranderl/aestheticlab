@@ -10,6 +10,10 @@ output "runtime_service_accounts" {
   value = { for environment, account in google_service_account.runtime : environment => account.email }
 }
 
+output "firestore_databases" {
+  value = { for environment, database in google_firestore_database.site : environment => database.name }
+}
+
 output "service_urls" {
   value = { for environment, service in google_cloud_run_v2_service.web : environment => service.uri }
 }

@@ -25,6 +25,8 @@
 | Go site dev (Air)                          | `make go-dev`                                                                                                     |
 | Go site assets (CSS, fonts, icons, images) | `make assets` (`bun run assets`), then commit `internal/assets/manifest_gen.go` and `internal/views/icons_gen.go` |
 | Go site texts (from i18n/*/app.json)       | `make i18n`, then commit `internal/i18n/messages_gen.go`                                                          |
+| Go site content tests (Firestore emulator) | `make firestore`, then `make test-content`                                                                        |
+| Go site content snapshot (from production) | `make snapshot`, then commit `internal/content/snapshot.json`; see `docs/CONTENT.md`                              |
 | Translation extraction                     | `bun run qwik-speak-extract`                                                                                      |
 
 ## File-Scoped Commands
@@ -56,7 +58,7 @@
 - `i18n/` contains Qwik Speak locale assets; update all five locales through extraction when keys change.
 - `infra/` owns OpenTofu-managed GCP resources; `.github/workflows/` owns delivery automation.
 - `cmd/`, `internal/`, `static/`, `Dockerfile.web` and `.agents/skills/` (Go, Datastar, DaisyUI, TDD) belong to the Go + Datastar rewrite in `plans/go-datastar-scale-to-zero.md`, which replaces the Qwik site; write Go test-first at public seams with `net/http/httptest`.
-- `plans/` holds durable execution plans; `docs/prompt-pack.md` holds reusable prompts, not policy.
+- `plans/` holds durable execution plans; `docs/CONTENT.md` documents the Go site's Firestore content; `docs/prompt-pack.md` holds reusable prompts, not policy.
 
 ## Key Conventions
 

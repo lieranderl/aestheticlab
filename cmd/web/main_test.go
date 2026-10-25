@@ -128,3 +128,37 @@ func TestAnInvalidPortStopsTheServerBeforeItStarts(t *testing.T) {
 		}
 	}
 }
+
+func TestWithoutAContentDatabaseTheServerStartsAndSaysSo(t *testing.T) {
+	port := freePort(t)
+	var logs syncBuffer
+	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
+	done := make(chan error, 1)
+	go func() { done <- run(ctx, env(map[string]string{"PORT": strconv.Itoa(port)}), &logs) }()
+
+	url := "http://127.0.0.1:" + strconv.Itoa(port) + "/dependencyz"
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		res, err := http.Get(url) //nolint:gosec // the test's own local server
+		if err == nil {
+			_, _ = io.Copy(io.Discard, res.Body)
+			_ = res.Body.Close()
+			if res.StatusCode != http.StatusServiceUnavailable {
+				t.Errorf("/dependencyz status = %d, want 503 without a database", res.StatusCode)
+			}
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("/dependencyz never answered: %v", err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	stop()
+	if err := <-done; err != nil {
+		t.Fatalf("run = %v", err)
+	}
+	if !strings.Contains(logs.String(), `"message":"content_database_not_configured"`) {
+		t.Errorf("log lacks content_database_not_configured: %s", logs.String())
+	}
+}

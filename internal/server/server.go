@@ -7,6 +7,8 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+
+	"github.com/lieranderl/aestheticlab/internal/content"
 )
 
 // Config holds what the site needs to serve requests.
@@ -16,6 +18,10 @@ type Config struct {
 	Static fs.FS
 	// Logger receives the request log; nil is slog.Default().
 	Logger *slog.Logger
+	// Content is the content cache the pages render from, and that
+	// /dependencyz checks; nil serves the embedded snapshot and fails
+	// /dependencyz.
+	Content *content.Store
 }
 
 // New returns the site's HTTP handler, wrapped in Middleware.
@@ -25,15 +31,21 @@ func New(cfg Config) http.Handler {
 	// probe uses it, so it never waits on anything outside the process.
 	mux.HandleFunc("GET /healthz", probe)
 	mux.HandleFunc("GET /readyz", probe)
-	// TODO(Phase 5): one bounded Firestore read.
-	mux.HandleFunc("GET /dependencyz", probe)
-	mux.HandleFunc("GET /static/", staticFiles(cfg.Static))
-	mux.HandleFunc("GET /{$}", home)
-	mux.HandleFunc("/", pages)
 	log := cfg.Logger
 	if log == nil {
 		log = slog.Default()
 	}
+	store := cfg.Content
+	if store == nil {
+		store = content.NewStore(content.Options{Logger: log})
+	}
+	// /dependencyz is for deploy smoke tests: one bounded Firestore read.
+	// Phase 9a removes the uptime check that calls it today, so that it
+	// never keeps an instance warm.
+	mux.HandleFunc("GET /dependencyz", dependency(store, log))
+	mux.HandleFunc("GET /static/", staticFiles(cfg.Static))
+	mux.HandleFunc("GET /{$}", home)
+	mux.HandleFunc("/", pages)
 	return Middleware(log, withLocale(mux))
 }
 
@@ -42,4 +54,20 @@ func probe(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = io.WriteString(w, "OK")
+}
+
+// dependency answers OK when the content database answers one read, else
+// 503 (with the reason only in the log).
+func dependency(store *content.Store, log *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := store.Ping(r.Context()); err != nil {
+			log.WarnContext(r.Context(), "dependency_check_failed", "error", err.Error())
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.Header().Set("Cache-Control", "no-store")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = io.WriteString(w, "Unavailable")
+			return
+		}
+		probe(w, r)
+	}
 }

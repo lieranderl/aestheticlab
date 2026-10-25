@@ -7,6 +7,7 @@ locals {
       supabase_url            = var.staging_supabase_url
       supabase_secret_id      = var.staging_supabase_secret_id
       supabase_secret_version = var.staging_supabase_secret_version
+      firestore_database      = "site-staging"
     }
     production = {
       name                    = var.production_service_name
@@ -15,12 +16,14 @@ locals {
       supabase_url            = var.production_supabase_url
       supabase_secret_id      = var.production_supabase_secret_id
       supabase_secret_version = var.production_supabase_secret_version
+      firestore_database      = "site-production"
     }
   }
 
   required_apis = toset([
     "artifactregistry.googleapis.com",
     "cloudresourcemanager.googleapis.com",
+    "firestore.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "logging.googleapis.com",
@@ -44,8 +47,12 @@ locals {
     infrastructure-plan = "Aesthetic Lab infra plan"
   }
 
+  # roles/datastore.owner is the only predefined role that can create
+  # Firestore databases. It grants no more than this account's
+  # projectIamAdmin role already lets it grant itself.
   iac_project_roles = toset([
     "roles/artifactregistry.admin",
+    "roles/datastore.owner",
     "roles/iam.serviceAccountAdmin",
     "roles/iam.workloadIdentityPoolAdmin",
     "roles/logging.configWriter",
@@ -71,6 +78,15 @@ check "environment_isolation" {
   assert {
     condition     = var.staging_supabase_secret_id != var.production_supabase_secret_id
     error_message = "Staging and production must use different Secret Manager secrets, even when they share one Supabase project."
+  }
+}
+
+check "site_databases" {
+  assert {
+    condition = alltrue([
+      for env in values(local.services) : startswith(env.firestore_database, "site-")
+    ]) && local.services.staging.firestore_database != local.services.production.firestore_database
+    error_message = "Each environment needs its own site-* Firestore database; (default) and aestheticlab-income belong to other apps."
   }
 }
 
@@ -201,6 +217,40 @@ resource "google_project_iam_member" "iac_plan" {
   project = var.project_id
   role    = each.value
   member  = "serviceAccount:${google_service_account.iac_plan.email}"
+}
+
+# The site's content (plans/go-datastar-scale-to-zero.md, docs/CONTENT.md).
+# The project's other Firestore databases, (default) and aestheticlab-income,
+# belong to other apps: OpenTofu never manages them, and the site's
+# identities get only conditioned grants that cannot reach them.
+resource "google_firestore_database" "site" {
+  for_each = local.services
+
+  name                        = each.value.firestore_database
+  location_id                 = var.region
+  type                        = "FIRESTORE_NATIVE"
+  concurrency_mode            = "OPTIMISTIC"
+  app_engine_integration_mode = "DISABLED"
+  delete_protection_state     = "DELETE_PROTECTION_ENABLED"
+  deletion_policy             = "ABANDON"
+
+  depends_on = [google_project_service.required, google_project_iam_member.iac]
+}
+
+# Read-only, and only on the environment's own database: an unconditioned
+# datastore role would reach every database in the project.
+resource "google_project_iam_member" "runtime_firestore_reader" {
+  for_each = local.services
+
+  project = var.project_id
+  role    = "roles/datastore.viewer"
+  member  = "serviceAccount:${google_service_account.runtime[each.key].email}"
+
+  condition {
+    title       = "${each.key}-site-database-only"
+    description = "Read the ${google_firestore_database.site[each.key].name} database only."
+    expression  = "resource.name == \"projects/${var.project_id}/databases/${google_firestore_database.site[each.key].name}\""
+  }
 }
 
 resource "google_secret_manager_secret_iam_member" "runtime_access" {

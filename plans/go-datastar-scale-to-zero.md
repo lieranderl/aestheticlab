@@ -108,7 +108,7 @@ Modeled on Moviestracker. During migration it lives next to `src/`, which it doe
 | Path | Owns |
 | --- | --- |
 | `cmd/web/main.go` | Config from env, logger, server start. No network I/O before `Listen`. |
-| `cmd/content-import/` | One-off Supabase-export → Firestore copy, run by a human with their own credentials. |
+| `cmd/content/` | `import` (Supabase export → Firestore) and `export` (Firestore → file, for the snapshot), run by a human with their own credentials. |
 | `internal/server/` | Router, middleware (security headers, compression, cache headers, logging), `/healthz`, `/readyz`, `/dependencyz`, compatibility redirects, the Qwik-client shim. |
 | `internal/content/` | Firestore reader, document parsing and per-locale projection, cache, embedded snapshot. |
 | `internal/i18n/` | Locales, URL locale resolution, translation tables for 5 locales, plural rules. |
@@ -256,7 +256,7 @@ Status:
 3. `Dockerfile.web` (Bun assets stage → Go build stage → distroless). The existing `Dockerfile` stays Qwik until cutover. It can't be named `Dockerfile.go`: the Go tool would parse it as Go source in the module root and fail `go vet ./...`.
 4. Add a Go quality job to `quality.yml` (lint, `go test -race`, govulncheck, gosec, templ/assets diff checks, Firestore emulator tests). Exclude the Go directories in `biome.json`. The existing Qwik jobs, including Qwik e2e, stay unchanged.
 
-Status (2026-10-25): scaffold on `feat/go-scaffold`.
+Status (2026-10-25): merged in #238.
 
 - `cmd/web` serves `/healthz`, `/readyz` and a `/dependencyz` stub (200 until Phase 5), the security headers with the CSP target, the `/static/` handler (ranges, a year's `immutable` caching for `<name>.<8+ hex>.<ext>` names, an hour for the rest, no folder listings), and Cloud Logging JSON (`severity`, `message`): `server_started`, `server_stopping`, `server_stopped`, `http_request` and `http_panic`.
 - The Qwik Makefile keeps `dev`, `lint` and `build`, so the Go targets are `go-dev`, `go-lint` and `go-build` until Phase 10. `make ci` runs `templ-check`, `go-lint`, `test`, `security` and `go-build`. `assets`, `assets-check`, `firestore` and `snapshot` are stubs that fail with a pointer to Phases 3 and 5.
@@ -278,7 +278,7 @@ Status (2026-10-25): scaffold on `feat/go-scaffold`.
 4. `frontend/images.mjs` (sharp): AVIF and WebP variants at the widths the layout uses, content-hashed names under `/static/`, and the generated `internal/assets/manifest_gen.go` with width, height and srcset per image. Byte-identical sources map to one canonical entry, keeping the existing invariant.
 5. Precompression of text assets. Vendor `datastar.js` at a pinned version.
 
-Status (2026-10-25): on `feat/go-assets`.
+Status (2026-10-25): merged in #240.
 
 - **One build, `bun run assets`** (`frontend/icons.mjs`, then `frontend/build.mjs`), writes content-hashed files to `static/dist/`. They are embedded with `go:embed all:dist` and served under `/static/dist/`.
 - **What is committed:** only the generated Go (`internal/assets/manifest_gen.go`, `internal/views/icons_gen.go`). Hashes come from source bytes and encoder settings, never from encoder output, so every machine writes the same manifest. `make assets-check` fails when it is stale, and `make ci` runs it first. The CI `go` job and `Dockerfile.web` (new Bun assets stage) build the assets themselves.
@@ -313,7 +313,7 @@ Status (2026-10-25): on `feat/go-assets`.
 3. Locale routing that matches today's: `/` → 302 `/en-BE/`; an unknown path keeps the locale of its first segment for the 404 page; trailing slashes as now.
 4. Test: every interface text has a translation in all four non-English locales, as Moviestracker's `TestEveryInterfaceTextHasARussianTranslation` does.
 
-Status (2026-10-25): on `feat/go-i18n`.
+Status (2026-10-25): merged in #242.
 
 - **Converter:** `cmd/i18n-convert` (Go) writes `internal/i18n/messages_gen.go` from `i18n/*/app.json`, through `go/format`.
   - It keeps only the 227 keys `src/` uses, as 223 distinct English texts; the other 134 keys in the files are stale and are dropped.
@@ -353,6 +353,38 @@ Status (2026-10-25): on `feat/go-i18n`.
    - stale cache → refresh completes inside a request;
    - an abandoned refresh is joined or replaced by the next request.
 7. Add `e2e/go/playwright.config.ts`: the Go server plus a Firestore emulator seeded from the same fixture data as `e2e/mock-supabase.ts`. Leave `playwright.config.ts` and the mock untouched, since they still test the Qwik site that CI ships.
+
+Status (2026-10-25): code and IaC on `feat/go-content`; the IaC apply, the imports and the first-call measurement are still to do.
+
+- **IaC (step 1):** `infra/main.tf` declares the Firestore API, `site-staging` and `site-production` (Native, `europe-west1`, delete protection, `deletion_policy = "ABANDON"`), and a `roles/datastore.viewer` grant per runtime conditioned on `resource.name == "projects/<project>/databases/<its database>"`.
+  - The IaC identity gains `roles/datastore.owner`, the only predefined role that can create databases. Its `projectIamAdmin` role already let it grant itself that, so its effective power doesn't change.
+  - The grant and the databases are created in the same apply. If IAM hasn't propagated when the databases are created, the apply fails with a 403; re-running it succeeds.
+  - A `check` block keeps both databases named `site-*` and distinct.
+- **Export (step 3):** the Supabase export was made with the read-only query in `docs/CONTENT.md`. It leaves out `created_at` and the staff `email` column: staff email addresses are personal and the site never shows them. Counts: 8 groups, 77 services (2 inactive), 4 staff, 1 contact, so 90 documents.
+- **`cmd/content` (step 3, changed):** one command with `import` and `export`, instead of `cmd/content-import`.
+  - `import` upserts by ID; whole numbers are stored as integers, as they were in Supabase.
+  - `export` writes the same format, sorted by ID; `make snapshot` uses it.
+  - Both refuse incomplete content and any database not named `site-*`.
+  - Against the emulator, importing the Supabase export twice and exporting it back gave identical content.
+- **Snapshot:** `internal/content/snapshot.json` (162 KB) is that export until the first `make snapshot` from production. It is parsed only when first needed.
+- **Parsing and projection (step 4):** `internal/content` ports `supabase-data.ts` and `locale-content.ts`: the same field checks, link and photo filtering, and English fallbacks. All five locales are projected once per fetch.
+  - Groups and services are ordered by priority, and staff by ID, as the Supabase queries ordered them.
+  - Content with no active group, no active service or no complete contact is rejected (`ErrIncomplete`), so a half-seeded database never replaces good content.
+  - The data parts of `service-utils.ts` and `service-catalog.ts` are ported too: grouping, add-ons, starting prices, the merged laser category and URL selection. Images, price formatting and category descriptions move with the pricelist in Phase 6, where their labels and manifest live.
+- **Cache (step 5):** `content.Store` keeps 15 min of content per instance, waits 300 ms (stale) or 1.5 s (cold), then falls back to the last good content, else the snapshot (`content_snapshot_served`).
+  - One refresh at a time, joined by concurrent requests. A refresh older than its 5 s timeout, for example one suspended with its instance, is replaced by the next request rather than joined. A small flight struct does this instead of `singleflight`, which can't replace a stuck call.
+  - `cmd/web` listens first, then creates the client (it connects on the first read) and prefetches. Against the emulator, the prefetch took 56 ms.
+  - Without `FIRESTORE_DATABASE` the site serves the snapshot and logs `content_database_not_configured`.
+  - `/dependencyz` makes one read (`site/contact`, 3 s timeout) and answers 503 without a database. CI's container smoke test runs without one and expects 503 (`DEPENDENCY_STATUS`).
+- **Tests (step 6):** stand-in sources cover the cold fetch, slow and failing sources, incomplete content, concurrent requests sharing one fetch, the stale wait, and an abandoned refresh being replaced. A gRPC server that implements nothing covers an unanswering Firestore. `make firestore` plus `make test-content` (and a CI step) run the import/export round trip against the emulator.
+- **Size:** the Firestore client (gRPC) grows the stripped binary from 17.7 MB to 29.7 MB. Local exec to first `/healthz` 200 is unchanged, at 11–17 ms. If Phase 8's cold starts miss the target and image pull is the cause, Firestore's REST API over `net/http` could replace the client.
+- **Step 7 moves to Phase 6:** there's no page to run Playwright against yet.
+- **Still to do:**
+  1. Apply the IaC through the protected workflow.
+  2. Check with a denied read that each runtime can't read `(default)` or `aestheticlab-income`.
+  3. Import into `site-staging`, then `site-production`, and compare counts.
+  4. Measure the first Firestore call from Cloud Run against the 1.5 s cold wait. This needs a Go revision on Cloud Run, so it may fall to Phase 8's preview revision.
+  5. Phase 8 adds `FIRESTORE_DATABASE` and `GOOGLE_CLOUD_PROJECT` to the Cloud Run template. Setting the project avoids a metadata lookup when the client is created.
 
 ### Phase 6: Pages and Sections
 

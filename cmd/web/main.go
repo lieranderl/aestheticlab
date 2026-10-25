@@ -1,14 +1,20 @@
 // Command web is Aesthetic Lab's site on Cloud Run (Dockerfile.web).
 //
-// It listens before anything else: no network I/O happens before
-// ListenAndServe, so a cold instance answers its startup probe at once.
+// It listens before anything else: no network I/O happens before the port
+// is open, so a cold instance answers its startup probe at once. Content
+// comes from the Firestore database FIRESTORE_DATABASE names, in
+// GOOGLE_CLOUD_PROJECT (else the project the credentials belong to), or,
+// without one, from the embedded snapshot.
 package main
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,6 +22,9 @@ import (
 	"syscall"
 	"time"
 
+	"cloud.google.com/go/firestore"
+
+	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/server"
 	"github.com/lieranderl/aestheticlab/static"
 )
@@ -44,9 +53,19 @@ func run(ctx context.Context, getenv func(string) string, logOut io.Writer) erro
 		return err
 	}
 
+	listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
+	if err != nil {
+		log.Error("server_failed", "error", err.Error())
+		return err
+	}
+	store, closeStore := openContent(ctx, getenv, log)
+	defer closeStore()
+	// The first request joins this fetch, made while Cloud Run still
+	// allocates CPU to the starting instance.
+	store.Prefetch()
+
 	srv := &http.Server{
-		Addr:              ":" + strconv.Itoa(port),
-		Handler:           server.New(server.Config{Static: static.Files, Logger: log}),
+		Handler:           server.New(server.Config{Static: static.Files, Logger: log, Content: store}),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       120 * time.Second,
 		MaxHeaderBytes:    1 << 20,
@@ -62,7 +81,7 @@ func run(ctx context.Context, getenv func(string) string, logOut io.Writer) erro
 	}()
 
 	log.Info("server_started", "port", port)
-	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+	if err := srv.Serve(listener); !errors.Is(err, http.ErrServerClosed) {
 		log.Error("server_failed", "error", err.Error())
 		return err
 	}
@@ -72,6 +91,24 @@ func run(ctx context.Context, getenv func(string) string, logOut io.Writer) erro
 	}
 	log.Info("server_stopped")
 	return nil
+}
+
+// openContent is the content store over the Firestore database the
+// environment names, or over the snapshot alone when it names none or the
+// client cannot be created. The client connects on its first read.
+func openContent(ctx context.Context, getenv func(string) string, log *slog.Logger) (*content.Store, func()) {
+	database := getenv("FIRESTORE_DATABASE")
+	if database == "" {
+		log.Warn("content_database_not_configured")
+		return content.NewStore(content.Options{Logger: log}), func() {}
+	}
+	project := cmp.Or(getenv("GOOGLE_CLOUD_PROJECT"), firestore.DetectProjectID)
+	db, err := content.NewFirestore(ctx, project, database)
+	if err != nil {
+		log.Error("content_database_failed", "database", database, "error", err.Error())
+		return content.NewStore(content.Options{Logger: log}), func() {}
+	}
+	return content.NewStore(content.Options{Source: db, Logger: log}), func() { _ = db.Close() }
 }
 
 // listenPort is the port Cloud Run gives in PORT, else 3000 (the

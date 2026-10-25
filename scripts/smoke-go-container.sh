@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # The Go scaffold has no pages yet. Probe its public HTTP boundary and every
 # embedded asset referenced by the committed manifest until the cutover.
+#
+# DEPENDENCY_STATUS is what /dependencyz must answer: 200 (the default) with
+# a content database, 503 for a container started without one, as CI's is.
 set -euo pipefail
 
 base_url="${1:?usage: smoke-go-container.sh BASE_URL}"
@@ -16,10 +19,20 @@ curl_args=(
 	--cookie "$work_dir/cookies" --cookie-jar "$work_dir/cookies"
 )
 
-for probe in healthz readyz dependencyz; do
+for probe in healthz readyz; do
 	curl "${curl_args[@]}" --output "$work_dir/body" "$base_url/$probe"
 	test "$(cat "$work_dir/body")" = "OK"
 done
+
+dependency_status="${DEPENDENCY_STATUS:-200}"
+# Without --fail and --retry: a 503 is an answer here, not a transient error.
+status="$(curl --silent --show-error --connect-timeout 5 --max-time 20 \
+	--cookie "$work_dir/cookies" --cookie-jar "$work_dir/cookies" \
+	--output "$work_dir/body" --write-out '%{http_code}' "$base_url/dependencyz")"
+test "$status" = "$dependency_status"
+if [[ "$dependency_status" == 200 ]]; then
+	test "$(cat "$work_dir/body")" = "OK"
+fi
 
 status="$(curl "${curl_args[@]}" --dump-header "$work_dir/headers" --output /dev/null --write-out '%{http_code}' "$base_url/")"
 test "$status" = 302
