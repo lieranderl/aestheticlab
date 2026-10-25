@@ -13,6 +13,7 @@ tool (
 require (
 	cloud.google.com/go/firestore v1.26.0
 	github.com/a-h/templ v0.3.1070
+	github.com/klauspost/compress v1.18.7
 	github.com/starfederation/datastar-go v1.2.2
 	golang.org/x/image v0.47.0
 	golang.org/x/sync v0.24.0
@@ -152,7 +153,6 @@ require (
 	github.com/karamaru-alpha/copyloopvar v1.2.2 // indirect
 	github.com/kisielk/errcheck v1.20.0 // indirect
 	github.com/kkHAIKE/contextcheck v1.1.6 // indirect
-	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/kulti/thelper v0.7.1 // indirect
 	github.com/kunwardeep/paralleltest v1.0.15 // indirect
 	github.com/ldez/exptostd v0.4.5 // indirect
