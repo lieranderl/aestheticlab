@@ -1,0 +1,248 @@
+package views
+
+import "strconv"
+
+// policyLayout is the policy pages' frame (src/routes/[...lang]/(policies)).
+templ policyLayout(meta PageMeta) {
+	@Layout(meta) {
+		<div class="min-h-screen bg-base-100 text-base-content">
+			<a href="#main-content" class="btn btn-neutral btn-sm fixed top-3 left-4 z-50 -translate-y-24 opacity-0 transition-[opacity,transform] duration-150 focus-visible:translate-y-0 focus-visible:opacity-100 motion-reduce:transition-none">
+				{ tr(ctx, "Skip to main content") }
+			</a>
+			@Navigation(false, true)
+			<main id="main-content" tabindex="-1" class="pt-16 lg:pt-20">
+				{ children... }
+			</main>
+			@Footer(true, true)
+			@ScrollToTop("", tr(ctx, "Scroll to top"))
+		</div>
+	}
+}
+
+// Privacy is the privacy policy: numbered sections with an index beside
+// them on desktop.
+templ Privacy() {
+	{{ sections := privacySections(ctx) }}
+	@policyLayout(PageMeta{
+		Title:       tr(ctx, "Privacy Policy — Aesthetic Lab"),
+		Description: tr(ctx, "How we collect, use, and protect your personal data at Aesthetic Lab."),
+	}) {
+		<div class="mx-auto grid max-w-360 gap-10 px-5.5 py-12 md:px-10 md:py-16 lg:grid-cols-[minmax(0,22.5rem)_minmax(0,42.5rem)] lg:gap-x-20 lg:px-16 lg:py-24 xl:gap-x-34 xl:px-28">
+			<aside class="flex flex-col gap-4 lg:sticky lg:top-28 lg:gap-7 lg:self-start">
+				@Kicker("", "mb-0") {
+					{ tr(ctx, "Legal") }
+				}
+				<h1 class="font-cormorant text-[2.875rem] leading-[0.95] lg:text-[5rem] lg:leading-[0.9]">{ tr(ctx, "Privacy Policy") }</h1>
+				<p class="font-main text-xs font-semibold tracking-[0.18em] text-base-content/80 uppercase">{ tr(ctx, "Last updated: 19.02.2026") }</p>
+				<nav aria-label={ tr(ctx, "On this page") } class="hidden border-t border-neutral font-main text-sm lg:block">
+					<ul>
+						for i, s := range sections {
+							<li>
+								<a href={ templ.SafeURL("#" + privacyID(i)) } class="flex gap-4 border-b border-base-300 py-3 hover:underline">
+									<span class="text-primary-content/80">{ twoDigits(i + 1) }</span>
+									{ s.Title }
+								</a>
+							</li>
+						}
+					</ul>
+				</nav>
+			</aside>
+			<article class="flex flex-col gap-9 font-main text-base leading-[1.7] lg:gap-11 lg:text-[1.0625rem]">
+				<p class="font-cormorant text-[1.375rem] leading-[1.35] italic lg:text-[1.625rem]">
+					{ tr(ctx, "How we collect, use, and protect your personal data at Aesthetic Lab.") }
+				</p>
+				for i, s := range sections {
+					{{ rights := i == len(sections)-3 }}
+					{{ cookies := i == len(sections)-2 }}
+					<section
+						id={ privacyID(i) }
+						aria-labelledby={ privacyID(i) + "-title" }
+						class={ "flex scroll-mt-28 flex-col gap-3", templ.KV("bg-primary px-5 py-6 text-primary-content lg:px-8 lg:py-7", rights) }
+					>
+						<h2 id={ privacyID(i) + "-title" } class="flex items-baseline gap-4.5 font-cormorant text-[1.75rem] leading-[1.1] lg:text-[2.125rem]">
+							<span class={ "text-lg", templ.KV("text-primary-content/80", !rights) }>{ twoDigits(i + 1) }</span>
+							{ s.Title }
+						</h2>
+						<p>{ s.Text }</p>
+						if len(s.List) > 0 {
+							<ul class="border-t border-base-300">
+								for _, item := range s.List {
+									<li class="border-b border-base-300 py-2.5">{ item }</li>
+								}
+							</ul>
+						}
+						if rights {
+							<a href={ templ.SafeURL("mailto:" + siteEmail) } class="btn btn-neutral mt-1 h-12 min-h-12 self-start px-5.5 font-main text-xs font-semibold tracking-[0.18em] uppercase">
+								{ tr(ctx, "Email a data request") }
+							</a>
+						}
+						if cookies {
+							<button type="button" data-on:click="$cookies = true" class="btn btn-outline mt-1 h-12 min-h-12 self-start border-neutral px-5.5 font-main text-xs font-semibold tracking-[0.18em] uppercase">
+								{ tr(ctx, "Change cookie settings") }
+							</button>
+						}
+					</section>
+				}
+			</article>
+		</div>
+	}
+}
+
+func privacyID(i int) string { return "privacy-" + strconv.Itoa(i+1) }
+
+const (
+	careHeading = "flex items-baseline gap-3 font-cormorant text-[1.75rem] leading-[1.1] lg:text-[2.125rem]"
+	careNumber  = "font-main text-xs font-semibold tracking-[0.14em] text-primary-content/80"
+	careList    = "border-t border-base-300"
+	careItem    = "border-b border-base-300 py-2.75 leading-[1.55]"
+	careTab     = "tab h-13 border-b border-neutral font-main text-xs font-semibold tracking-[0.18em] uppercase"
+)
+
+// Care is the care notes: nails and laser as DaisyUI radio tabs, laser
+// first when the URL asks for it (?tab=laser, from the FAQ).
+templ Care() {
+	{{ laser := queryParam(ctx, "tab") == "laser" }}
+	@policyLayout(PageMeta{
+		Title:       tr(ctx, "Care notes | Aesthetic Lab"),
+		Description: tr(ctx, "Important pre- and post-care instructions for your appointment at Aesthetic Lab."),
+	}) {
+		<section class="bg-primary text-primary-content">
+			<div class="mx-auto flex max-w-360 flex-col gap-3 px-5.5 pt-7 pb-6 md:px-10 lg:gap-5 lg:px-16 lg:py-16 xl:px-28">
+				@Kicker("sage", "mb-0") {
+					{ tr(ctx, "Before & after your visit") }
+				}
+				<h1 class="font-cormorant text-[2.875rem] leading-[0.95] lg:text-[5rem] lg:leading-[0.9]">{ tr(ctx, "Care notes") }</h1>
+				<p class="max-w-xl font-main text-sm leading-normal lg:text-base">{ tr(ctx, "Read these before your appointment for the best, longest-lasting result.") }</p>
+				<p class="font-main text-xs font-semibold tracking-[0.18em] uppercase">{ tr(ctx, "Last updated: 01.07.2025") }</p>
+			</div>
+		</section>
+		<div class="mx-auto max-w-360 px-5.5 pb-16 md:px-10 lg:px-16 lg:pb-24 xl:px-28">
+			<!-- Native radios in a labelled radio group, so the selected topic is announced. -->
+			<div role="radiogroup" aria-label={ tr(ctx, "Care notes") } class="tabs tabs-border grid grid-cols-2 lg:max-w-3xl">
+				<input type="radio" name="care-notes" class={ careTab } aria-label={ tr(ctx, "Nails") } checked?={ !laser }/>
+				<div class="tab-content col-span-2 pt-6 lg:pt-10">
+					<div class="flex max-w-3xl flex-col gap-8 font-main text-[0.9375rem] lg:gap-11 lg:text-base">
+						<p class="font-cormorant text-[1.375rem] leading-[1.35] italic lg:text-[1.625rem]">
+							{ tr(ctx, "At our salon, we strive to deliver high-quality, long-lasting nail services using only professional products and techniques. To ensure transparency and manage expectations, please carefully read the following information:") }
+						</p>
+						<section class="flex flex-col gap-3">
+							<h2 class={ careHeading }>
+								<span class={ careNumber }>01</span>
+								{ tr(ctx, "Product Durability Disclaimer") }
+							</h2>
+							<p class="leading-relaxed">{ tr(ctx, "Our salon works exclusively with professional materials, including gel polishes, builder gels, and hard gels from trusted brands. According to manufacturers, these products are designed to last up to 3 weeks with proper application and aftercare.") }</p>
+							<p class="font-semibold">{ tr(ctx, "However, please note:") }</p>
+							<ul class={ careList }>
+								<li class={ careItem }>{ tr(ctx, "The declared durability depends not only on the quality of the products but also on individual nail characteristics and aftercare.") }</li>
+								<li class={ careItem }>{ tr(ctx, "External factors such as frequent water exposure, harsh chemicals, and mechanical damage may reduce wear time.") }</li>
+								<li class={ careItem }>{ tr(ctx, "Personal physiology, including hormonal changes, can also affect product adhesion and durability.") }</li>
+							</ul>
+							<p class="border-l-2 border-primary pl-4 leading-relaxed" role="note">
+								{ tr(ctx, "The salon guarantees proper and professional application of materials, but we cannot guarantee maximum wear time if external or individual factors interfere.") }
+							</p>
+						</section>
+						<section class="flex flex-col gap-3">
+							<h2 class={ careHeading }>
+								<span class={ careNumber }>02</span>
+								{ tr(ctx, "Important Notice") }
+							</h2>
+							<p class="leading-relaxed">{ tr(ctx, "The durability of nail coatings may vary depending on individual characteristics, including hormonal fluctuations. Please be aware that during periods of hormonal changes (such as PMS, pregnancy, breastfeeding, taking hormonal medications, or experiencing high stress levels), the adhesion of the product to the nail plate may decrease, which can affect the longevity of the coating.") }</p>
+							<p class="font-semibold">{ tr(ctx, "Other factors that may affect durability:") }</p>
+							<ul class={ careList }>
+								<li class={ careItem }>{ tr(ctx, "Frequent contact with water or aggressive chemicals without gloves") }</li>
+								<li class={ careItem }>{ tr(ctx, "Mechanical damage to the nails") }</li>
+								<li class={ careItem }>{ tr(ctx, "Individual nail features (such as increased moisture, brittleness, or tendency to peeling)") }</li>
+							</ul>
+							<p class="border-l-2 border-primary pl-4 leading-relaxed" role="note">
+								{ tr(ctx, "Please understand that in the presence of these factors, the salon cannot guarantee standard wear time of the coating.") }
+							</p>
+						</section>
+						<section class="flex flex-col gap-3 bg-primary px-5 py-6 text-primary-content lg:px-8 lg:py-7">
+							<h2 class={ careHeading }>
+								<span class="font-main text-xs font-semibold tracking-[0.14em]">03</span>
+								{ tr(ctx, "Complimentary Fix Policy") }
+							</h2>
+							<p class="leading-relaxed">{ tr(ctx, "If you experience any issues with your manicure within the first 5 days after your appointment, you are welcome to come back for a free correction.") }</p>
+							<p class="leading-relaxed">{ tr(ctx, "We care about your satisfaction and will be happy to fix any issues that may arise within this period.") }</p>
+						</section>
+						<p class="border-t border-neutral pt-4 font-cormorant text-xl leading-snug italic">
+							{ tr(ctx, "Thank you for your understanding, trust, and cooperation! We look forward to making your nails beautiful and long-lasting.") }
+						</p>
+					</div>
+				</div>
+				<input type="radio" name="care-notes" class={ careTab } aria-label={ tr(ctx, "Laser") } checked?={ laser }/>
+				<div class="tab-content col-span-2 pt-6 lg:pt-10">
+					<div class="flex max-w-3xl flex-col gap-8 font-main text-[0.9375rem] lg:gap-11 lg:text-base">
+						<section class="flex flex-col gap-3">
+							<h2 class={ careHeading }>
+								<span class={ careNumber }>01</span>
+								{ tr(ctx, "Before your session") }
+							</h2>
+							<ul class={ careList }>
+								<li class={ careItem }>{ tr(ctx, "Shave the area 24 hours before your session.") }</li>
+								<li class={ careItem }>{ tr(ctx, "Avoid sun, tanning beds and self-tanner for at least 2 weeks before.") }</li>
+							</ul>
+						</section>
+						<section class="flex flex-col gap-2 bg-primary px-5 py-5 text-primary-content lg:px-8 lg:py-6">
+							<p class="font-cormorant text-[1.375rem] italic">{ tr(ctx, "Still have a question?") }</p>
+							<a href={ templ.SafeURL(instagramMessage) } target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 items-center self-start font-main text-xs font-semibold tracking-[0.16em] uppercase underline-offset-4 hover:underline">
+								{ tr(ctx, "Message us on Instagram") }
+							</a>
+						</section>
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+// NotFound is the branded page for unknown URLs, in the path's locale: the
+// server sends it with a 404.
+templ NotFound() {
+	@Layout(PageMeta{Title: tr(ctx, "Page not found | Aesthetic Lab"), NoIndex: true}) {
+		<div class="min-h-screen bg-base-100 text-base-content">
+			<!-- The page has its own Book button, so no phone booking bar. -->
+			@Navigation(false, false)
+			<main id="main-content" tabindex="-1" class="grid pt-16 lg:min-h-svh lg:grid-cols-2 lg:pt-20">
+				<figure class="h-72 overflow-hidden bg-sage-200 sm:h-96 lg:h-auto">
+					@Picture("gallery/white-shimmer.jpg", tr(ctx, "White shimmer manicure resting on soft green wool"), "h-full w-full object-cover object-[50%_45%]", "(min-width: 1024px) 50vw, 100vw", true)
+				</figure>
+				<div class="flex flex-col justify-center gap-10 bg-sage-200 px-5.5 pt-8 pb-14 md:px-10 lg:gap-12 lg:px-20 xl:px-28">
+					<div class="flex flex-col gap-4 lg:gap-6">
+						@FadeUp(0, false, "") {
+							@Kicker("", "mb-0") {
+								{ tr(ctx, "Page not found · 404") }
+							}
+						}
+						@FadeUp(80, true, "") {
+							<h1 class="max-w-[12ch] font-cormorant text-[2.75rem] leading-[0.98] md:text-6xl lg:text-7xl">{ tr(ctx, "This page has moved on") }</h1>
+						}
+						@FadeUp(160, false, "flex flex-col gap-6") {
+							<p class="max-w-md font-main text-[0.9375rem] leading-relaxed lg:text-base">{ tr(ctx, "The link may be old. Everything you need is one tap away.") }</p>
+							@BookButton(Booking{ID: "not-found-book-btn", Text: tr(ctx, "Book appointment"), Placement: "not_found",
+								Class: "btn btn-accent h-13 min-h-13 px-8 font-main text-[0.9375rem] font-semibold sm:self-start"})
+						}
+					</div>
+					@FadeUp(240, false, "") {
+						<nav aria-label={ tr(ctx, "Popular pages") }>
+							<ul class="max-w-md border-t border-neutral">
+								for _, link := range popularPages(ctx) {
+									<li class="border-b border-neutral/25">
+										<a href={ templ.SafeURL(href(ctx, link.Target)) } class="group flex min-h-16 items-center justify-between gap-4 py-3">
+											<span class="flex flex-col gap-0.5">
+												<span class="font-main text-base font-semibold">{ link.Label }</span>
+												<span class="font-main text-sm text-base-content/75">{ link.Note }</span>
+											</span>
+											@Icon("outline/arrow-long-right", "size-6 shrink-0 transition-transform duration-500 ease-(--ease-quint) group-hover:translate-x-1.5 motion-reduce:transition-none")
+										</a>
+									</li>
+								}
+							</ul>
+						</nav>
+					}
+				</div>
+			</main>
+			@Footer(false, false)
+		</div>
+	}
+}
