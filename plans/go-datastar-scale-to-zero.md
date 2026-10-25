@@ -242,7 +242,11 @@ The 7-day startup distribution replaced the planned five spaced cold requests: i
 3. Deploy and promote so the change reaches serving revisions: a merge to `staging` for staging, the next published release for production.
 4. Re-measure staging cold starts and `startup_latencies`. Expected: well under 1 s, against 5.1 s at Phase 0.
 
-Status: merged in [#235](https://github.com/lieranderl/qwik-aestheticlab/pull/235) as `757bcdc`. The plan-only run showed only the probe fields changing. The apply was awaiting approval when Phase 0 ran.
+Status:
+
+- Merged in [#235](https://github.com/lieranderl/qwik-aestheticlab/pull/235) as `757bcdc`; applied by infrastructure run 40195855239 (0 added, 2 changed, 0 destroyed; only the probe fields). The [#237](https://github.com/lieranderl/qwik-aestheticlab/pull/237) staging deploy copied the template, so staging's serving revision `stage-aestheticlab-web-candidate-40199687517-1` probes every 1 s. Production picks it up with the next release.
+- Measured 2026-10-25 14:25 UTC on staging after 18+ min idle, with a new instance confirmed in Cloud Run logs: cold first byte 1.68 s (was 5.58 s), Cloud Run request latency 1.53 s, warm 0.14–0.18 s. The instance went from start to ready in about 1.1 s (was about 5.1 s): `Starting new instance` 14:25:58.32 → Bun `server_started` +0.72 s → probe passed on attempt 2, +0.37 s.
+- Gate met. Qwik still misses the Go targets (startup p95 ≤ 700 ms, cold first byte ≤ 1.2 s) mainly because of Bun's 0.7 s boot.
 
 ### Phase 2: Go Scaffold
 
