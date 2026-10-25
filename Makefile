@@ -91,7 +91,7 @@ AIR ?= air
 GOLANGCI_LINT ?= $(GO) tool golangci-lint
 GO_DIRS := cmd internal static
 
-.PHONY: templ templ-check go-lint test security go-build ci go-dev assets assets-check frontend-test i18n i18n-check firestore snapshot
+.PHONY: templ templ-check go-lint test security go-build ci go-dev assets assets-check frontend-test i18n i18n-check firestore test-content snapshot
 
 templ: ## Go: generate Go code from templ templates
 	$(GO) tool templ generate
@@ -146,8 +146,23 @@ i18n-check: i18n ## Go: fail when the Go text tables differ from what git has
 	@git diff --quiet -- $(I18N_GENERATED) && test -z "$$(git ls-files --others --exclude-standard -- $(I18N_GENERATED))" || \
 		(echo "Out of date (run make i18n, then git add):" && git status --short -- $(I18N_GENERATED) && exit 1)
 
-firestore: ## Go: start the Firestore emulator (TODO: Phase 5)
-	@echo "make $@ is not implemented yet: plans/go-datastar-scale-to-zero.md, Phase 5" >&2; exit 1
+# The Firestore emulator for the content tests (make test-content) and for
+# running the site against seeded content; the image is pinned like CI's.
+CONTAINER_TOOL ?= $(shell command -v docker 2>/dev/null || command -v container 2>/dev/null)
+FIRESTORE_EMULATOR_IMAGE ?= gcr.io/google.com/cloudsdktool/google-cloud-cli:587.0.0-emulators@sha256:8d8573471c489a409f03891d2c24d177fa531276184f7002b9a2d853d1b3ed54
+FIRESTORE_EMULATOR_PORT ?= 8087
 
-snapshot: ## Go: refresh the embedded content snapshot (TODO: Phase 5)
-	@echo "make $@ is not implemented yet: plans/go-datastar-scale-to-zero.md, Phase 5" >&2; exit 1
+firestore: ## Go: start the Firestore emulator on localhost:8087
+	$(CONTAINER_TOOL) run -d --rm --name aestheticlab-firestore -p $(FIRESTORE_EMULATOR_PORT):$(FIRESTORE_EMULATOR_PORT) $(FIRESTORE_EMULATOR_IMAGE) \
+		gcloud emulators firestore start --host-port=0.0.0.0:$(FIRESTORE_EMULATOR_PORT)
+	@echo "Firestore emulator on localhost:$(FIRESTORE_EMULATOR_PORT); stop it with: $(notdir $(CONTAINER_TOOL)) stop aestheticlab-firestore"
+
+test-content: ## Go: the content tests against the Firestore emulator (make firestore first)
+	FIRESTORE_EMULATOR_HOST=localhost:$(FIRESTORE_EMULATOR_PORT) $(GO) test -race -count=1 ./internal/content/
+
+# The production content the site renders when Firestore does not answer in
+# time, refreshed with your application default credentials.
+SNAPSHOT := internal/content/snapshot.json
+
+snapshot: ## Go: refresh the embedded content snapshot from production Firestore
+	$(GO) run ./cmd/content export -project $(GCP_PROJECT) -database site-production -out $(SNAPSHOT)

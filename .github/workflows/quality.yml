@@ -138,6 +138,20 @@ jobs:
       - name: Go quality gate
         run: make ci
 
+      # The content store against Firestore's emulator as well as stand-ins
+      # (make firestore, make test-content): import, export and fetch.
+      - name: Content works with Firestore
+        env:
+          FIRESTORE_EMULATOR_IMAGE: gcr.io/google.com/cloudsdktool/google-cloud-cli:587.0.0-emulators@sha256:8d8573471c489a409f03891d2c24d177fa531276184f7002b9a2d853d1b3ed54
+        run: |
+          set -o pipefail
+          docker run -d --name firestore -p 8087:8087 "$FIRESTORE_EMULATOR_IMAGE" \
+            gcloud emulators firestore start --host-port=0.0.0.0:8087
+          trap 'docker rm -f firestore >/dev/null 2>&1 || true' EXIT
+          timeout 120 bash -c 'until curl -fsS localhost:8087 >/dev/null; do sleep 1; done'
+          FIRESTORE_EMULATOR_HOST=localhost:8087 go test -count=1 -race -v ./internal/content/ | tee content.log
+          grep -q -- '--- PASS: TestFirestoreKeepsTheImportedContent' content.log
+
   secrets:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -232,7 +246,9 @@ jobs:
           test "$(docker image inspect aestheticlab-go:ci --format '{{.Config.User}}')" = "65532:65532"
           docker run --detach --rm --name aestheticlab-go-ci --publish 127.0.0.1:3000:3000 aestheticlab-go:ci
           trap 'docker stop aestheticlab-go-ci >/dev/null 2>&1 || true' EXIT
-          bash ./scripts/smoke-go-container.sh http://127.0.0.1:3000
+          # No content database here: the site serves its embedded snapshot
+          # and /dependencyz answers 503.
+          DEPENDENCY_STATUS=503 bash ./scripts/smoke-go-container.sh http://127.0.0.1:3000
 
       - name: Scan Go container
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
