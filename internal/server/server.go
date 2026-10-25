@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/lieranderl/aestheticlab/internal/content"
+	"github.com/lieranderl/aestheticlab/internal/i18n"
 )
 
 // Config holds what the site needs to serve requests.
@@ -45,6 +46,14 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("GET /dependencyz", dependency(store, log))
 	mux.HandleFunc("GET /static/", staticFiles(cfg.Static))
 	mux.HandleFunc("GET /{$}", home)
+	// Each page under each locale, spelled out: a locale-shaped segment that
+	// is not a locale (/de-BE/pricelist/) falls through to the 404.
+	// The slashless form gets pages' 301, as on the Qwik site (the mux's own
+	// redirect would be a 307).
+	for _, l := range i18n.Supported() {
+		mux.HandleFunc("GET /"+string(l)+"/pricelist/{$}", page(l, store, log, pricelist))
+		mux.HandleFunc("GET /"+string(l)+"/pricelist", pages)
+	}
 	mux.HandleFunc("/", pages)
 	return Middleware(log, withLocale(mux))
 }

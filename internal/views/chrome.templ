@@ -1,0 +1,458 @@
+package views
+
+import (
+	"context"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/lieranderl/aestheticlab/internal/i18n"
+
+	"github.com/lieranderl/aestheticlab/internal/assets"
+)
+
+// navLink is a navigation entry (src/shared/nav-links.ts).
+type navLink struct {
+	Target string // "#services", "pricelist/"
+	Label  string
+	// Primary links show in the desktop header; all show in the phone menu
+	// and the footer.
+	Primary bool
+	// Section is the landing-page section that highlights the link.
+	Section string
+}
+
+func navLinks(ctx context.Context) []navLink {
+	return []navLink{
+		{"#services", tr(ctx, "Services"), true, "services"},
+		{"pricelist/", tr(ctx, "Prices"), true, ""},
+		{"#gallery", tr(ctx, "Our Work"), true, "gallery"},
+		{"#team", tr(ctx, "Team"), true, "team"},
+		{"#faq", tr(ctx, "Good to know"), false, "faq"},
+		{"#contact", tr(ctx, "Visit"), true, "contact"},
+	}
+}
+
+// Navigation is the fixed header, the phone menu and, with bookingBar, the
+// phone booking bar that slides up once the hero has scrolled away.
+// landing marks the home page: the header starts transparent over its hero.
+templ Navigation(landing, bookingBar bool) {
+	<div
+		data-init={ scrollState }
+		data-on:scroll__window__throttle.50ms.trail={ scrollState }
+		data-on:resize__window__throttle.100ms.trail={ scrollState }
+	>
+		<header
+			class={ "fixed inset-x-0 top-0 z-40 border-b pt-[env(safe-area-inset-top)] transition-[background-color,border-color,color,box-shadow] duration-300 ease-(--ease-smooth) motion-reduce:transition-none lg:border-base-300 lg:bg-base-100/88 lg:text-base-content lg:backdrop-blur-md",
+				templ.KV("border-transparent bg-transparent text-ink", landing),
+				templ.KV("border-base-300 bg-base-100 text-base-content", !landing) }
+			data-class="{'border-transparent': $overHero && !$menu, 'bg-transparent': $overHero && !$menu, 'text-ink': $overHero && !$menu, 'border-base-300': !$overHero || $menu, 'bg-base-100': !$overHero || $menu, 'text-base-content': !$overHero || $menu, 'lg:shadow-[0_6px_24px_-12px_rgb(26_36_26/0.25)]': $scrolled}"
+		>
+			<div
+				class="mx-auto grid h-16 w-full max-w-360 grid-cols-[1fr_auto] items-center pr-2 pl-4.5 transition-[height] duration-300 ease-(--ease-smooth) motion-reduce:transition-none sm:pl-6 lg:h-20 lg:grid-cols-[1fr_auto_1fr] lg:px-10 xl:px-16"
+				data-class="{'lg:h-16': $scrolled, 'lg:h-20': !$scrolled}"
+			>
+				<a href={ templ.SafeURL(href(ctx, "#")) } class="inline-flex min-h-11 items-center gap-2 justify-self-start lg:gap-2.5" aria-label={ "Aesthetic Lab — " + tr(ctx, "Home") }>
+					@Icon("logo/bird", "h-6.5 w-auto lg:h-8")
+					<span class="font-qestero text-2xl leading-none lg:text-[1.875rem]">Aesthetic Lab</span>
+				</a>
+				<nav aria-label={ tr(ctx, "Primary navigation") } class="hidden lg:block">
+					<ul class="flex items-center gap-7 xl:gap-10">
+						for _, link := range navLinks(ctx) {
+							if link.Primary {
+								<li>
+									<a
+										href={ templ.SafeURL(href(ctx, link.Target)) }
+										class="relative flex min-h-11 items-center font-main text-sm font-medium after:absolute after:inset-x-0 after:bottom-2 after:h-0.5 after:origin-left after:scale-x-0 after:bg-sage-600 after:transition-transform after:duration-300 after:ease-(--ease-smooth) hover:after:scale-x-100 motion-reduce:after:transition-none"
+										if link.Section != "" {
+											data-attr:aria-current={ "$section === " + jsString(link.Section) + " ? 'location' : false" }
+											data-class={ "{'after:scale-x-100': $section === " + jsString(link.Section) + "}" }
+										}
+									>
+										{ link.Label }
+									</a>
+								</li>
+							}
+						}
+					</ul>
+				</nav>
+				<div class="flex items-center gap-1 justify-self-end lg:gap-3">
+					@languageSwitcher()
+					@BookButton(Booking{ID: "nav-book-btn", Text: tr(ctx, "Book appointment"), Placement: "desktop_nav",
+						Class: "btn btn-accent hidden h-12 min-h-12 px-6 font-main text-sm font-semibold lg:inline-flex"})
+					<button
+						type="button"
+						class="btn btn-ghost btn-square size-11 min-h-11 border-0 text-current hover:bg-transparent lg:hidden"
+						aria-label={ tr(ctx, "Open navigation menu") }
+						aria-controls="mobile-menu"
+						aria-expanded="false"
+						data-attr:aria-expanded="$menu ? 'true' : 'false'"
+						data-on:click="$menu = true; document.getElementById('mobile-menu').showModal()"
+					>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" class="size-6" aria-hidden="true"><path d="M3 9h18M3 15h18"></path></svg>
+					</button>
+				</div>
+			</div>
+			<span aria-hidden="true" class="absolute inset-x-0 bottom-0 hidden h-0.5 origin-left scale-x-0 bg-primary lg:block" data-style:transform="'scaleX(' + $progress + ')'"></span>
+		</header>
+		@mobileMenu()
+		if bookingBar {
+			@phoneBookingBar(landing)
+		}
+	</div>
+}
+
+// mobileMenu is the phone menu: a modal dialog, so focus stays inside it and
+// Escape closes it.
+templ mobileMenu() {
+	<dialog
+		id="mobile-menu"
+		aria-labelledby="mobile-menu-title"
+		class="m-0 h-dvh max-h-none w-full max-w-none flex-col bg-primary p-0 pt-[env(safe-area-inset-top)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)] text-primary-content open:flex backdrop:bg-transparent"
+		data-on:close="$menu = false"
+	>
+		<div class="flex h-16 shrink-0 items-center justify-between border-b border-primary-content/30 pr-2 pl-4.5">
+			<div class="flex items-center gap-2">
+				@Icon("logo/bird", "h-6.5 w-auto")
+				<h2 id="mobile-menu-title" class="font-qestero text-2xl leading-none font-normal">Aesthetic Lab</h2>
+			</div>
+			<form method="dialog">
+				<button type="submit" autofocus class="btn btn-ghost btn-square size-11 min-h-11 border-0 text-current hover:bg-transparent" aria-label={ tr(ctx, "Close navigation menu") }>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" class="size-5.5" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"></path></svg>
+				</button>
+			</form>
+		</div>
+		<nav class="px-5.5 pt-4" aria-label={ trc(ctx, "navigation landmark", "Open navigation menu") }>
+			<ul>
+				for i, link := range navLinks(ctx) {
+					<li>
+						<a href={ templ.SafeURL(href(ctx, link.Target)) } class="flex min-h-15 items-center gap-4.5 border-b border-primary-content/25" data-on:click="document.getElementById('mobile-menu').close()">
+							<span class="w-6 font-main text-[0.6875rem] font-semibold tracking-[0.14em]">{ twoDigits(i + 1) }</span>
+							<span class="font-cormorant text-[2.375rem] leading-none">{ link.Label }</span>
+						</a>
+					</li>
+				}
+			</ul>
+		</nav>
+		<div class="flex flex-col gap-5 px-5.5 pt-6">
+			@BookButton(Booking{ID: "mobile-menu-book-btn", Text: tr(ctx, "Book appointment"), Placement: "mobile_menu",
+				Class: "btn btn-accent h-13 min-h-13 w-full font-main text-[0.9375rem] font-semibold"})
+			@localeNav("flex justify-between font-main text-xs font-semibold tracking-[0.14em]", "flex min-h-11 min-w-12 items-center justify-center border", "border-primary-content", "border-transparent")
+		</div>
+		<div class="mt-auto flex items-end justify-between gap-4 border-t border-primary-content/30 px-5.5 pt-4.5 font-main text-[0.8125rem] leading-normal">
+			<p>
+				{ street }, { city }
+				<br/>
+				{ tr(ctx, "Monday") } – { tr(ctx, "Saturday") } · { opens } – { closes }
+			</p>
+			<a href={ templ.SafeURL(instagram) } target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 items-center font-semibold">Instagram</a>
+		</div>
+	</dialog>
+}
+
+// localeNav links the current page in every language, recording
+// language_changed.
+templ localeNav(navClass, linkClass, currentClass, otherClass string) {
+	<nav aria-label={ tr(ctx, "Language options") } class={ navClass } data-on:click={ languageChanged(ctx) }>
+		for _, l := range localeLinks(ctx) {
+			<a
+				href={ templ.SafeURL(l.Href) }
+				hreflang={ l.Lang }
+				data-locale={ l.Lang }
+				aria-label={ l.Name }
+				title={ l.Name }
+				if l.Current {
+					aria-current="true"
+				}
+				class={ linkClass, templ.KV(currentClass, l.Current), templ.KV(otherClass, !l.Current) }
+			>
+				{ l.Label }
+			</a>
+		}
+	</nav>
+}
+
+// upperLang is the page's language as the header shows it: "EN".
+func upperLang(ctx context.Context) string { return strings.ToUpper(i18n.FromContext(ctx).Language()) }
+
+// languageChanged records language_changed for a click on a language link.
+func languageChanged(ctx context.Context) string {
+	return "evt.target.closest('a[data-locale]') && aesthetic.track('language_changed', {from_locale: " + jsString(pageLang(ctx)) +
+		", to_locale: evt.target.closest('a[data-locale]').dataset.locale})"
+}
+
+// languageSwitcher is the header's language menu: a popover anchored under
+// its button.
+templ languageSwitcher() {
+	<button
+		type="button"
+		popovertarget="language-menu"
+		class="btn btn-ghost min-h-11 min-w-11 gap-1 border-0 px-2 font-main text-xs font-semibold uppercase tracking-[0.2em] text-current hover:bg-transparent [anchor-name:--language-menu]"
+		aria-label={ tr(ctx, "Select your language") }
+		aria-haspopup="menu"
+	>
+		{ upperLang(ctx) }
+		<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4" aria-hidden="true">
+			<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
+		</svg>
+	</button>
+	<ul
+		id="language-menu"
+		popover="auto"
+		class="dropdown menu menu-sm z-50 mt-1 w-44 border border-base-300 bg-base-100 p-1.5 text-base-content shadow-lg [position-anchor:--language-menu] [inset:auto] [top:anchor(bottom)]"
+		aria-label={ tr(ctx, "Language options") }
+		data-on:click={ languageChanged(ctx) }
+	>
+		for _, l := range localeLinks(ctx) {
+			<li>
+				if l.Current {
+					<span class="flex min-h-11 cursor-default items-center justify-between gap-2 bg-neutral px-3 py-2 font-main text-sm font-semibold text-neutral-content hover:bg-neutral hover:text-neutral-content" aria-current="true">
+						{ l.Name }
+						<span aria-hidden="true">✓</span>
+					</span>
+				} else {
+					<a href={ templ.SafeURL(l.Href) } data-locale={ l.Lang } class="flex min-h-11 items-center px-3 py-2 font-main text-sm text-base-content transition-colors duration-150 hover:bg-base-200">
+						{ l.Name }
+					</a>
+				}
+			</li>
+		}
+	</ul>
+}
+
+// phoneBookingBar is the phone booking bar: Book plus directions, shown once the
+// hero (if any) has mostly scrolled away.
+templ phoneBookingBar(landing bool) {
+	<div
+		class={ "fixed inset-x-0 bottom-0 z-30 flex gap-2 border-t border-base-300 bg-base-100 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] transition-transform duration-300 ease-(--ease-smooth) motion-reduce:transition-none lg:hidden",
+			templ.KV("pointer-events-none translate-y-full", landing) }
+		if landing {
+			aria-hidden="true"
+			inert
+		}
+		data-class="{'translate-y-full': !$bar, 'pointer-events-none': !$bar, 'translate-y-0': $bar}"
+		data-attr:aria-hidden="$bar ? false : 'true'"
+		data-attr:inert="!$bar"
+	>
+		@BookButton(Booking{ID: "bottom-bar-book-btn", Text: tr(ctx, "Book appointment"), Placement: "mobile_bottom_bar",
+			Class: "btn btn-accent h-13 min-h-13 flex-1 font-main text-[0.9375rem] font-semibold"})
+		<a
+			href={ templ.SafeURL(googlePlaceURL) }
+			target="_blank"
+			rel="noopener noreferrer"
+			aria-label={ tr(ctx, "Get directions") }
+			class="btn btn-outline btn-square size-13 min-h-13 border-neutral bg-base-100 hover:border-neutral hover:bg-neutral hover:text-neutral-content"
+			data-on:click={ track("directions_clicked", map[string]string{"placement": "mobile_bottom_bar", "link_url": googlePlaceURL}) }
+		>
+			@Icon("outline/map-pin", "size-5")
+		</a>
+	</div>
+}
+
+// BookButton opens the booking dialog on b's widget.
+templ BookButton(b Booking) {
+	<button
+		type="button"
+		class={ b.Class, "motion-safe:active:scale-[0.97] motion-safe:transition-transform motion-safe:duration-100" }
+		if b.AriaLabel != "" {
+			aria-label={ b.AriaLabel }
+		}
+		aria-haspopup="dialog"
+		data-on:click={ b.open() }
+	>
+		{ b.Text }
+	</button>
+}
+
+// Kicker is a section eyebrow: a short rule, then a small-caps label. tone
+// is "" (on light surfaces), "sage" or "photo".
+templ Kicker(tone, class string) {
+	<p class={ "mb-4 flex items-center gap-3 font-main text-[0.6875rem] font-semibold uppercase tracking-[0.28em] md:gap-3.5 md:text-xs", kickerText(tone), class }>
+		<span aria-hidden="true" class={ "h-px w-7 shrink-0 md:w-10", kickerRule(tone) }></span>
+		{ children... }
+	</p>
+}
+
+func kickerText(tone string) string {
+	switch tone {
+	case "sage":
+		return "text-ink"
+	case "photo":
+		return "text-neutral-content"
+	}
+	return "text-sage-700"
+}
+
+func kickerRule(tone string) string {
+	switch tone {
+	case "sage":
+		return "bg-ink"
+	case "photo":
+		return "bg-neutral-content"
+	}
+	return "bg-sage-600"
+}
+
+// Picture is a bundled image's WebP variants, sized so the layout never
+// shifts while it loads. Unknown names render nothing.
+templ Picture(name, alt, class, sizes string, eager bool) {
+	if img, ok := assets.Lookup(name); ok {
+		<img
+			src={ img.Src }
+			srcset={ img.SrcSet }
+			sizes={ sizes }
+			width={ strconv.Itoa(img.Width) }
+			height={ strconv.Itoa(img.Height) }
+			alt={ alt }
+			class={ class }
+			if eager {
+				loading="eager"
+			} else {
+				loading="lazy"
+			}
+			decoding="async"
+		/>
+	}
+}
+
+// FadeUp reveals its content the first time it scrolls into view: text
+// rises 40px as it fades in, or, with mask, slides up from behind its own
+// edge. Nothing moves with reduced motion or without JavaScript.
+templ FadeUp(delay int, mask bool, class string) {
+	if mask {
+		<div class={ "fade-mask overflow-clip pb-[0.06em]", class } data-on-intersect__once="el.classList.add('in-view')">
+			<div class={ fadeDelay(delay) }>
+				{ children... }
+			</div>
+		</div>
+	} else {
+		<div class={ "fade-up", fadeDelay(delay), class } data-on-intersect__once="el.classList.add('in-view')">
+			{ children... }
+		</div>
+	}
+}
+
+// ScrollToTop is the floating button that scrolls back to the top, or to
+// the element target names once it is well out of view.
+templ ScrollToTop(target, label string) {
+	<button
+		type="button"
+		class="btn btn-square btn-outline fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-30 size-13 min-h-13 translate-y-4 border-base-content/15 bg-base-100/55 text-base-content/70 opacity-0 shadow-none backdrop-blur-md transition-[opacity,translate,background-color,color] duration-300 ease-(--ease-smooth) pointer-events-none hover:border-neutral hover:bg-neutral hover:text-neutral-content motion-reduce:transition-none lg:right-6 lg:bottom-6 lg:size-12 lg:min-h-12"
+		aria-label={ label }
+		aria-hidden="true"
+		tabindex="-1"
+		data-signals:to-top="false"
+		data-on:scroll__window__throttle.100ms.trail={ showScrollTop(target) }
+		data-class="{'translate-y-0': $toTop, 'opacity-100': $toTop, 'translate-y-4': !$toTop, 'opacity-0': !$toTop, 'pointer-events-none': !$toTop}"
+		data-attr:aria-hidden="$toTop ? false : 'true'"
+		data-attr:tabindex="$toTop ? '0' : '-1'"
+		data-on:click={ scrollTo(target) }
+	>
+		@Icon("outline/arrow-up", "size-5")
+	</button>
+}
+
+// Footer is the site footer and, with readyBand, the "Ready when you are"
+// booking band above it. bookingBar leaves room for the phone booking bar.
+templ Footer(readyBand, bookingBar bool) {
+	if readyBand {
+		<section aria-labelledby="ready-title" class="bg-base-200 px-4 py-12 sm:px-6 md:px-10 lg:px-16 lg:py-18 xl:px-28">
+			<div class="mx-auto grid max-w-7xl gap-7 md:grid-cols-2 md:items-stretch lg:gap-16">
+				<figure class="relative h-60 overflow-hidden bg-sage-200 md:h-auto md:min-h-80">
+					<div class="parallax-center absolute inset-x-0 -top-15 h-[calc(100%+7.5rem)]">
+						@Picture("hero/taupe-manicure.jpg", tr(ctx, "Glossy taupe manicure resting on linen"), "h-full w-full object-cover object-[50%_45%]", "(min-width: 768px) 45vw, 100vw", false)
+					</div>
+				</figure>
+				<div class="flex flex-col justify-center gap-5 lg:gap-6">
+					@FadeUp(0, true, "") {
+						<h2 id="ready-title" class="font-cormorant text-[2.75rem] leading-[0.92] font-medium tracking-[-0.015em] text-ink md:text-6xl lg:text-[4.25rem]">
+							{ tr(ctx, "Ready when you are.") }
+						</h2>
+					}
+					@FadeUp(100, false, "") {
+						<p class="max-w-[26rem] font-main text-base leading-relaxed text-sage-700">
+							{ tr(ctx, "Pick a treatment and a time that suits you. Booking takes about a minute.") }
+						</p>
+					}
+					@FadeUp(200, false, "flex flex-wrap items-center gap-6") {
+						@BookButton(Booking{ID: "footer-book-btn", Text: tr(ctx, "Book appointment"), Placement: "footer",
+							Class: "btn btn-accent h-14 min-h-14 px-8 font-main text-[0.9375rem] font-semibold"})
+						<a href={ templ.SafeURL(href(ctx, "pricelist/")) } class="group inline-flex min-h-11 items-center gap-2.5 font-main text-[0.9375rem] font-semibold text-rosewood">
+							{ tr(ctx, "See prices") }
+							<span aria-hidden="true" class="transition-transform duration-500 ease-(--ease-quint) group-hover:translate-x-1.5">→</span>
+						</a>
+					}
+				</div>
+			</div>
+		</section>
+	}
+	<footer
+		class={ "overflow-x-clip bg-sage-100 px-5.5 pt-12 text-ink md:px-10 lg:px-16 lg:pt-22 lg:pb-9 xl:px-28",
+			templ.KV("pb-[calc(env(safe-area-inset-bottom)+7.5rem)]", bookingBar),
+			templ.KV("pb-[calc(env(safe-area-inset-bottom)+2.5rem)]", !bookingBar) }
+	>
+		<div class="mx-auto flex max-w-7xl flex-col gap-8 lg:gap-12">
+			<!-- Phones: the contact column is a little wider so the email fits one line. -->
+			<div class="grid grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] gap-x-4 gap-y-6 lg:grid-cols-3 lg:gap-12">
+				<div class="flex flex-col gap-2 border-t border-ink pt-3 font-main text-sm leading-normal lg:gap-3.5 lg:pt-3.5 lg:text-[0.9375rem]">
+					<h2 class={ footerColumnLabel }>{ tr(ctx, "Studio") }</h2>
+					<p>
+						{ street }
+						<br/>
+						{ zip } { city }
+					</p>
+					<p>
+						{ tr(ctx, "Monday") } – { tr(ctx, "Saturday") }
+						<!-- Phones: hours on their own line in the narrower column. -->
+						<span class="max-lg:hidden">{ " · " }</span>
+						<br class="lg:hidden"/>
+						<span class="whitespace-nowrap">{ opens } – { closes }</span>
+						<br/>
+						{ tr(ctx, "By appointment only") }
+					</p>
+					<a href={ templ.SafeURL(googlePlaceURL) } target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 items-center self-start text-[0.6875rem] font-semibold tracking-[0.18em] uppercase underline underline-offset-5 lg:text-xs">
+						{ tr(ctx, "Directions") }
+					</a>
+				</div>
+				<div class="flex flex-col gap-2 border-t border-ink pt-3 font-main text-sm lg:gap-3.5 lg:pt-3.5 lg:text-[0.9375rem]">
+					<h2 class={ footerColumnLabel }>{ tr(ctx, "Contact") }</h2>
+					<a href={ templ.SafeURL("mailto:" + siteEmail) } class="inline-block py-3 hover:underline lg:py-0">
+						<!-- Narrow phones: wrap at the @, never mid-word. -->
+						aestheticlabbe<wbr/>{ "@gmail.com" }
+					</a>
+					<a href={ templ.SafeURL(instagram) } target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 items-center gap-2 hover:underline lg:min-h-0">
+						@Icon("brand/instagram", "size-4")
+						{ "@aestheticlabbe" }
+					</a>
+				</div>
+				<nav aria-label={ tr(ctx, "Site navigation") } class="col-span-2 border-t border-ink pt-3 font-main text-sm lg:col-span-1 lg:pt-3.5 lg:text-[0.9375rem]">
+					<h2 class={ footerColumnLabel, "mb-2 lg:mb-3.5" }>{ tr(ctx, "Explore") }</h2>
+					<ul class="grid grid-cols-2 lg:grid-cols-1 lg:gap-2">
+						for _, link := range navLinks(ctx) {
+							<li>
+								<a href={ templ.SafeURL(href(ctx, link.Target)) } class="flex min-h-11 items-center border-b border-sage-300 hover:underline lg:min-h-0 lg:border-0">{ link.Label }</a>
+							</li>
+						}
+					</ul>
+				</nav>
+			</div>
+			<p aria-hidden="true" class="drift-word font-qestero text-[clamp(4.5rem,19vw,17.5rem)] leading-[0.85] whitespace-nowrap text-sage-300 select-none">Aesthetic Lab</p>
+			<div class="flex flex-col gap-2.5 border-t border-sage-300 pt-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6 lg:pt-5">
+				<p class="order-last font-main text-xs text-sage-700 lg:order-first">© { strconv.Itoa(time.Now().Year()) } Aesthetic Lab Leuven</p>
+				<nav aria-label={ tr(ctx, "Legal") } class="flex flex-wrap gap-x-6 lg:gap-x-7">
+					<a class={ legalLink } href={ templ.SafeURL(href(ctx, "privacy-policy/")) }>{ tr(ctx, "Privacy Policy") }</a>
+					<a class={ legalLink } href={ templ.SafeURL(href(ctx, "notice/")) }>{ tr(ctx, "Care notes") }</a>
+					<button type="button" class={ legalLink, "cursor-pointer" } data-on:click="$cookies = true">{ tr(ctx, "Cookie settings") }</button>
+				</nav>
+				@localeNav("flex justify-between gap-1 font-main text-xs font-semibold tracking-[0.14em] lg:justify-start",
+					"flex min-h-11 min-w-11 items-center justify-center border lg:min-h-9 lg:min-w-9 lg:border-0",
+					"border-neutral lg:underline lg:underline-offset-4", "border-transparent text-sage-700 hover:text-base-content")
+			</div>
+		</div>
+	</footer>
+}
+
+const (
+	footerColumnLabel = "font-main text-[0.6875rem] font-semibold tracking-[0.22em] text-sage-700 uppercase"
+	legalLink         = "inline-flex min-h-11 items-center font-main text-xs text-base-content hover:underline"
+)

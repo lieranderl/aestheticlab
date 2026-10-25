@@ -231,6 +231,8 @@ async function build() {
 		"datastar.js",
 		await copy("frontend/vendor/datastar.js", "datastar.js"),
 	);
+	// Consent Mode and analytics (window.aesthetic), loaded before Datastar.
+	files.set("site.js", await copy("frontend/site.js", "site.js"));
 
 	// Media: raster images become WebP variants; videos, their posters and
 	// SVGs are copied.

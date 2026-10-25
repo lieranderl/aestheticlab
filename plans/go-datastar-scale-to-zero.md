@@ -394,6 +394,23 @@ Status (2026-10-25): code and IaC on `feat/go-content`; the IaC apply, the impor
 4. Run the shared Playwright specs under the Go config, and add that run to CI next to the Qwik run.
 5. Capture screenshots (every page × 5 locales × mobile/desktop) and Lighthouse LCP/CLS/TBT for `/en-BE/` and `/en-BE/pricelist/` from local production builds of both stacks, side by side and under the same conditions. Review every difference.
 
+Status (2026-10-25): split into three PRs. 6a (shell and pricelist) is on `feat/go-pages`; 6b (home sections) and 6c (policies and the branded 404) follow.
+
+- **6a: shell and pricelist.**
+  - The layout carries the head of `router-head.tsx`: canonical, five alternates plus x-default, Open Graph and Twitter tags with the per-language share image, and JSON-LD as a data block, which CSP doesn't block.
+  - Navigation keeps the header's scroll states, the section highlight and the reading progress. They're Datastar signals, updated by one throttled scroll expression.
+  - The phone menu is a native modal `<dialog>` instead of DaisyUI's drawer, so focus trapping, Escape and focus return come from the browser.
+  - The language menu is a native popover with CSS anchor positioning. Its anchor is a class, not an inline style.
+  - Booking: one shared dialog for every Book button. The Qwik site renders a dialog per button, about 90 on the pricelist. Each button sets the widget URL and the analytics parameters; the iframe loads only once a button sets its URL. As on the Qwik site, the pricelist passes the contact's location name as Timely's `location`.
+  - Consent Mode v2 and gtag moved from Qwik's inline bootstrap to `frontend/site.js`, a hashed, deferred file loaded before Datastar. It keeps the storage key `aestheticlab_cookie_consent_v2`, so existing choices carry over, and exposes `window.aesthetic` (`needsConsent`, `accept`, `reject`, `track`). The footer's Cookie settings reopens the banner through `$cookies`.
+  - The pricelist ships every category in the HTML. Tabs are `?category=` links that switch in place with JavaScript, and the server renders the URL's category for visitors without it. Rows, laser areas and the cross-fading header photo are signals.
+  - **Prices** match what the Qwik site's server sends in production, not local Bun: `€70` (en), `€ 70` (nl), `70 €` (fr, ru), `70 EUR` (uk), with no-break spaces.
+  - Motion has no per-element script. FadeUp is a class Datastar adds once in view (`data-on-intersect__once`); parallax is CSS scroll-driven animation. Both stay still without JavaScript (`@media (scripting: enabled)`) or with reduced motion.
+  - The bird logo is generated into the icon table (`logo/bird`), drawn in `currentColor`.
+  - Routes are registered per literal locale. `/de-BE/pricelist/` is a 404, and `/en-BE/pricelist` gets the Qwik site's 301 rather than the mux's 307.
+- **Compared with the live site** in the browser: at 1024 px the pricelist matches pixel for pixel except the price spacing, now fixed. Tabs, the URL update, rows, laser areas, the booking widget and rejecting analytics all work, with no CSP violations.
+- **Left for Phase 7:** `/favicon.ico`, `/favicon.svg`, `/icon-192.svg` and `/manifest.json` at the root. The head links `/static/favicon.svg` until then.
+
 ### Phase 7: Compatibility
 
 1. The open-Qwik-client shim for `/build/*.js` and `…/q-data.json`, the service-worker kill switch, and the open-tab proxy spec, as described above.

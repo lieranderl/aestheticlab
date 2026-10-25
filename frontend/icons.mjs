@@ -4,7 +4,7 @@
 //
 // Names are "outline/<heroicon>" (24px outline), "mini/<heroicon>" (20px
 // solid) and "brand/<simple-icons slug>", the sets the Qwik site renders
-// through @qwikest/icons. Templates are scanned for those string literals;
+// through @qwikest/icons, and "logo/bird", the studio's mark (src/media/Bird.svg). Templates are scanned for those string literals;
 // the icons the Qwik site uses today are always included.
 //
 // Usage: bun run icons
@@ -24,14 +24,20 @@ export const qwikIcons = [
 	"mini/pause",
 	"mini/play",
 	"brand/instagram",
+	"logo/bird",
 ];
+
+// The studio's marks, by slug: drawn in currentColor like the icons.
+const logos = { bird: "src/media/Bird.svg" };
 
 const heroiconsDir = { outline: "24/outline", mini: "20/solid" };
 
 /** The icon names a template mentions. */
 export function iconNames(templ) {
 	return [
-		...templ.matchAll(/"((?:outline|mini|brand)\/[a-z0-9]+(?:-[a-z0-9]+)*)"/g),
+		...templ.matchAll(
+			/"((?:outline|mini|brand|logo)\/[a-z0-9]+(?:-[a-z0-9]+)*)"/g,
+		),
 	].map((m) => m[1]);
 }
 
@@ -47,6 +53,14 @@ const toPascal = (slug) =>
 /** The inner SVG markup for name, or "" when no set has it. */
 export function iconMarkup(name, readFile = readFileSync) {
 	const [set, slug] = name.split("/");
+	if (set === "logo") {
+		const file = logos[slug];
+		return file
+			? svgInner(readFile(file, "utf8"))
+					.replace(/<title>[^<]*<\/title>/, "")
+					.replace(/ fill="[^"]*"/g, "")
+			: "";
+	}
 	if (set === "brand") {
 		const icon = simpleIcons[`si${toPascal(slug)}`];
 		return icon ? `<path d="${icon.path}"/>` : "";
