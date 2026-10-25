@@ -4,8 +4,9 @@ package static
 
 import "embed"
 
-// Files holds favicon.svg and dist/, the content-hashed CSS, scripts, fonts
-// and media frontend/build.mjs builds (bun run assets).
+// Files holds dist/: the content-hashed CSS, scripts, fonts and media
+// frontend/build.mjs builds (bun run assets), and the link-preview images
+// and root files (robots.txt, manifest.json, …) it copies from public/.
 //
-//go:embed favicon.svg all:dist
+//go:embed all:dist
 var Files embed.FS

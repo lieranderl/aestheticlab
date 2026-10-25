@@ -50,6 +50,14 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("GET /dependencyz", dependency(store, log))
 	mux.HandleFunc("GET /static/", staticFiles(cfg.Static))
 	mux.HandleFunc("GET /og/", shareImages(cfg.Static))
+	for _, name := range rootFiles {
+		mux.HandleFunc("GET /"+name, rootFile(cfg.Static, name))
+	}
+	// The Qwik site's URLs (compat.go).
+	mux.HandleFunc("GET /assets/", legacyRedirect)
+	mux.HandleFunc("GET /fonts/", legacyRedirect)
+	mux.HandleFunc("GET /build/", qwikChunk)
+	mux.HandleFunc("GET /service-worker.js", serviceWorker)
 	mux.HandleFunc("GET /{$}", root)
 	// Each page under each locale, spelled out: a locale-shaped segment that
 	// is not a locale (/de-BE/pricelist/) falls through to the 404.

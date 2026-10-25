@@ -67,22 +67,19 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-ubuntu-24.04-${{ runner.arch }}-${{ steps.playwright.outputs.version }}
 
-      # Bounded with one retry: a stalled browser or apt download once held this step
-      # for most of the job timeout.
+      # Let apt finish before retrying browser downloads: killing its unprivileged
+      # parent can leave a root-owned apt-get running and holding the dpkg lock.
+      - name: Install browser system dependencies
+        timeout-minutes: 10
+        run: bunx playwright install-deps chromium firefox webkit
+
       - name: Install supported browsers
-        env:
-          CACHE_HIT: ${{ steps.playwright-cache.outputs.cache-hit }}
         run: |
-          if [[ "$CACHE_HIT" == "true" ]]; then
-            install=(install-deps chromium firefox webkit)
-          else
-            install=(install --with-deps chromium firefox webkit)
-          fi
           for attempt in 1 2; do
-            if timeout --kill-after=15 300 bunx playwright "${install[@]}"; then
+            if timeout --kill-after=15 300 bunx playwright install chromium firefox webkit; then
               exit 0
             fi
-            echo "Playwright install attempt $attempt failed or timed out" >&2
+            echo "Playwright browser download attempt $attempt failed or timed out" >&2
           done
           exit 1
 
@@ -163,25 +160,28 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-ubuntu-24.04-${{ runner.arch }}-${{ steps.playwright.outputs.version }}
 
+      # Keep privileged apt outside the browser download timeout/retry loop.
+      - name: Install browser system dependencies
+        timeout-minutes: 10
+        run: bunx playwright install-deps chromium firefox webkit
+
       - name: Install supported browsers
-        env:
-          CACHE_HIT: ${{ steps.playwright-cache.outputs.cache-hit }}
         run: |
-          if [[ "$CACHE_HIT" == "true" ]]; then
-            install=(install-deps chromium firefox webkit)
-          else
-            install=(install --with-deps chromium firefox webkit)
-          fi
           for attempt in 1 2; do
-            if timeout --kill-after=15 300 bunx playwright "${install[@]}"; then
+            if timeout --kill-after=15 300 bunx playwright install chromium firefox webkit; then
               exit 0
             fi
-            echo "Playwright install attempt $attempt failed or timed out" >&2
+            echo "Playwright browser download attempt $attempt failed or timed out" >&2
           done
           exit 1
 
       - name: Go cross-browser interaction tests
         run: make test-e2e
+
+      # A tab opened on the Qwik site, then served by Go (Phase 7). Runs the
+      # Qwik production build against the mock Supabase; remove with Qwik.
+      - name: Open Qwik tabs move to the Go site
+        run: bun run test.e2e.handoff
 
       - name: Upload Go Playwright report on failure
         if: failure()
@@ -190,7 +190,9 @@ jobs:
           name: playwright-go-report-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             playwright-report/go/
+            playwright-report/handoff/
             test-results/go/
+            test-results/handoff/
           retention-days: 7
           if-no-files-found: ignore
 

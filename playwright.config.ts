@@ -27,6 +27,8 @@ const webServers = [
 
 export default defineConfig({
 	testDir: "./e2e",
+	// playwright.handoff.config.ts runs these against both sites at once.
+	testIgnore: "handoff/**",
 	fullyParallel: false,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,

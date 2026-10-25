@@ -19,10 +19,13 @@ var hashedName = regexp.MustCompile(`\.[0-9a-f]{8,}\.[a-z0-9]+$`)
 // depend on the image's /etc/mime.types or on sniffing.
 var contentTypes = map[string]string{
 	".ico":         "image/x-icon",
+	".json":        "application/json",
 	".mp4":         "video/mp4",
+	".svg":         "image/svg+xml",
 	".txt":         "text/plain; charset=utf-8",
 	".webmanifest": "application/manifest+json",
 	".woff2":       "font/woff2",
+	".xml":         "text/xml; charset=utf-8",
 }
 
 // encodings are the precompressed siblings frontend/build.mjs writes next to
