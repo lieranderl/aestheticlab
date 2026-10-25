@@ -45,8 +45,12 @@ func staticFiles(files fs.FS) http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
+		defer func() { _ = f.Close() }()
 
 		h := w.Header()
+		// Even a file with only an identity representation can answer 406
+		// for a different Accept-Encoding. Shared caches must keep them apart.
+		h.Add("Vary", "Accept-Encoding")
 		if hashedName.MatchString(name) {
 			h.Set("Cache-Control", "public, max-age=31536000, immutable")
 		} else {
@@ -59,25 +63,38 @@ func staticFiles(files fs.FS) http.HandlerFunc {
 			h.Set("Content-Type", ct)
 		}
 
-		varies := false
+		preferences := parseAcceptEncoding(strings.Join(r.Header.Values("Accept-Encoding"), ","))
+		bestQuality := preferences["identity"]
+		selected := ""
 		for _, enc := range encodings {
 			packed, ok := openFile(files, name+enc.suffix)
 			if !ok {
 				continue
 			}
-			varies = true
-			if accepts(r.Header.Get("Accept-Encoding"), enc.name) {
+			q, explicit := preferences[enc.name]
+			if !explicit {
+				q = preferences["*"]
+			}
+			if q > 0 && (q > bestQuality || (q == bestQuality && selected == "")) {
 				_ = f.Close()
 				f = packed
-				h.Set("Content-Encoding", enc.name)
-				break
+				bestQuality, selected = q, enc.name
+			} else {
+				_ = packed.Close()
 			}
-			_ = packed.Close()
 		}
-		if varies {
-			h.Add("Vary", "Accept-Encoding")
+		identity, explicitIdentity := preferences["identity"]
+		wildcard, hasWildcard := preferences["*"]
+		identityAllowed := (explicitIdentity && identity > 0) || (!explicitIdentity && (!hasWildcard || wildcard > 0))
+		if selected == "" && !identityAllowed {
+			h.Set("Cache-Control", "no-store")
+			h.Del("Content-Type")
+			http.Error(w, "No acceptable content encoding", http.StatusNotAcceptable)
+			return
 		}
-		defer func() { _ = f.Close() }()
+		if selected != "" {
+			h.Set("Content-Encoding", selected)
+		}
 
 		// Embedded files have no modification time; the hashed name (or
 		// the short max-age) stands in for validators.
@@ -85,18 +102,51 @@ func staticFiles(files fs.FS) http.HandlerFunc {
 	}
 }
 
-// accepts reports whether an Accept-Encoding header allows coding: listed by
-// name (any case) without q=0.
-func accepts(header, coding string) bool {
+// parseAcceptEncoding returns qualities in thousandths (RFC 9110, 12.5.3).
+// Explicit codings override the wildcard. Identity is an acceptable fallback
+// unless explicitly excluded; its preference is compared only when supplied.
+// Invalid entries and conflicting duplicate entries fail closed.
+func parseAcceptEncoding(header string) map[string]int {
+	qualities := make(map[string]int)
 	for part := range strings.SplitSeq(header, ",") {
 		name, params, _ := strings.Cut(strings.TrimSpace(part), ";")
-		if !strings.EqualFold(strings.TrimSpace(name), coding) {
+		name = strings.ToLower(strings.TrimSpace(name))
+		if name == "" {
 			continue
 		}
-		q, found := strings.CutPrefix(strings.ReplaceAll(strings.ToLower(params), " ", ""), "q=")
-		return !found || strings.Trim(q, "0.") != ""
+		q := 1000
+		if params != "" {
+			key, value, found := strings.Cut(strings.TrimSpace(params), "=")
+			q = 0
+			if found && strings.EqualFold(strings.TrimSpace(key), "q") {
+				q = encodingQuality(strings.TrimSpace(value))
+			}
+		}
+		if previous, exists := qualities[name]; exists {
+			q = min(q, previous)
+		}
+		qualities[name] = q
 	}
-	return false
+	return qualities
+}
+
+func encodingQuality(value string) int {
+	whole, fraction, _ := strings.Cut(value, ".")
+	if (whole != "0" && whole != "1") || len(fraction) > 3 {
+		return 0
+	}
+	q, place := 0, 100
+	for _, digit := range fraction {
+		if digit < '0' || digit > '9' || (whole == "1" && digit != '0') {
+			return 0
+		}
+		q += int(digit-'0') * place
+		place /= 10
+	}
+	if whole == "1" {
+		return 1000
+	}
+	return q
 }
 
 // openFile opens the regular file name in files, if there is one.

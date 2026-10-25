@@ -79,8 +79,9 @@ func isProbe(path string) bool {
 	return path == "/healthz" || path == "/readyz" || path == "/dependencyz"
 }
 
-// recoverPanics answers 500 when a handler panics, unless it already wrote
-// its headers, and logs http_panic.
+// recoverPanics logs http_panic and answers 500 before headers are sent.
+// After headers are sent it aborts the transfer: a partial page must never
+// finish as a successful response.
 func recoverPanics(log *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rec := &statusRecorder{ResponseWriter: w}
@@ -92,9 +93,10 @@ func recoverPanics(log *slog.Logger, next http.Handler) http.Handler {
 				}
 				log.ErrorContext(r.Context(), "http_panic",
 					"method", r.Method, "path", r.URL.Path, "panic", fmt.Sprint(v))
-				if !rec.wroteHeader {
-					http.Error(rec, "Internal Server Error", http.StatusInternalServerError)
+				if rec.wroteHeader {
+					panic(http.ErrAbortHandler)
 				}
+				http.Error(rec, "Internal Server Error", http.StatusInternalServerError)
 			}
 		}()
 		next.ServeHTTP(rec, r)

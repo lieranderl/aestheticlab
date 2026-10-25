@@ -1,9 +1,27 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
+
+func TestRepeatedPlaceholdersReuseTheirArgument(t *testing.T) {
+	for _, tc := range []struct {
+		name, english, translation, want string
+	}{
+		{"English repetition", "Hello {{name}}, {{name}}", "Hallo {{name}}, {{name}}", "Hallo Julia, Julia"},
+		{"translation-only repetition", "Hello {{name}}", "{{name}}, hallo {{name}}", "Julia, hallo Julia"},
+		{"repetition with percent", "Save 30% for {{name}}", "30% voor {{name}}, {{name}}", "30% voor Julia, Julia"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			translated := formatText(tc.translation, placeholders(tc.english))
+			if got := fmt.Sprintf(translated, "Julia"); got != tc.want {
+				t.Errorf("formatted translation = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
 
 func TestPlaceholdersBecomeFmtVerbsInTheEnglishOrder(t *testing.T) {
 	for _, tc := range []struct{ text, want string }{
