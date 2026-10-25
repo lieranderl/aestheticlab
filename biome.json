@@ -107,7 +107,7 @@
 	},
 	"overrides": [
 		{
-			"includes": ["frontend/*.mjs"],
+			"includes": ["frontend/*.{js,mjs}"],
 			"linter": {
 				"rules": {
 					"correctness": {
@@ -151,7 +151,7 @@
 			"src/**/*.{js,cjs,cts,mjs,ts,mts,jsx,tsx,json,yml,yaml,md,html,css,sass,scss,less,vue,svelte}",
 			"e2e/**/*.{js,ts,tsx,json}",
 			"adapters/**/*.{js,cjs,cts,mjs,ts,mts,jsx,tsx}",
-			"frontend/*.mjs",
+			"frontend/*.{js,mjs}",
 			"*.{js,ts,tsx,json,md}",
 			"!src/global.css",
 			"!cmd",

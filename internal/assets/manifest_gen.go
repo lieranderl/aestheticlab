@@ -8,7 +8,7 @@ func fileURL(name string) string {
 	case "Bird.svg":
 		return "/static/dist/media/Bird.02de9cbcb0.svg"
 	case "app.css":
-		return "/static/dist/app.77e6e8c23f.css"
+		return "/static/dist/app.1199d14383.css"
 	case "datastar.js":
 		return "/static/dist/datastar.727844adfc.js"
 	case "fonts/QESTERO-Regular.ttf":
@@ -39,6 +39,8 @@ func fileURL(name string) string {
 		return "/static/dist/fonts/onest-symbols-wght-normal.2ec2d45d2e.woff2"
 	case "fonts/onest-vietnamese-wght-normal.woff2":
 		return "/static/dist/fonts/onest-vietnamese-wght-normal.d852d4d094.woff2"
+	case "site.js":
+		return "/static/dist/site.591b46414c.js"
 	case "video/cateye-poster.jpg":
 		return "/static/dist/media/video/cateye-poster.6b3602984d.jpg"
 	case "video/cateye.mp4":
@@ -178,6 +180,7 @@ var fileNames = []string{
 	"fonts/onest-math-wght-normal.woff2",
 	"fonts/onest-symbols-wght-normal.woff2",
 	"fonts/onest-vietnamese-wght-normal.woff2",
+	"site.js",
 	"video/cateye-poster.jpg",
 	"video/cateye.mp4",
 	"video/chrome-poster.jpg",

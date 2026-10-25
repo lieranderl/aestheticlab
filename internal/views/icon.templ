@@ -4,13 +4,18 @@ import "strings"
 
 // Icon renders an icon as inline SVG on the server, sized 1em like the Qwik
 // site's @qwikest/icons. name is "outline/<heroicon>" (24px outline),
-// "mini/<heroicon>" (20px solid) or "brand/<simple-icons slug>"; run
+// "mini/<heroicon>" (20px solid), "brand/<simple-icons slug>" or
+// "logo/bird" (the studio's mark, sized by its class); run
 // `bun run icons` after using a new one. Unknown names render nothing.
 templ Icon(name string, class string) {
 	if markup := iconPath(name); markup != "" {
 		switch {
 			case strings.HasPrefix(name, "outline/"):
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class={ class }>
+					@templ.Raw(markup)
+				</svg>
+			case strings.HasPrefix(name, "logo/"):
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="371 192 202 240" fill="currentColor" aria-hidden="true" class={ class }>
 					@templ.Raw(markup)
 				</svg>
 			case strings.HasPrefix(name, "mini/"):

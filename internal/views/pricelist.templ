@@ -1,0 +1,240 @@
+package views
+
+import "github.com/lieranderl/aestheticlab/internal/content"
+
+// priceColumns lays out a treatment row: name, time, price, toggle.
+const priceColumns = "grid grid-cols-[minmax(0,1fr)_auto_1.125rem] items-center gap-x-3 md:grid-cols-[minmax(0,1fr)_5.625rem_4.375rem_1.5rem] md:items-baseline md:gap-x-5"
+
+// Pricelist is every treatment with its time and price, one category at a
+// time. Every category is in the HTML, so search engines and visitors
+// without JavaScript get them all (each tab is a ?category= link); with
+// JavaScript the tabs switch in place.
+templ Pricelist(loc *content.Localized) {
+	{{ cats := pricelist(ctx, loc) }}
+	{{ selected := selectedCategory(ctx, cats) }}
+	{{ location := loc.Contact.Location.Name }}
+	@Layout(PageMeta{
+		Title:       tr(ctx, "Manicure, Pedicure, Brows & Laser Prices in Leuven | Aesthetic Lab"),
+		Description: tr(ctx, "Prices and durations for manicure, pedicure, brows, lashes, waxing and laser hair removal at Aesthetic Lab in Leuven. Book online."),
+	}) {
+		<div class="min-h-screen bg-base-100 text-base-content">
+			@Navigation(false, true)
+			<main
+				id="main-content"
+				tabindex="-1"
+				class="pt-16 lg:pt-20"
+				data-signals={ pricelistSignals(selected, cats) }
+				data-init={ pricingViewed(loc) + `; document.querySelector('#pricelist-tabs [aria-current="true"]')?.scrollIntoView({block: 'nearest', inline: 'center'})` }
+			>
+				<section class="grid lg:h-100 lg:grid-cols-[minmax(0,37.5rem)_minmax(0,1fr)]">
+					<div class="flex flex-col justify-end gap-3 bg-primary px-5.5 pt-7 pb-6.5 text-primary-content md:px-10 lg:gap-5 lg:py-14 lg:pr-18 lg:pl-16 xl:pl-28">
+						@Kicker("sage", "mb-0") {
+							{ tr(ctx, "Price list") }
+						}
+						<h1 class="font-cormorant text-[2.875rem] leading-[0.95] lg:text-[5rem] lg:leading-[0.92]">{ tr(ctx, "Prices & time") }</h1>
+						<p class="max-w-95 font-main text-sm leading-normal lg:text-base lg:leading-[1.55]">
+							{ tr(ctx, "Every treatment with its duration. Prices are for the treatment itself; add-ons are listed separately.") }
+						</p>
+					</div>
+					<figure class="relative h-56 overflow-hidden bg-sage-200 sm:h-72 lg:h-auto">
+						if len(cats) == 0 {
+							@Picture("pricelist-hero.png", "", "absolute inset-0 h-full w-full object-cover object-[center_45%]", "(min-width: 1024px) calc(100vw - 37.5rem), 100vw", true)
+						}
+						<!-- Photos cross-fade: the next one is already loaded underneath, so the frame never goes blank. -->
+						for _, c := range covers(cats, selected) {
+							<div
+								class={ "absolute inset-0 transition-opacity duration-700 ease-(--ease-quint) motion-reduce:transition-none", templ.KV("opacity-100", c.Initially), templ.KV("opacity-0", !c.Initially) }
+								data-class={ "{'opacity-100': " + c.Active + ", 'opacity-0': !(" + c.Active + ")}" }
+							>
+								@Picture(c.Image, "", "h-full w-full object-cover", "(min-width: 1024px) calc(100vw - 37.5rem), 100vw", c.Initially)
+							</div>
+						}
+					</figure>
+				</section>
+				if len(cats) == 0 {
+					<div class="mx-auto max-w-3xl px-5.5 py-16">
+						<div class="alert border border-base-300 bg-base-100" role="status">
+							<span>{ tr(ctx, "No treatments listed in this category yet. Check back soon or contact us for details.") }</span>
+						</div>
+					</div>
+				} else {
+					<!-- Non-sticky anchor: the tabs below stick, so they cannot be a scroll target. -->
+					<div id="pricelist-categories" class="scroll-mt-16"></div>
+					<nav id="pricelist-tabs" aria-label={ tr(ctx, "Service categories") } class="sticky top-16 z-20 overflow-x-auto overscroll-x-contain border-b border-neutral bg-base-100 [scrollbar-width:none] lg:top-16">
+						<ul class="flex w-max gap-0 px-2.5 md:px-10 lg:gap-10 lg:px-16 xl:px-28">
+							for i, c := range cats {
+								<li>
+									<a
+										href={ templ.SafeURL("?category=" + c.ID) }
+										if c.ID == selected {
+											aria-current="true"
+										}
+										data-attr:aria-current={ is("category", c.ID) + " ? 'true' : false" }
+										data-on:click__prevent={ selectCategory(c) }
+										class={ "-mb-px flex min-h-13 cursor-pointer items-center gap-2.5 border-b-2 px-3 font-main text-sm font-semibold whitespace-nowrap transition-colors lg:min-h-18 lg:px-0 lg:text-xs",
+											templ.KV("border-neutral text-base-content", c.ID == selected),
+											templ.KV("border-transparent text-base-content/70 hover:text-base-content", c.ID != selected) }
+										data-class={ "{'border-neutral': " + is("category", c.ID) + ", 'text-base-content': " + is("category", c.ID) + ", 'border-transparent': !(" + is("category", c.ID) + "), 'text-base-content/70': !(" + is("category", c.ID) + ")}" }
+									>
+										<span class="hidden text-primary-content/80 lg:inline">{ twoDigits(i + 1) }</span>
+										{ c.Title }
+									</a>
+								</li>
+							}
+						</ul>
+					</nav>
+					for i, c := range cats {
+						@priceCategorySection(c, i, len(cats), c.ID == selected, location)
+					}
+				}
+			</main>
+			@Footer(true, true)
+			@ScrollToTop("pricelist-categories", tr(ctx, "Back to categories"))
+		</div>
+	}
+}
+
+// priceCategorySection is one category: its title, description and Book
+// button beside its treatments.
+templ priceCategorySection(c priceCategory, index, total int, selected bool, location string) {
+	{{ headingID := "pricelist-" + c.ID + "-title" }}
+	{{ first := c.Lists[0] }}
+	<section
+		if !selected {
+			hidden
+		}
+		data-attr:hidden={ "!(" + is("category", c.ID) + ")" }
+		aria-labelledby={ headingID }
+		class="mx-auto grid max-w-360 gap-4.5 px-4.5 pt-4.5 pb-16 md:px-10 lg:grid-cols-[minmax(0,25rem)_minmax(0,1fr)] lg:gap-24 lg:px-16 lg:pt-18 lg:pb-22 xl:px-28"
+	>
+		<aside class="flex flex-col gap-3 lg:sticky lg:top-40 lg:gap-5.5 lg:self-start">
+			<span class="hidden font-main text-xs font-semibold tracking-[0.2em] text-primary-content/80 lg:block">{ twoDigits(index + 1) } / { twoDigits(total) }</span>
+			<div class="flex items-baseline justify-between gap-4">
+				<h2
+					id={ headingID }
+					class="font-cormorant text-[2rem] leading-none lg:text-7xl lg:leading-[0.9]"
+					if len(c.Lists) > 1 {
+						data-text={ listHeading(c) }
+					}
+				>{ first.Title }</h2>
+				<span
+					class="font-main text-sm font-semibold whitespace-nowrap text-base-content/80 lg:hidden"
+					if len(c.Lists) > 1 {
+						data-text={ listCount(ctx, c) }
+					}
+				>{ countLabel(ctx, first) }</span>
+			</div>
+			<p class="hidden font-cormorant text-[1.3125rem] leading-[1.35] italic lg:block">{ c.Description }</p>
+			<div class="hidden items-center gap-5 lg:flex">
+				@BookButton(Booking{ID: "pricelist-" + c.ID + "-book", Text: tr(ctx, "Book appointment"), Location: location,
+					Placement: "pricelist_category", ServiceCategory: c.Title,
+					Class: "btn btn-accent h-13 min-h-13 px-6.5 font-main text-sm font-semibold"})
+				if c.From != "" {
+					<span class="font-main text-sm font-semibold text-base-content/80">{ c.From }</span>
+				}
+			</div>
+		</aside>
+		<div>
+			if len(c.Lists) > 1 {
+				<div class="mb-4.5 flex gap-1.5 lg:mb-8">
+					for i, l := range c.Lists {
+						<button
+							type="button"
+							aria-pressed={ boolString(i == 0) }
+							data-attr:aria-pressed={ is("laser", l.ID) + " ? 'true' : 'false'" }
+							aria-controls={ "pricelist-list-" + l.ID }
+							data-on:click={ "$laser = " + jsString(l.ID) + "; $open = ''" }
+							class={ "btn btn-sm h-11 min-h-11 flex-1 border-neutral font-main text-sm font-semibold lg:flex-none lg:px-6", templ.KV("btn-neutral", i == 0), templ.KV("btn-outline", i != 0) }
+							data-class={ "{'btn-neutral': " + is("laser", l.ID) + ", 'btn-outline': !(" + is("laser", l.ID) + ")}" }
+						>
+							{ l.Label }
+						</button>
+					}
+				</div>
+			}
+			<div class={ priceColumns, "hidden border-b border-neutral pb-3 font-main text-[0.6875rem] font-semibold tracking-[0.2em] text-primary-content/80 uppercase md:grid" } aria-hidden="true">
+				<span>{ tr(ctx, "Treatment") }</span>
+				<span>{ tr(ctx, "Time") }</span>
+				<span class="text-right">{ tr(ctx, "Price") }</span>
+				<span></span>
+			</div>
+			for i, l := range c.Lists {
+				<div
+					id={ "pricelist-list-" + l.ID }
+					if i > 0 {
+						hidden
+					}
+					if len(c.Lists) > 1 {
+						data-attr:hidden={ "!(" + is("laser", l.ID) + ")" }
+					}
+				>
+					<ul class="border-t border-neutral md:border-t-0">
+						for _, s := range l.Main {
+							@priceRow(s, l.Title, location)
+						}
+					</ul>
+					if len(l.AddOns) > 0 {
+						<div class="mt-6.5 lg:mt-10">
+							@Kicker("", "mb-0 border-b border-neutral pb-2 lg:pb-3") {
+								{ tr(ctx, "Add-ons · with any treatment") }
+							}
+							<ul class="grid font-main text-[0.8125rem] md:grid-cols-2 md:gap-x-10 md:text-sm">
+								for _, s := range l.AddOns {
+									<li class="flex justify-between gap-3 border-b border-base-300 py-3">
+										<span>
+											{ s.Name }
+											if d := minutes(ctx, s.Duration); d != "" {
+												{ " · " + d }
+											}
+										</span>
+										<strong class="font-semibold whitespace-nowrap tabular-nums">{ price(ctx, s.Price) }</strong>
+									</li>
+								}
+							</ul>
+						</div>
+					}
+				</div>
+			}
+		</div>
+	</section>
+}
+
+// priceRow is a treatment: tapping it shows its description and a Book
+// button that opens the widget on it.
+templ priceRow(s content.Service, category, location string) {
+	{{ panelID := "price-row-" + s.ID }}
+	{{ open := is("open", s.ID) }}
+	<li class="border-b border-base-300 transition-colors duration-300" data-class={ "{'bg-base-200/70': " + open + ", 'md:-mx-5': " + open + ", 'md:px-5': " + open + "}" }>
+		<button
+			type="button"
+			aria-expanded="false"
+			data-attr:aria-expanded={ open + " ? 'true' : 'false'" }
+			aria-controls={ panelID }
+			data-on:click={ "$open = " + open + " ? '' : " + jsString(s.ID) }
+			class={ priceColumns, "min-h-14 w-full cursor-pointer py-3 text-left md:py-4" }
+		>
+			<span class="flex min-w-0 flex-col gap-0.5">
+				<span class="font-cormorant text-[1.3125rem] leading-[1.1] md:text-2xl">{ upperFirst(s.Name) }</span>
+				<span class="font-main text-xs font-medium text-base-content/80 md:hidden">{ minutes(ctx, s.Duration) }</span>
+			</span>
+			<span class="hidden font-main text-sm text-base-content/80 md:block">{ minutes(ctx, s.Duration) }</span>
+			<span class="font-main text-[0.9375rem] font-semibold tabular-nums md:text-right md:text-base">{ price(ctx, s.Price) }</span>
+			<span aria-hidden="true" class="font-main text-xl leading-none" data-text={ open + " ? '−' : '+'" }>+</span>
+		</button>
+		<div id={ panelID } hidden data-attr:hidden={ "!(" + open + ")" } class="flex flex-col gap-3 pb-4 md:pb-5.5">
+			if s.Description != "" {
+				<p class="max-w-140 font-main text-sm leading-relaxed text-base-content md:text-[0.9375rem] md:leading-[1.6]">{ s.Description }</p>
+			}
+			@BookButton(Booking{ID: "pricelist_service_" + s.ID, Product: s.ID, Text: tr(ctx, "Book this treatment"), Location: location,
+				Placement: "pricelist_service", ServiceID: s.ID, ServiceName: s.Name, ServiceCategory: category,
+				Class: "btn btn-outline btn-secondary btn-sm h-11 min-h-11 self-start px-4.5 font-main text-sm font-semibold md:px-5"})
+		</div>
+	</li>
+}
+
+func boolString(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
+}

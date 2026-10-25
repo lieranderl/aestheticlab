@@ -1,0 +1,175 @@
+package views
+
+import (
+	"github.com/lieranderl/aestheticlab/internal/assets"
+	"github.com/lieranderl/aestheticlab/internal/i18n"
+)
+
+// PageMeta is what a page tells search engines and link previews.
+type PageMeta struct {
+	Title       string
+	Description string
+	// NoIndex asks search engines to leave the page out (the 404 page).
+	NoIndex bool
+}
+
+// pageSignals are the signals every page shares:
+//   - cookies: the cookie banner shows (no choice stored yet, or reopened);
+//   - booking*: the booking dialog's widget URL, load state and the
+//     analytics parameters of the button that opened it (JSON);
+//   - menu: the phone menu is open;
+//   - scrolled, overHero, bar, progress, section: the header's scroll state
+//     (see scrollState).
+const pageSignals = `{cookies: false, bookingUrl: '', bookingLoaded: false, bookingEvent: '{}', menu: false, scrolled: false, overHero: false, bar: false, progress: 0, section: ''}`
+
+// Layout is the document shell: the head with the page's SEO and
+// link-preview tags, then the page, the cookie banner and the one booking
+// dialog every Book button opens.
+templ Layout(meta PageMeta) {
+	<!DOCTYPE html>
+	<html lang={ pageLang(ctx) }>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ meta.Title }</title>
+			@seoHead(meta)
+			<link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>
+			<meta name="theme-color" content="#8b9687"/>
+			<link rel="stylesheet" href={ assets.URL("app.css") }/>
+			@templ.Raw(jsonLDScript())
+			<!-- Consent defaults and gtag first, then Datastar: deferred and module
+			     scripts run in document order, and pages call window.aesthetic. -->
+			<script defer src={ assets.URL("site.js") }></script>
+			<script type="module" src={ assets.URL("datastar.js") }></script>
+		</head>
+		<body
+			data-theme="Aesthetic"
+			class="relative min-w-80 bg-base-200 font-main text-base-content antialiased scrollbar-thin [scrollbar-color:var(--color-base-300)_transparent]"
+			data-signals={ pageSignals }
+		>
+			{ children... }
+			@cookieBanner()
+			@bookingDialog()
+		</body>
+	</html>
+}
+
+// seoHead is the page's canonical and alternate URLs and its link preview
+// (src/components/router-head/router-head.tsx).
+templ seoHead(meta PageMeta) {
+	{{ path := requestOf(ctx).path }}
+	{{ current := i18n.FromContext(ctx) }}
+	{{ shareImage := siteURL + "/og/" + string(current) + ".jpg" }}
+	{{ shareAlt := tr(ctx, "Aesthetic Lab, Leuven: a glossy taupe manicure in soft foam") }}
+	if meta.Description != "" {
+		<meta name="description" content={ meta.Description }/>
+	}
+	if meta.NoIndex {
+		<meta name="robots" content="noindex"/>
+	}
+	<link rel="canonical" href={ absoluteURL(current, path) }/>
+	for _, l := range i18n.Supported() {
+		<link rel="alternate" hreflang={ string(l) } href={ absoluteURL(l, path) }/>
+	}
+	<link rel="alternate" hreflang="x-default" href={ absoluteURL(i18n.Default, path) }/>
+	<meta property="og:type" content="website"/>
+	<meta property="og:site_name" content={ siteName }/>
+	<meta property="og:title" content={ meta.Title }/>
+	if meta.Description != "" {
+		<meta property="og:description" content={ meta.Description }/>
+	}
+	<meta property="og:url" content={ absoluteURL(current, path) }/>
+	<meta property="og:locale" content={ ogLocale(current) }/>
+	for _, l := range i18n.Supported() {
+		if l != current {
+			<meta property="og:locale:alternate" content={ ogLocale(l) }/>
+		}
+	}
+	<meta property="og:image" content={ shareImage }/>
+	<meta property="og:image:type" content="image/jpeg"/>
+	<meta property="og:image:width" content="1200"/>
+	<meta property="og:image:height" content="630"/>
+	<meta property="og:image:alt" content={ shareAlt }/>
+	<meta name="twitter:card" content="summary_large_image"/>
+	<meta name="twitter:title" content={ meta.Title }/>
+	if meta.Description != "" {
+		<meta name="twitter:description" content={ meta.Description }/>
+	}
+	<meta name="twitter:image" content={ shareImage }/>
+	<meta name="twitter:image:alt" content={ shareAlt }/>
+}
+
+// cookieBanner asks for analytics consent until the visitor chooses, and
+// again when the footer's Cookie settings reopens it ($cookies).
+templ cookieBanner() {
+	<section
+		id="cookie-banner"
+		hidden
+		data-init="$cookies = aesthetic.needsConsent()"
+		data-attr:hidden="!$cookies"
+		aria-labelledby="cookie-settings-title"
+		aria-describedby="cookie-settings-description"
+		class="fixed top-[calc(env(safe-area-inset-top)+4.25rem)] right-3 left-3 z-50 motion-safe:animate-fade-in motion-reduce:animate-none md:top-auto md:right-auto md:bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] md:left-6 md:w-[min(26rem,calc(100vw-3rem))]"
+	>
+		<div class="flex max-h-[45svh] flex-col gap-2.5 overflow-y-auto overscroll-contain border border-base-300 bg-base-100 p-3.5 sm:gap-3 sm:p-5 text-base-content shadow-[0_12px_32px_rgb(26_36_26/0.25)]">
+			<!-- Phones: compact, so the hero headline and booking button stay in view. -->
+			<div class="flex items-baseline justify-between gap-4 max-sm:sr-only">
+				<h2 id="cookie-settings-title" class="font-cormorant text-[1.625rem] leading-none">{ tr(ctx, "Cookies") }</h2>
+				<a class="link inline-flex min-h-11 items-center font-main text-xs underline-offset-3" href={ templ.SafeURL(href(ctx, "privacy-policy/")) }>
+					{ tr(ctx, "Read our Privacy Policy") }
+				</a>
+			</div>
+			<p id="cookie-settings-description" class="font-main text-sm leading-normal text-base-content">
+				{ tr(ctx, "Necessary cookies keep the site working. Analytics cookies are only set if you allow them.") }
+				<a class="link sm:hidden" href={ templ.SafeURL(href(ctx, "privacy-policy/")) }>{ tr(ctx, "Read our Privacy Policy") }</a>
+			</p>
+			<div class="grid grid-cols-2 gap-2">
+				<button type="button" class={ cookieButton } data-on:click="aesthetic.reject(); $cookies = false">
+					{ tr(ctx, "Reject analytics") }
+				</button>
+				<button type="button" class={ cookieButton } data-on:click="aesthetic.accept(); $cookies = false">
+					{ tr(ctx, "Accept analytics") }
+				</button>
+			</div>
+		</div>
+	</section>
+}
+
+const cookieButton = "btn btn-outline h-11 min-h-11 border-neutral px-2 font-main text-sm font-semibold sm:h-12 sm:min-h-12"
+
+// bookingDialog shows Timely's booking widget for the Book button that
+// opened it ($bookingUrl). The iframe loads only once a button sets its URL,
+// and is emptied again on close.
+templ bookingDialog() {
+	<dialog
+		id="booking"
+		class="modal modal-bottom sm:modal-middle"
+		aria-labelledby="booking-title"
+		data-on:close="$bookingUrl = ''; $bookingLoaded = false"
+	>
+		<div class="modal-box relative flex min-h-[70vh] w-full max-w-5xl flex-col bg-base-100 p-2 pt-12 sm:min-h-[50vh] sm:w-[calc(100%-1rem)]">
+			<h2 id="booking-title" class="sr-only">{ tr(ctx, "Book your appointment") }</h2>
+			<form method="dialog">
+				<button type="submit" class="btn btn-ghost btn-square absolute right-1 top-1 min-h-11 min-w-11" aria-label={ tr(ctx, "Close") }>
+					<span aria-hidden="true">✕</span>
+				</button>
+			</form>
+			<div class="relative min-h-[60vh] grow" data-attr:aria-busy="$bookingLoaded ? 'false' : 'true'">
+				<div class="absolute inset-0 flex items-center justify-center" role="status" data-show="!$bookingLoaded">
+					<span class="loading loading-spinner loading-lg text-secondary"></span>
+					<span class="sr-only">{ tr(ctx, "Loading booking widget…") }</span>
+				</div>
+				<iframe
+					title={ tr(ctx, "Book your appointment") }
+					class="h-[75vh] w-full translate-y-2 border-0 opacity-0 transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none"
+					data-attr:src="$bookingUrl || false"
+					data-class="{'opacity-100': $bookingLoaded, 'translate-y-0': $bookingLoaded, 'opacity-0': !$bookingLoaded, 'translate-y-2': !$bookingLoaded}"
+					data-on:load="if ($bookingUrl) { $bookingLoaded = true; aesthetic.track('booking_widget_loaded', JSON.parse($bookingEvent)) }"
+				></iframe>
+			</div>
+		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button type="submit">{ tr(ctx, "Close") }</button>
+		</form>
+	</dialog>
+}
