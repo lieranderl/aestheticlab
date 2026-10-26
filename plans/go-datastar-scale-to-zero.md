@@ -595,6 +595,19 @@ Status (2026-10-26): the template change merged in [#257](https://github.com/lie
 3. Deploy and promote so the serving revisions pick up the new template: a merge to `staging`, then a patch release (`v5.0.1`) through the canary path.
 4. Measure only after that promotion. Confirm the serving revision shows min instances 0, `instance_count` reaches 0 overnight, cold-start metrics meet the targets, and Firestore reads match the model.
 
+Status (2026-10-26): step 2 is coded on `feat/prod-scale-to-zero`, to ship with `v5.0.0` rather than a week after it.
+
+- **Why it can go first:** `min_instances` is a revision setting, and production revisions change only with a release. After the apply, the serving Qwik revision keeps its one warm instance until `v5.0.0` promotes the Go revision, which then scales to zero. Qwik never runs scaled to zero. Step 3's `v5.0.1` isn't needed for this.
+- **Uptime checks were already broken:** `/healthz` answers 404 from outside on both stacks, because Cloud Run's front end doesn't pass that path through. The health check has been failing, and only `/dependencyz` reached the app. Removing both checks loses no working signal.
+- **Changes:**
+  - `production_min_instances` 1 → 0;
+  - both uptime checks and their alert removed;
+  - `supabase_failures` replaced by `content_failures`. It counts `content_refresh_failed` and `content_snapshot_served`, plus Qwik's Supabase loader failures while a Qwik revision can still serve. The alert policy moves to `content_failure` with a `moved` block.
+  - **slow-cold-start alert:** container startup p95 above 700 ms in a 15-minute window. Windows with no starts never alert.
+  - **Firestore-read alert:** more than 2,000 `site-production` reads in an hour. The 40k/day budget as an hourly pace, since alert windows are short.
+  - memory 1 GiB → 512 MiB. The Go site peaks at about 16 MiB, but the second-generation execution environment needs at least 512 MiB, so not 256 MiB as guessed.
+- **Staging:** it already scaled to zero (min 0, no checks). It gets the memory change.
+
 #### 9b: Drop the Supabase Binding
 
 1. Apply a template without `SUPABASE_URL` and the `SUPABASE_KEY` binding.

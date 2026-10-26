@@ -94,7 +94,7 @@ variable "production_supabase_secret_version" {
 }
 
 variable "production_uptime_host" {
-  description = "Public production hostname checked independently of Cloud Run."
+  description = "Public production hostname, exported as the PROD_URL deployment variable."
   type        = string
   default     = "aestheticlab.be"
 }
@@ -150,8 +150,9 @@ variable "staging_max_instances" {
 }
 
 variable "production_min_instances" {
-  type    = number
-  default = 1
+  description = "Minimum production instances. 0 lets the service scale to zero between visits (plan Phase 9a)."
+  type        = number
+  default     = 0
 }
 
 variable "production_max_instances" {
@@ -204,8 +205,20 @@ variable "server_error_alert_threshold" {
   default     = 5
 }
 
-variable "supabase_failure_alert_threshold" {
-  description = "Production Supabase loader failures tolerated within 5 minutes before alerting."
+variable "content_failure_alert_threshold" {
+  description = "Production content failures (failed content refreshes, snapshot fallbacks, Qwik Supabase loader failures) tolerated within 5 minutes before alerting."
   type        = number
   default     = 10
+}
+
+variable "startup_latency_alert_ms" {
+  description = "Production container startup p95, in milliseconds, above which a 15-minute window alerts. The Go site starts in about 230 ms (plan Phase 8)."
+  type        = number
+  default     = 700
+}
+
+variable "firestore_read_alert_per_hour" {
+  description = "Production Firestore document reads tolerated in one hour before alerting: about the plan's 40k/day bug threshold, as an hourly pace."
+  type        = number
+  default     = 2000
 }
