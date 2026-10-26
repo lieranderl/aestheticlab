@@ -539,7 +539,7 @@ Status (2026-10-26): done on `feat/go-compat`; `internal/server/compat.go` holds
 5. Before merging, deploy the Go image as a no-traffic tagged revision on staging for a preview URL.
 6. Merge, let the staging deploy run (it copies the Phase 8 template), and measure staging cold starts against the targets.
 
-Status (2026-10-26): the template change merged in [#257](https://github.com/lieranderl/qwik-aestheticlab/pull/257) as `d797f35`, with the `Dockerfile.web` fix left over from Phase 7. Steps 2–4 are in [#258](https://github.com/lieranderl/qwik-aestheticlab/pull/258). The IaC apply and steps 5 and 6 are still to do.
+Status (2026-10-26): the template change merged in [#257](https://github.com/lieranderl/qwik-aestheticlab/pull/257) as `d797f35`, with the `Dockerfile.web` fix left over from Phase 7. Steps 2–4 merged in [#258](https://github.com/lieranderl/qwik-aestheticlab/pull/258) as `ce412a9`. Staging has served the Go image since 08:58 UTC. Step 5's separate preview revision was not needed: the staging job deploys every candidate as a no-traffic tagged revision and smoke-tests it before promotion. Making `go` a required check in the `staging` ruleset is still to do.
 
 - **Template (step 1):** the Cloud Run container gets `FIRESTORE_DATABASE` (from the `google_firestore_database.site` resource) and `GOOGLE_CLOUD_PROJECT`, as Phase 5 noted. The service now depends on the conditioned Firestore grant. `tofu fmt` and `validate` pass.
 - **Image (step 2):** `Dockerfile.web` replaces `Dockerfile`. The Qwik Dockerfile is gone; its revisions remain the rollback targets.
@@ -552,6 +552,22 @@ Status (2026-10-26): the template change merged in [#257](https://github.com/lie
 - **Order:** a Go revision needs `FIRESTORE_DATABASE` in the template. Without it, `/dependencyz` answers 503, the staging smoke test fails and staging stays on Qwik. The infrastructure workflow runs only from `staging`, so ship two PRs:
   1. The template change alone. The Qwik image ignores the new variables. Merge it, then plan and apply through the infrastructure workflow.
   2. Everything else, once the apply is done.
+
+  #258 was merged before the apply, so its first staging attempt failed this way, safely: the candidate got no traffic. Two more things came up before the cutover:
+  - **Tainted databases.** The Phase 5 apply (run 40218583940) had stopped on the expected 403. Both `google_firestore_database.site` entries were tainted in state, and the runtime read grants had never been created. Both databases were untainted locally (`tofu untaint`, which only edits state). The next plan was then 2 to add (the grants) and 2 to change (the template variables), and it was applied.
+  - **IAM propagation.** The re-run 42 s after the apply still got `PermissionDenied` from Firestore. The third attempt, about 8 minutes after the apply, passed and was promoted.
+- **Cold start (step 6), measured 2026-10-26 10:17 UTC:** staging had been idle 17 minutes on revision `…-40300836995-2`. The request came from a machine in Belgium.
+  - **First byte:** 1.21 s for `/en-BE/`. Cloud Run's request latency was 1.02 s. The target is ≤ 1.2 s (Qwik: 5.58 s at Phase 0, 1.68 s after Phase 1).
+  - **Startup:** `startup_latencies` is about 1.01 s for every revision today, Qwik and Go alike, against a target of p95 ≤ 700 ms.
+  - **Timeline of the cold instance:**
+    - `Starting new instance` at +0;
+    - `server_started` at +0.37 s;
+    - content fetched from Firestore at +0.52 s, the first call taking 157 ms against the 1.5 s cold wait;
+    - startup probe passed at +1.09 s, after 2 attempts;
+    - request served at +1.10 s, in 2.6 ms.
+  - **Probe-bound:** the server is ready at +0.37 s. The HTTP startup probe's first attempt comes before the port is open, and the next one is a full second later (`period_seconds = 1`, the minimum). About 0.7 s of each cold start is spent waiting for that second attempt.
+  - **Warm:** first byte 43–48 ms for `/en-BE/`, with 1.5–3.2 ms in the handler.
+  - **Next step (Phase 9a):** try a TCP startup probe, or Cloud Run's default one, and measure whether it passes as soon as the port opens. If it does, startup would drop to about 0.4 s and the cold first byte to about 0.6 s. The liveness probe can keep `/healthz`.
 - **Content (Phase 5's open item 3):** on 2026-10-26 a fresh Supabase export matched `internal/content/snapshot.json` exactly. It was imported into `site-staging`: 90 documents (8 groups, 77 services, 4 staff, 1 contact), and an export of the database matches it. The same file was then imported into `site-production`, also 90 documents. Phase 9a step 1 still re-imports, unless content wasn't edited in Supabase after this date.
 
 ### Phase 9: Production and Scale-to-Zero
