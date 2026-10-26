@@ -152,7 +152,7 @@ Pinned toolchain, as in Moviestracker: Go 1.27.x, `github.com/a-h/templ`, `githu
    - Measure the Firestore first-call cost (gRPC channel, TLS, metadata-server token) in Phase 5 against the 1.5 s deadline.
 5. **Precompressed static assets.** CSS, JS and SVG are built with `.br` and `.gz` siblings and chosen by `Accept-Encoding`. Hashed file names get `Cache-Control: public, max-age=31536000, immutable`, so returning visitors rarely reach a cold instance for assets. HTML keeps `max-age=60, stale-while-revalidate=600`, with gzip done on the fly.
 6. **Right-sized instance.** Measure peak RSS under a short load test, then lower memory from 1 GiB, likely to 256 MiB. Keep 1 vCPU and `startup_cpu_boost`. Revisit concurrency (40) from the load test.
-7. **Fast startup probe.** `period_seconds = 1` and `timeout_seconds = 1` on `/healthz` (process-only), with `failure_threshold = 60`, keeping the 60 s startup budget.
+7. **Fast startup probe.** Cloud Run's default TCP startup probe (one attempt, 240 s timeout), as Moviestracker uses: it passes once the port opens. Phase 1's 1 s HTTP probe on `/healthz` missed the port on its first attempt and added about 0.7 s to every cold start (Phase 8). Liveness keeps `/healthz` (process-only).
 
 ### Firestore Read Model (Production)
 
@@ -567,7 +567,7 @@ Status (2026-10-26): the template change merged in [#257](https://github.com/lie
     - request served at +1.10 s, in 2.6 ms.
   - **Probe-bound:** the server is ready at +0.37 s. The HTTP startup probe's first attempt comes before the port is open, and the next one is a full second later (`period_seconds = 1`, the minimum). About 0.7 s of each cold start is spent waiting for that second attempt.
   - **Warm:** first byte 43–48 ms for `/en-BE/`, with 1.5–3.2 ms in the handler.
-  - **Next step (Phase 9a):** try a TCP startup probe, or Cloud Run's default one, and measure whether it passes as soon as the port opens. If it does, startup would drop to about 0.4 s and the cold first byte to about 0.6 s. The liveness probe can keep `/healthz`.
+  - **Next step:** switch to Cloud Run's default TCP startup probe (one attempt with a 240 s timeout). Moviestracker uses it and reaches p95 667 ms. That should bring startup to about 0.4 s and the cold first byte to about 0.6 s; measure it again on staging after the template change is applied and deployed. The liveness probe keeps `/healthz`.
 - **Content (Phase 5's open item 3):** on 2026-10-26 a fresh Supabase export matched `internal/content/snapshot.json` exactly. It was imported into `site-staging`: 90 documents (8 groups, 77 services, 4 staff, 1 contact), and an export of the database matches it. The same file was then imported into `site-production`, also 90 documents. Phase 9a step 1 still re-imports, unless content wasn't edited in Supabase after this date.
 
 ### Phase 9: Production and Scale-to-Zero

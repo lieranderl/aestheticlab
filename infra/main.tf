@@ -395,15 +395,17 @@ resource "google_cloud_run_v2_service" "web" {
         }
       }
 
-      # Probe every second so a cold start is routed as soon as /healthz answers,
-      # instead of waiting up to 5 s for the next probe; 60 x 1 s keeps the 60 s budget.
+      # Cloud Run's default TCP startup probe: one attempt that waits up to 240 s
+      # for the port, so a cold start is routed as soon as the server listens. The
+      # 1 s HTTP probe it replaces missed the port on its first attempt and added
+      # about 0.7 s to every cold start (plan, Phase 8). Both servers are ready to
+      # serve once they listen; /healthz stays process-only for liveness.
       startup_probe {
         initial_delay_seconds = 0
-        timeout_seconds       = 1
-        period_seconds        = 1
-        failure_threshold     = 60
-        http_get {
-          path = "/healthz"
+        timeout_seconds       = 240
+        period_seconds        = 240
+        failure_threshold     = 1
+        tcp_socket {
           port = 3000
         }
       }

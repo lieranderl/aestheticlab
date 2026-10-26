@@ -56,7 +56,7 @@ curl --fail http://localhost:3000/healthz
 
 - Staging and production are separate services with dedicated runtime service accounts and Secret Manager secrets. They currently share one read-only Supabase project protected by RLS.
 - Runtime identities receive access only to the named Secret Manager secret, never project-wide secret roles.
-- Deployments create a revision with no traffic, validate the Supabase dependency and localized pages through a temporary tagged URL, remove the tag after validation, then migrate traffic; Cloud Run startup and liveness probes use the process-only `/healthz` endpoint.
+- Deployments create a revision with no traffic, validate the content dependency (`/dependencyz`) and localized pages through a temporary tagged URL, remove the tag after validation, then migrate traffic. The startup probe is Cloud Run's default TCP check on port 3000, which routes a cold start as soon as the server listens; the liveness probe uses the process-only `/healthz` endpoint.
 - Startup/liveness probes, scaling, concurrency, resource limits, labels, and environment variables are declared in `infra/`.
 - Production supports multiple instances; tune concurrency and memory from monitoring data, not by console drift.
 
