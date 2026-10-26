@@ -359,8 +359,10 @@ resource "google_cloud_run_v2_service" "web" {
 
       resources {
         limits = {
-          cpu    = "1"
-          memory = "1Gi"
+          cpu = "1"
+          # The Go site peaks at about 16 MiB; 512 MiB is the minimum for the
+          # second-generation execution environment.
+          memory = "512Mi"
         }
         cpu_idle          = true
         startup_cpu_boost = true
@@ -465,60 +467,6 @@ resource "google_cloud_run_v2_service_iam_member" "deployer" {
   member   = "serviceAccount:${google_service_account.deployer[each.key].email}"
 }
 
-resource "google_monitoring_uptime_check_config" "localized_page" {
-  display_name     = "Aesthetic Lab production health endpoint"
-  selected_regions = ["EUROPE", "USA", "ASIA_PACIFIC"]
-  timeout          = "10s"
-  period           = "60s"
-
-  http_check {
-    path         = "/healthz"
-    port         = 443
-    use_ssl      = true
-    validate_ssl = true
-  }
-
-  monitored_resource {
-    type = "uptime_url"
-    labels = {
-      host       = var.production_uptime_host
-      project_id = var.project_id
-    }
-  }
-
-  content_matchers {
-    content = "OK"
-    matcher = "CONTAINS_STRING"
-  }
-}
-
-resource "google_monitoring_uptime_check_config" "supabase_dependency" {
-  display_name     = "Aesthetic Lab production Supabase dependency"
-  selected_regions = ["EUROPE", "USA", "ASIA_PACIFIC"]
-  timeout          = "10s"
-  period           = "300s"
-
-  http_check {
-    path         = "/dependencyz"
-    port         = 443
-    use_ssl      = true
-    validate_ssl = true
-  }
-
-  monitored_resource {
-    type = "uptime_url"
-    labels = {
-      host       = var.production_uptime_host
-      project_id = var.project_id
-    }
-  }
-
-  content_matchers {
-    content = "OK"
-    matcher = "CONTAINS_STRING"
-  }
-}
-
 resource "google_monitoring_alert_policy" "server_errors" {
   display_name          = "Aesthetic Lab production 5xx responses"
   combiner              = "OR"
@@ -550,53 +498,9 @@ resource "google_monitoring_alert_policy" "server_errors" {
   }
 }
 
-resource "google_monitoring_alert_policy" "localized_page" {
-  display_name          = "Aesthetic Lab production health or dependency unavailable"
-  combiner              = "OR"
-  notification_channels = var.notification_channel_ids
-
-  conditions {
-    display_name = "Health endpoint check fails"
-    condition_threshold {
-      filter          = "resource.type = \"uptime_url\" AND metric.type = \"monitoring.googleapis.com/uptime_check/check_passed\" AND metric.labels.check_id = \"${google_monitoring_uptime_check_config.localized_page.uptime_check_id}\""
-      comparison      = "COMPARISON_LT"
-      threshold_value = 1
-      duration        = "120s"
-
-      aggregations {
-        alignment_period   = "120s"
-        per_series_aligner = "ALIGN_NEXT_OLDER"
-      }
-
-      trigger {
-        count = 1
-      }
-    }
-  }
-
-  conditions {
-    display_name = "Supabase dependency check fails"
-    condition_threshold {
-      filter          = "resource.type = \"uptime_url\" AND metric.type = \"monitoring.googleapis.com/uptime_check/check_passed\" AND metric.labels.check_id = \"${google_monitoring_uptime_check_config.supabase_dependency.uptime_check_id}\""
-      comparison      = "COMPARISON_LT"
-      threshold_value = 1
-      duration        = "120s"
-
-      aggregations {
-        alignment_period   = "120s"
-        per_series_aligner = "ALIGN_NEXT_OLDER"
-      }
-
-      trigger {
-        count = 1
-      }
-    }
-  }
-
-  alert_strategy {
-    auto_close = "604800s"
-  }
-}
+# No uptime checks: a probe every minute would keep an instance warm and stop
+# the service scaling to zero (plan, Decisions). Alerts fire on real traffic,
+# and every deploy smoke-tests /readyz, /dependencyz and the pages.
 
 resource "google_monitoring_alert_policy" "latency" {
   display_name          = "Aesthetic Lab production p95 latency"
@@ -680,10 +584,10 @@ resource "google_monitoring_alert_policy" "runtime_failure" {
   }
 }
 
-resource "google_logging_metric" "supabase_failures" {
-  name        = "aestheticlab_production_supabase_failures"
-  description = "Supabase loader fetch or configuration failures logged by production."
-  filter      = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.production_service_name}\" AND (jsonPayload.message=\"supabase_fetch_failed\" OR jsonPayload.message=\"supabase_configuration_rejected\")"
+resource "google_logging_metric" "content_failures" {
+  name        = "aestheticlab_production_content_failures"
+  description = "Production content failures: Go content refresh failures and snapshot fallbacks, and Qwik Supabase loader failures until Qwik is removed."
+  filter      = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.production_service_name}\" AND (jsonPayload.message=\"content_refresh_failed\" OR jsonPayload.message=\"content_snapshot_served\" OR jsonPayload.message=\"supabase_fetch_failed\" OR jsonPayload.message=\"supabase_configuration_rejected\")"
 
   metric_descriptor {
     metric_kind = "DELTA"
@@ -694,23 +598,95 @@ resource "google_logging_metric" "supabase_failures" {
   depends_on = [google_project_service.required]
 }
 
-resource "google_monitoring_alert_policy" "supabase_failure" {
-  display_name          = "Aesthetic Lab production Supabase loader failure"
+moved {
+  from = google_monitoring_alert_policy.supabase_failure
+  to   = google_monitoring_alert_policy.content_failure
+}
+
+resource "google_monitoring_alert_policy" "content_failure" {
+  display_name          = "Aesthetic Lab production content failure"
   combiner              = "OR"
   notification_channels = var.notification_channel_ids
 
   conditions {
-    # One failed page render logs up to four loader failures, so alert on a
-    # sustained count; a full outage is also covered by the /dependencyz uptime check.
-    display_name = "Supabase loader failures exceed threshold in 5 minutes"
+    # A cold instance that can't reach Firestore logs a failed refresh and then
+    # serves the snapshot, and a Qwik render logs up to four loader failures,
+    # so alert on a sustained count rather than single events.
+    display_name = "Content failures exceed threshold in 5 minutes"
     condition_threshold {
-      filter          = "resource.type = \"cloud_run_revision\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.supabase_failures.name}\""
+      filter          = "resource.type = \"cloud_run_revision\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.content_failures.name}\""
       comparison      = "COMPARISON_GT"
-      threshold_value = var.supabase_failure_alert_threshold
+      threshold_value = var.content_failure_alert_threshold
       duration        = "0s"
 
       aggregations {
         alignment_period     = "300s"
+        per_series_aligner   = "ALIGN_SUM"
+        cross_series_reducer = "REDUCE_SUM"
+      }
+
+      trigger {
+        count = 1
+      }
+    }
+  }
+
+  alert_strategy {
+    auto_close = "604800s"
+  }
+}
+
+resource "google_monitoring_alert_policy" "startup_latency" {
+  display_name          = "Aesthetic Lab production slow cold starts"
+  combiner              = "OR"
+  notification_channels = var.notification_channel_ids
+
+  conditions {
+    # With min instances 0 most visits after a quiet spell start an instance,
+    # so startup time is part of the page load. Windows with no starts report
+    # nothing and never alert.
+    display_name = "Container startup p95 above target in 15 minutes"
+    condition_threshold {
+      filter          = "resource.type = \"cloud_run_revision\" AND resource.labels.service_name = \"${var.production_service_name}\" AND metric.type = \"run.googleapis.com/container/startup_latencies\""
+      comparison      = "COMPARISON_GT"
+      threshold_value = var.startup_latency_alert_ms
+      duration        = "0s"
+
+      aggregations {
+        alignment_period     = "900s"
+        per_series_aligner   = "ALIGN_PERCENTILE_95"
+        cross_series_reducer = "REDUCE_MAX"
+        group_by_fields      = ["resource.labels.service_name"]
+      }
+
+      trigger {
+        count = 1
+      }
+    }
+  }
+
+  alert_strategy {
+    auto_close = "604800s"
+  }
+}
+
+resource "google_monitoring_alert_policy" "firestore_reads" {
+  display_name          = "Aesthetic Lab production Firestore reads"
+  combiner              = "OR"
+  notification_channels = var.notification_channel_ids
+
+  conditions {
+    # Normal traffic reads well under 10k documents a day (plan, Firestore Read
+    # Model). This catches a refresh loop or a broken cache, not growth.
+    display_name = "Document reads exceed the hourly budget"
+    condition_threshold {
+      filter          = "resource.type = \"firestore.googleapis.com/Database\" AND resource.labels.database_id = \"${google_firestore_database.site["production"].name}\" AND metric.type = \"firestore.googleapis.com/document/read_ops_count\""
+      comparison      = "COMPARISON_GT"
+      threshold_value = var.firestore_read_alert_per_hour
+      duration        = "0s"
+
+      aggregations {
+        alignment_period     = "3600s"
         per_series_aligner   = "ALIGN_SUM"
         cross_series_reducer = "REDUCE_SUM"
       }

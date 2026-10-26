@@ -58,7 +58,7 @@ curl --fail http://localhost:3000/healthz
 - Runtime identities receive access only to the named Secret Manager secret, never project-wide secret roles.
 - Deployments create a revision with no traffic, validate the content dependency (`/dependencyz`) and localized pages through a temporary tagged URL, remove the tag after validation, then migrate traffic. The startup probe is Cloud Run's default TCP check on port 3000, which routes a cold start as soon as the server listens; the liveness probe uses the process-only `/healthz` endpoint.
 - Startup/liveness probes, scaling, concurrency, resource limits, labels, and environment variables are declared in `infra/`.
-- Production supports multiple instances; tune concurrency and memory from monitoring data, not by console drift.
+- Both services scale to zero between visits (min instances 0), so a visit after a quiet spell starts an instance; the Go site starts in about 230 ms. Production scales up to `production_max_instances`. Tune concurrency and memory (512 MiB, the second-generation minimum) from monitoring data, not by console drift.
 
 Required runtime configuration:
 
@@ -128,8 +128,8 @@ gcloud run services update-traffic SERVICE \
 
 ## Operational Checks
 
-- OpenTofu manages health/dependency uptime checks plus availability, 5xx, p95 latency, instance-saturation, memory-limit, structured Supabase-failure, and unexpected-production-mutation alerts. Keep high-frequency uptime checks on lightweight endpoints; localized page checks belong in deployment smoke tests.
-- The 5xx and Supabase-failure alerts fire on counts within 5 minutes (`server_error_alert_threshold`, `supabase_failure_alert_threshold`), not on single events. The mutation alert reads Admin Activity audit logs for v1 (`ReplaceService`) and v2 (`UpdateService`) service changes, creates, deletes, and IAM changes by anyone other than the production deployer or IaC identity.
+- OpenTofu manages 5xx, p95 latency, instance-saturation, runtime-failure (memory, startup, termination), content-failure, slow-cold-start, Firestore-read and unexpected-production-mutation alerts. There are no uptime checks: a probe every minute would keep an instance warm and stop the service scaling to zero. Alerts fire on real traffic, and every deploy smoke-tests `/readyz`, `/dependencyz` and the localized pages. The accepted tradeoff is no signal when the site is broken and nobody is visiting.
+- The 5xx and content-failure alerts fire on counts within 5 minutes (`server_error_alert_threshold`, `content_failure_alert_threshold`), not on single events. Content failures are Go content refresh failures and snapshot fallbacks, plus Qwik's Supabase loader failures until Qwik is removed. The slow-cold-start alert fires when container startup p95 in a 15-minute window exceeds `startup_latency_alert_ms` (700). The Firestore-read alert fires above `firestore_read_alert_per_hour` (2,000) reads of `site-production` in an hour, which catches a refresh loop, not growth. The mutation alert reads Admin Activity audit logs for v1 (`ReplaceService`) and v2 (`UpdateService`) service changes, creates, deletes, and IAM changes by anyone other than the production deployer or IaC identity.
 - OpenTofu does not pin Cloud Run revision names. After any CI deploy, an infrastructure plan shows both `google_cloud_run_v2_service.web` instances as updated in place, with `template.revision` changing from the CI `candidate-*` name to unset. This is expected: applying it creates a Cloud Run-named revision from the IaC template on the live image digest, and traffic stays on the CI-promoted revision (`traffic` and the image are in `ignore_changes`). Treat any other Cloud Run attribute change in the plan as a real change to review. Template changes reach serving traffic with the next CI deploy, which copies the service template.
 - Artifact Registry keeps the newest `artifact_keep_recent_versions` images and deletes images older than `artifact_delete_older_than_days`. Cleanup starts in dry-run (`artifact_cleanup_dry_run = true`); review the cleanup logs, then set it to `false` to enforce.
 - Candidate deployment smoke tests require readiness, localized content, and security headers on `/en-BE/` and `/fr-BE/pricelist/` before traffic migration.
@@ -144,6 +144,6 @@ gcloud run services update-traffic SERVICE \
 | --- | --- |
 | Release cannot resolve an image | Tag commit must match a successful staging artifact/deployment record |
 | New revision fails before traffic | Container logs, probes, secret access, runtime service-account IAM |
-| Supabase data missing | Environment URL, secret version binding, loader error logs |
+| Content missing or stale | `FIRESTORE_DATABASE` in the revision, the runtime's Firestore read grant, `content_refresh_failed` and `content_snapshot_served` logs; edits reach visitors within about 15 minutes |
 | Stale content after update | Dynamic response may remain fresh for 300 seconds |
 | IaC proposes unexpected replacement | Provider/version drift, imported resource identity, environment state selection |

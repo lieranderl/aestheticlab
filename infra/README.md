@@ -10,7 +10,7 @@
 - Secret-level publishable/anon Supabase access; service-role keys are rejected by runtime readiness
 - The Go site's Firestore databases `site-staging` and `site-production` (delete-protected), each readable only by its environment's runtime through a conditioned `roles/datastore.viewer`; the project's other databases are not managed here
 - Cloud Run v2 services, probes, scaling, and public invocation
-- Production health-endpoint and Supabase-dependency uptime plus 5xx, p95 latency, instance saturation, runtime-failure, loader, and unexpected-mutation alerts
+- Production 5xx, p95 latency, instance saturation, runtime-failure, content-failure, slow-cold-start, Firestore-read, and unexpected-mutation alerts; no uptime checks, so both services scale to zero
 - Artifact Registry cleanup policy (dry-run by default) keeping recent rollback images
 
 ## Bootstrap
