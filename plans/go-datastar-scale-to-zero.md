@@ -382,7 +382,7 @@ Status (2026-10-25): code and IaC on `feat/go-content`; the IaC apply, the impor
 - **Still to do:**
   1. Apply the IaC through the protected workflow.
   2. Check with a denied read that each runtime can't read `(default)` or `aestheticlab-income`.
-  3. Import into `site-staging`, then `site-production`, and compare counts.
+  3. Import into `site-staging`, then `site-production`, and compare counts. `site-staging` was done 2026-10-26 (see Phase 8); `site-production` is still to do.
   4. Measure the first Firestore call from Cloud Run against the 1.5 s cold wait. This needs a Go revision on Cloud Run, so it may fall to Phase 8's preview revision.
   5. Phase 8 adds `FIRESTORE_DATABASE` and `GOOGLE_CLOUD_PROJECT` to the Cloud Run template. Setting the project avoids a metadata lookup when the client is created.
 
@@ -552,7 +552,7 @@ Status (2026-10-26): the template change merged in [#257](https://github.com/lie
 - **Order:** a Go revision needs `FIRESTORE_DATABASE` in the template. Without it, `/dependencyz` answers 503, the staging smoke test fails and staging stays on Qwik. The infrastructure workflow runs only from `staging`, so ship two PRs:
   1. The template change alone. The Qwik image ignores the new variables. Merge it, then plan and apply through the infrastructure workflow.
   2. Everything else, once the apply is done.
-- **Before step 5:** confirm that `site-staging` holds the imported content (Phase 5's open item 3). It wasn't checked from this machine.
+- **Content (Phase 5's open item 3):** on 2026-10-26 a fresh Supabase export matched `internal/content/snapshot.json` exactly. It was imported into `site-staging`: 90 documents (8 groups, 77 services, 4 staff, 1 contact), and an export of the database matches it. `site-production` is still to be imported, before Phase 9a at the latest.
 
 ### Phase 9: Production and Scale-to-Zero
 
