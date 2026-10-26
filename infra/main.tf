@@ -598,6 +598,24 @@ resource "google_logging_metric" "content_failures" {
   depends_on = [google_project_service.required]
 }
 
+# Kept for one apply so OpenTofu repoints content_failure before deleting it:
+# removing it in the same apply as the repoint deleted it first, and Cloud
+# Monitoring refuses to delete a metric an alert policy still uses. Remove this
+# block once content_failure filters on content_failures.
+resource "google_logging_metric" "supabase_failures" {
+  name        = "aestheticlab_production_supabase_failures"
+  description = "Supabase loader fetch or configuration failures logged by production."
+  filter      = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.production_service_name}\" AND (jsonPayload.message=\"supabase_fetch_failed\" OR jsonPayload.message=\"supabase_configuration_rejected\")"
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+    unit        = "1"
+  }
+
+  depends_on = [google_project_service.required]
+}
+
 moved {
   from = google_monitoring_alert_policy.supabase_failure
   to   = google_monitoring_alert_policy.content_failure
