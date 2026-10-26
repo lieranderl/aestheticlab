@@ -612,6 +612,7 @@ Status (2026-10-26): step 2 merged in [#264](https://github.com/lieranderl/qwik-
   - [#265](https://github.com/lieranderl/qwik-aestheticlab/pull/265) kept the old metric for one apply, which repointed the alert.
   - [#266](https://github.com/lieranderl/qwik-aestheticlab/pull/266) then deleted it.
   - When an alert's metric changes name, ship the repoint and the delete as separate applies.
+- **Service-level minimum:** after `v5.0.0`, production still had a service-level `scaling.minInstanceCount` of 1. That setting was made outside OpenTofu, and it applies across all revisions, overriding their minimum of 0. Staging had none. The service-level `scaling` block now sets it from `min_instances` and `max_instances`. Unlike the revision setting, it takes effect at apply.
 - **Content freeze held:** before the release, a fresh Supabase export hashed the same as the one imported into both databases that morning, so step 1 needs no re-import.
 
 #### 9b: Drop the Supabase Binding

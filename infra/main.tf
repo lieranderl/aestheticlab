@@ -335,6 +335,14 @@ resource "google_cloud_run_v2_service" "web" {
   deletion_protection = var.deletion_protection
   ingress             = "INGRESS_TRAFFIC_ALL"
 
+  # Service-level scaling applies across all revisions and overrides the
+  # template's minimum. Production had min 1 here, set outside OpenTofu, which
+  # kept an instance warm after v5.0.0 set the revisions' minimum to 0.
+  scaling {
+    min_instance_count = each.value.min_instances
+    max_instance_count = each.value.max_instances
+  }
+
   template {
     service_account                  = google_service_account.runtime[each.key].email
     max_instance_request_concurrency = var.container_concurrency
