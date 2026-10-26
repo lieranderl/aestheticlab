@@ -83,8 +83,10 @@ jobs:
           done
           exit 1
 
-      - name: Cross-browser interaction tests
-        run: bun run test.e2e
+      # The Qwik site, until it is removed (Phase 10). The Go site's specs
+      # run in the go job.
+      - name: Qwik cross-browser interaction tests
+        run: bun run test.e2e.qwik
         env:
           SUPABASE_URL: https://example.invalid
           SUPABASE_KEY: sb_publishable_ci_placeholder
@@ -218,6 +220,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
@@ -232,72 +236,22 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Verify non-root runtime and application behavior
+      - name: Verify non-root runtime, embedded assets and deployment smoke
         env:
-          SUPABASE_URL: https://example.invalid
-          SUPABASE_KEY: sb_publishable_ci_placeholder
           SMOKE_SKIP_DEPENDENCY: "true"
         run: |
           test "$(docker image inspect aestheticlab:ci --format '{{.Config.User}}')" = "65532:65532"
-          container_id=$(docker create aestheticlab:ci)
-          docker export "$container_id" --output /tmp/aestheticlab-ci.tar
-          if tar --list --file=/tmp/aestheticlab-ci.tar | grep --extended-regexp '^app/node_modules/.*\.(node|so|dylib)$'; then
-            echo "Native runtime dependency cannot be copied from BUILDPLATFORM into TARGETPLATFORM" >&2
-            docker rm "$container_id" >/dev/null
-            exit 1
-          fi
-          docker rm "$container_id" >/dev/null
-          docker run --detach --rm --name aestheticlab-ci --publish 127.0.0.1:3000:3000 --env SUPABASE_URL --env SUPABASE_KEY aestheticlab:ci
+          docker run --detach --rm --name aestheticlab-ci --publish 127.0.0.1:3000:3000 aestheticlab:ci
           trap 'docker stop aestheticlab-ci >/dev/null 2>&1 || true' EXIT
+          # No content database here: the site serves its embedded snapshot
+          # and /dependencyz answers 503.
+          DEPENDENCY_STATUS=503 bash ./scripts/smoke-go-container.sh http://127.0.0.1:3000
           ./scripts/smoke-deployment.sh http://127.0.0.1:3000
 
       - name: Scan production container
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           image-ref: aestheticlab:ci
-          format: table
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-
-  go-container:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
-
-      - name: Build Go container
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
-        with:
-          context: .
-          file: Dockerfile.web
-          load: true
-          platforms: linux/amd64
-          tags: aestheticlab-go:ci
-          cache-from: type=gha,scope=go-container
-          cache-to: type=gha,scope=go-container,mode=max
-
-      - name: Verify Go runtime and embedded assets
-        run: |
-          test "$(docker image inspect aestheticlab-go:ci --format '{{.Config.User}}')" = "65532:65532"
-          docker run --detach --rm --name aestheticlab-go-ci --publish 127.0.0.1:3000:3000 aestheticlab-go:ci
-          trap 'docker stop aestheticlab-go-ci >/dev/null 2>&1 || true' EXIT
-          # No content database here: the site serves its embedded snapshot
-          # and /dependencyz answers 503.
-          DEPENDENCY_STATUS=503 bash ./scripts/smoke-go-container.sh http://127.0.0.1:3000
-
-      - name: Scan Go container
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
-        with:
-          image-ref: aestheticlab-go:ci
           format: table
           severity: HIGH,CRITICAL
           ignore-unfixed: true

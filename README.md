@@ -76,7 +76,8 @@ Open [http://localhost:5173](http://localhost:5173).
 | `bun run build.types`        | Run TypeScript checks.                                       |
 | `bun run test`               | Run Vitest tests.                                            |
 | `bun run test.coverage`      | Run Vitest with enforced V8 coverage thresholds.             |
-| `bun run test.e2e`           | Run Playwright tests.                                        |
+| `bun run test.e2e`           | Run the Playwright specs against the Go site.                |
+| `bun run test.e2e.qwik`      | Run the Playwright specs against the Qwik site.              |
 | `bun run verify`             | Run Biome, type checks, unit coverage, and production build. |
 | `bun run biome`              | Run Biome with fixes.                                        |
 | `bunx --bun biome ci .`      | Check formatting and lint without modifying files.           |

@@ -18,7 +18,7 @@
 | Typecheck                                  | `bun run build.types`                                                                                             |
 | Unit tests                                 | `bun run test`                                                                                                    |
 | Unit coverage                              | `bun run test.coverage`                                                                                           |
-| E2E tests                                  | `bun run test.e2e`                                                                                                |
+| E2E tests (Go site; Qwik: `test.e2e.qwik`) | `bun run test.e2e`                                                                                                |
 | Production build                           | `bun run build`                                                                                                   |
 | Main local verification                    | `bun run verify`                                                                                                  |
 | Go site gate (rewrite)                     | `make ci`                                                                                                         |
@@ -58,7 +58,7 @@
 - `src/shared/` owns Supabase, runtime config, security headers, logging, locale, and service helpers.
 - `i18n/` contains Qwik Speak locale assets; update all five locales through extraction when keys change.
 - `infra/` owns OpenTofu-managed GCP resources; `.github/workflows/` owns delivery automation.
-- `cmd/`, `internal/`, `static/`, `Dockerfile.web` and `.agents/skills/` (Go, Datastar, DaisyUI, TDD) belong to the Go + Datastar rewrite in `plans/go-datastar-scale-to-zero.md`, which replaces the Qwik site; write Go test-first at public seams with `net/http/httptest`.
+- `cmd/`, `internal/`, `static/`, `Dockerfile` (the Go image since Phase 8) and `.agents/skills/` (Go, Datastar, DaisyUI, TDD) belong to the Go + Datastar rewrite in `plans/go-datastar-scale-to-zero.md`, which replaces the Qwik site; write Go test-first at public seams with `net/http/httptest`.
 - `plans/` holds durable execution plans; `docs/CONTENT.md` documents the Go site's Firestore content; `docs/prompt-pack.md` holds reusable prompts, not policy.
 
 ## Key Conventions

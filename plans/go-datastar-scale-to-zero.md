@@ -382,7 +382,7 @@ Status (2026-10-25): code and IaC on `feat/go-content`; the IaC apply, the impor
 - **Still to do:**
   1. Apply the IaC through the protected workflow.
   2. Check with a denied read that each runtime can't read `(default)` or `aestheticlab-income`.
-  3. Import into `site-staging`, then `site-production`, and compare counts.
+  3. Import into `site-staging`, then `site-production`, and compare counts. Both were done 2026-10-26 (see Phase 8).
   4. Measure the first Firestore call from Cloud Run against the 1.5 s cold wait. This needs a Go revision on Cloud Run, so it may fall to Phase 8's preview revision.
   5. Phase 8 adds `FIRESTORE_DATABASE` and `GOOGLE_CLOUD_PROJECT` to the Cloud Run template. Setting the project avoids a metadata lookup when the client is created.
 
@@ -538,6 +538,21 @@ Status (2026-10-26): done on `feat/go-compat`; `internal/server/compat.go` holds
 4. Update `scripts/smoke-deployment.sh` to collect image URLs from the rendered HTML, keeping cookie-jar session affinity across page and asset probes.
 5. Before merging, deploy the Go image as a no-traffic tagged revision on staging for a preview URL.
 6. Merge, let the staging deploy run (it copies the Phase 8 template), and measure staging cold starts against the targets.
+
+Status (2026-10-26): the template change merged in [#257](https://github.com/lieranderl/qwik-aestheticlab/pull/257) as `d797f35`, with the `Dockerfile.web` fix left over from Phase 7. Steps 2–4 are in [#258](https://github.com/lieranderl/qwik-aestheticlab/pull/258). The IaC apply and steps 5 and 6 are still to do.
+
+- **Template (step 1):** the Cloud Run container gets `FIRESTORE_DATABASE` (from the `google_firestore_database.site` resource) and `GOOGLE_CLOUD_PROJECT`, as Phase 5 noted. The service now depends on the conditioned Firestore grant. `tofu fmt` and `validate` pass.
+- **Image (step 2):** `Dockerfile.web` replaces `Dockerfile`. The Qwik Dockerfile is gone; its revisions remain the rollback targets.
+  - The required `container` check now builds the Go image. It runs `smoke-go-container.sh` (expecting `/dependencyz` 503 with no database), then `smoke-deployment.sh`, then the Trivy scan.
+  - The separate `go-container` job is removed.
+- **E2E (step 3):** `bun run test.e2e` now runs the Go config. The Qwik suite is `bun run test.e2e.qwik`, run by the `verify` job until Phase 10.
+  - The `go` job, which runs the Go specs and the open-tab spec, is not a required check. The staging ruleset requires `lint`, `verify`, `secrets`, `container`, `infrastructure` and the two CodeQL analyses.
+  - Adding `go` to the ruleset is a repository setting, outside IaC.
+- **Smoke (step 4):** `scripts/smoke-deployment.sh` collects image URLs under `/assets/` (Qwik) and `/static/` (Go) from the rendered pages, with one cookie jar for pages and images. Against the local Go binary it passed, probing 114 images.
+- **Order:** a Go revision needs `FIRESTORE_DATABASE` in the template. Without it, `/dependencyz` answers 503, the staging smoke test fails and staging stays on Qwik. The infrastructure workflow runs only from `staging`, so ship two PRs:
+  1. The template change alone. The Qwik image ignores the new variables. Merge it, then plan and apply through the infrastructure workflow.
+  2. Everything else, once the apply is done.
+- **Content (Phase 5's open item 3):** on 2026-10-26 a fresh Supabase export matched `internal/content/snapshot.json` exactly. It was imported into `site-staging`: 90 documents (8 groups, 77 services, 4 staff, 1 contact), and an export of the database matches it. The same file was then imported into `site-production`, also 90 documents. Phase 9a step 1 still re-imports, unless content wasn't edited in Supabase after this date.
 
 ### Phase 9: Production and Scale-to-Zero
 
