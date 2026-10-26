@@ -539,7 +539,7 @@ Status (2026-10-26): done on `feat/go-compat`; `internal/server/compat.go` holds
 5. Before merging, deploy the Go image as a no-traffic tagged revision on staging for a preview URL.
 6. Merge, let the staging deploy run (it copies the Phase 8 template), and measure staging cold starts against the targets.
 
-Status (2026-10-26): the template change merged in [#257](https://github.com/lieranderl/qwik-aestheticlab/pull/257) as `d797f35`, with the `Dockerfile.web` fix left over from Phase 7. Steps 2–4 merged in [#258](https://github.com/lieranderl/qwik-aestheticlab/pull/258) as `ce412a9`. Staging has served the Go image since 08:58 UTC. Step 5's separate preview revision was not needed: the staging job deploys every candidate as a no-traffic tagged revision and smoke-tests it before promotion. Making `go` a required check in the `staging` ruleset is still to do.
+Status (2026-10-26): the template change merged in [#257](https://github.com/lieranderl/qwik-aestheticlab/pull/257) as `d797f35`, with the `Dockerfile.web` fix left over from Phase 7. Steps 2–4 merged in [#258](https://github.com/lieranderl/qwik-aestheticlab/pull/258) as `ce412a9`. Staging has served the Go image since 08:58 UTC. Step 5's separate preview revision was not needed: the staging job deploys every candidate as a no-traffic tagged revision and smoke-tests it before promotion. On 2026-10-26 `go` became a required check in the `staging` ruleset, beside `lint`, `verify`, `secrets`, `container`, `infrastructure` and the CodeQL analyses. Phase 8 is done.
 
 - **Template (step 1):** the Cloud Run container gets `FIRESTORE_DATABASE` (from the `google_firestore_database.site` resource) and `GOOGLE_CLOUD_PROJECT`, as Phase 5 noted. The service now depends on the conditioned Firestore grant. `tofu fmt` and `validate` pass.
 - **Image (step 2):** `Dockerfile.web` replaces `Dockerfile`. The Qwik Dockerfile is gone; its revisions remain the rollback targets.
@@ -595,7 +595,7 @@ Status (2026-10-26): the template change merged in [#257](https://github.com/lie
 3. Deploy and promote so the serving revisions pick up the new template: a merge to `staging`, then a patch release (`v5.0.1`) through the canary path.
 4. Measure only after that promotion. Confirm the serving revision shows min instances 0, `instance_count` reaches 0 overnight, cold-start metrics meet the targets, and Firestore reads match the model.
 
-Status (2026-10-26): step 2 is coded on `feat/prod-scale-to-zero`, to ship with `v5.0.0` rather than a week after it.
+Status (2026-10-26): step 2 merged in [#264](https://github.com/lieranderl/qwik-aestheticlab/pull/264) and is applied, ahead of `v5.0.0` rather than a week after it. `package.json` is bumped to `5.0.0` for step 1.
 
 - **Why it can go first:** `min_instances` is a revision setting, and production revisions change only with a release. After the apply, the serving Qwik revision keeps its one warm instance until `v5.0.0` promotes the Go revision, which then scales to zero. Qwik never runs scaled to zero. Step 3's `v5.0.1` isn't needed for this.
 - **Uptime checks were already broken:** `/healthz` answers 404 from outside on both stacks, because Cloud Run's front end doesn't pass that path through. The health check has been failing, and only `/dependencyz` reached the app. Removing both checks loses no working signal.
@@ -607,6 +607,12 @@ Status (2026-10-26): step 2 is coded on `feat/prod-scale-to-zero`, to ship with 
   - **Firestore-read alert:** more than 2,000 `site-production` reads in an hour. The 40k/day budget as an hourly pace, since alert windows are short.
   - memory 1 GiB → 512 MiB. The Go site peaks at about 16 MiB, but the second-generation execution environment needs at least 512 MiB, so not 256 MiB as guessed.
 - **Staging:** it already scaled to zero (min 0, no checks). It gets the memory change.
+- **Apply took three runs:**
+  - OpenTofu deleted the old `supabase_failures` metric before repointing the alert that used it, and Cloud Monitoring refuses that. It did so in both #264 applies, even with the `moved` block.
+  - [#265](https://github.com/lieranderl/qwik-aestheticlab/pull/265) kept the old metric for one apply, which repointed the alert.
+  - [#266](https://github.com/lieranderl/qwik-aestheticlab/pull/266) then deleted it.
+  - When an alert's metric changes name, ship the repoint and the delete as separate applies.
+- **Content freeze held:** before the release, a fresh Supabase export hashed the same as the one imported into both databases that morning, so step 1 needs no re-import.
 
 #### 9b: Drop the Supabase Binding
 
