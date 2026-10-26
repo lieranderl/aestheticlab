@@ -67,11 +67,44 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-ubuntu-24.04-${{ runner.arch }}-${{ steps.playwright.outputs.version }}
 
+      # The runner's Ubuntu mirror can serve the browsers' 119 MB of packages
+      # at tens of kB/s, past the install timeout. Keep the .deb files so apt
+      # downloads only what changed; the runner image in the key refreshes
+      # them weekly, and the restore keys bring back the last set to reuse.
+      - name: Resolve runner image
+        id: runner-image
+        run: echo "version=${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore browser system packages
+        id: apt-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/playwright-apt
+          key: playwright-apt-ubuntu-24.04-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-${{ steps.runner-image.outputs.version }}
+          restore-keys: |
+            playwright-apt-ubuntu-24.04-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-
+            playwright-apt-ubuntu-24.04-${{ runner.arch }}-
+
       # Let apt finish before retrying browser downloads: killing its unprivileged
       # parent can leave a root-owned apt-get running and holding the dpkg lock.
+      # autoclean drops superseded versions before the packages are kept.
       - name: Install browser system dependencies
         timeout-minutes: 10
-        run: bunx playwright install-deps chromium firefox webkit
+        run: |
+          mkdir -p ~/.cache/playwright-apt
+          echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/99keep-downloaded-packages >/dev/null
+          find ~/.cache/playwright-apt -maxdepth 1 -name '*.deb' -exec sudo cp -t /var/cache/apt/archives/ {} +
+          bunx playwright install-deps chromium firefox webkit
+          sudo apt-get autoclean
+          find ~/.cache/playwright-apt -maxdepth 1 -name '*.deb' -delete
+          find /var/cache/apt/archives -maxdepth 1 -name '*.deb' -exec cp -t ~/.cache/playwright-apt/ {} +
+
+      - name: Save browser system packages
+        if: steps.apt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/playwright-apt
+          key: ${{ steps.apt-cache.outputs.cache-primary-key }}
 
       - name: Install supported browsers
         run: |
@@ -162,10 +195,39 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-ubuntu-24.04-${{ runner.arch }}-${{ steps.playwright.outputs.version }}
 
+      # The same kept .deb files as the verify job; see there for why.
+      - name: Resolve runner image
+        id: runner-image
+        run: echo "version=${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore browser system packages
+        id: apt-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/playwright-apt
+          key: playwright-apt-ubuntu-24.04-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-${{ steps.runner-image.outputs.version }}
+          restore-keys: |
+            playwright-apt-ubuntu-24.04-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-
+            playwright-apt-ubuntu-24.04-${{ runner.arch }}-
+
       # Keep privileged apt outside the browser download timeout/retry loop.
       - name: Install browser system dependencies
         timeout-minutes: 10
-        run: bunx playwright install-deps chromium firefox webkit
+        run: |
+          mkdir -p ~/.cache/playwright-apt
+          echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/99keep-downloaded-packages >/dev/null
+          find ~/.cache/playwright-apt -maxdepth 1 -name '*.deb' -exec sudo cp -t /var/cache/apt/archives/ {} +
+          bunx playwright install-deps chromium firefox webkit
+          sudo apt-get autoclean
+          find ~/.cache/playwright-apt -maxdepth 1 -name '*.deb' -delete
+          find /var/cache/apt/archives -maxdepth 1 -name '*.deb' -exec cp -t ~/.cache/playwright-apt/ {} +
+
+      - name: Save browser system packages
+        if: steps.apt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/playwright-apt
+          key: ${{ steps.apt-cache.outputs.cache-primary-key }}
 
       - name: Install supported browsers
         run: |
