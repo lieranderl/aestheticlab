@@ -37,13 +37,18 @@ for path in /en-BE/ /fr-BE/pricelist/; do
 	grep --extended-regexp --ignore-case --quiet \
 		'^x-content-type-options:[[:space:]]*nosniff' \
 		"${work_dir}/${name}.headers"
+	# Qwik renders images under /assets/, the Go site under /static/. Until
+	# Qwik is removed, this script checks both: the production canary for the
+	# cutover release serves pages from either stack.
 	grep --only-matching --extended-regexp \
-		'/assets/[A-Za-z0-9._/-]+\.(webp|avif|png|jpe?g|svg)' \
+		'/(assets|static)/[A-Za-z0-9._/-]+\.(webp|avif|png|jpe?g|svg)' \
 		"${work_dir}/${name}.body" >> "${work_dir}/images" || true
 done
 
 # Validate every responsive image variant referenced by server-rendered HTML.
-# Client/server image deduplication must never produce URLs absent from dist.
+# The page and its images share the cookie jar, so session affinity keeps
+# them on one revision. Client/server image deduplication must never produce
+# URLs absent from the build.
 test -s "${work_dir}/images"
 sort -u "${work_dir}/images" > "${work_dir}/unique-images"
 while IFS= read -r image_path; do

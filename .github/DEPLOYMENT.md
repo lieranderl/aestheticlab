@@ -31,9 +31,8 @@ Store only non-sensitive Monitoring channel resource names in the repository var
 
 ## Container
 
-- `Dockerfile` performs the Qwik build and creates a minimal Bun runtime image.
-- The distroless runtime contains built `dist/`, `public/`, and `server/` output plus the minimal production dependency graph; build-only dependencies remain in the build stage.
-- The runtime is non-root, exposes port `3000`, and starts `server/entry.bun.js`.
+- `Dockerfile` builds the Go site (`cmd/web`, Phase 8 of `plans/go-datastar-scale-to-zero.md`): a Bun stage builds the hashed static assets, a Go stage embeds them into one static binary, and the runtime is `gcr.io/distroless/static-debian12:nonroot` with only that binary.
+- The runtime is non-root, exposes port `3000`, and starts `/web`. Revisions built from the Qwik image stay available as rollback targets until Phase 9c.
 - PR CI builds, runs, and scans the production container. Delivery generates an SBOM and provenance attestation, scans the exact published digest, and gates deployment on the result; production verifies provenance and re-scans before deployment.
 - Images are stored in the regional Google Artifact Registry repository managed by OpenTofu.
 
@@ -41,11 +40,9 @@ Local verification:
 
 ```bash
 bun run verify
+make ci
 docker build --tag aestheticlab:local .
-docker run --rm --publish 3000:3000 \
-  --env SUPABASE_URL \
-  --env SUPABASE_KEY \
-  aestheticlab:local
+docker run --rm --publish 3000:3000 aestheticlab:local
 curl --fail http://localhost:3000/healthz
 ```
 
@@ -67,9 +64,10 @@ Required runtime configuration:
 
 | Name | Source | Notes |
 | --- | --- | --- |
-| `SUPABASE_URL` | Cloud Run environment | Public project URL |
-| `SUPABASE_KEY` | Environment-specific Secret Manager secret | Publishable/anon key injected at runtime; `service_role` and `sb_secret_*` keys fail readiness |
-| `NODE_ENV` | Container | `production` |
+| `FIRESTORE_DATABASE` | Cloud Run environment | `site-staging` or `site-production`; without it the Go site serves its embedded content snapshot and `/dependencyz` answers 503 |
+| `GOOGLE_CLOUD_PROJECT` | Cloud Run environment | Saves the Firestore client a metadata-server lookup on a cold start |
+| `SUPABASE_URL` | Cloud Run environment | Qwik only; kept until Phase 9b so a Qwik image still starts |
+| `SUPABASE_KEY` | Environment-specific Secret Manager secret | Qwik only, as above; publishable/anon key injected at runtime; `service_role` and `sb_secret_*` keys fail readiness |
 
 ## Infrastructure as Code
 

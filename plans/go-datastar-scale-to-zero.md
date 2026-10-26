@@ -539,6 +539,21 @@ Status (2026-10-26): done on `feat/go-compat`; `internal/server/compat.go` holds
 5. Before merging, deploy the Go image as a no-traffic tagged revision on staging for a preview URL.
 6. Merge, let the staging deploy run (it copies the Phase 8 template), and measure staging cold starts against the targets.
 
+Status (2026-10-26): steps 1–4 are in two PRs to `staging`: the template change alone on `feat/go-firestore-env`, and the rest on `feat/go-staging-cutover` with the `Dockerfile.web` fix left over from Phase 7. Steps 5 and 6 and the IaC apply are still to do.
+
+- **Template (step 1):** the Cloud Run container gets `FIRESTORE_DATABASE` (from the `google_firestore_database.site` resource) and `GOOGLE_CLOUD_PROJECT`, as Phase 5 noted. The service now depends on the conditioned Firestore grant. `tofu fmt` and `validate` pass.
+- **Image (step 2):** `Dockerfile.web` replaces `Dockerfile`. The Qwik Dockerfile is gone; its revisions remain the rollback targets.
+  - The required `container` check now builds the Go image. It runs `smoke-go-container.sh` (expecting `/dependencyz` 503 with no database), then `smoke-deployment.sh`, then the Trivy scan.
+  - The separate `go-container` job is removed.
+- **E2E (step 3):** `bun run test.e2e` now runs the Go config. The Qwik suite is `bun run test.e2e.qwik`, run by the `verify` job until Phase 10.
+  - The `go` job, which runs the Go specs and the open-tab spec, is not a required check. The staging ruleset requires `lint`, `verify`, `secrets`, `container`, `infrastructure` and the two CodeQL analyses.
+  - Adding `go` to the ruleset is a repository setting, outside IaC.
+- **Smoke (step 4):** `scripts/smoke-deployment.sh` collects image URLs under `/assets/` (Qwik) and `/static/` (Go) from the rendered pages, with one cookie jar for pages and images. Against the local Go binary it passed, probing 114 images.
+- **Order:** a Go revision needs `FIRESTORE_DATABASE` in the template. Without it, `/dependencyz` answers 503, the staging smoke test fails and staging stays on Qwik. The infrastructure workflow runs only from `staging`, so ship two PRs:
+  1. The template change alone. The Qwik image ignores the new variables. Merge it, then plan and apply through the infrastructure workflow.
+  2. Everything else, once the apply is done.
+- **Before step 5:** confirm that `site-staging` holds the imported content (Phase 5's open item 3). It wasn't checked from this machine.
+
 ### Phase 9: Production and Scale-to-Zero
 
 #### 9a: Release and Scale to Zero

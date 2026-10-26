@@ -1,4 +1,4 @@
-// Command web is Aesthetic Lab's site on Cloud Run (Dockerfile.web).
+// Command web is Aesthetic Lab's site on Cloud Run (Dockerfile).
 //
 // It listens before anything else: no network I/O happens before the port
 // is open, so a cold instance answers its startup probe at once. Content

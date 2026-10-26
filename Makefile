@@ -109,7 +109,7 @@ test: ## Go: race-enabled test suite
 	$(GO) test -race -count=1 ./...
 
 test-e2e: ## Go: shared browser specs in Chromium, Firefox and WebKit
-	bun run test.e2e.go
+	bun run test.e2e
 
 security: ## Go: govulncheck and gosec
 	$(GO) tool govulncheck ./...
