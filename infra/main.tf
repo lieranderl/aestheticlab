@@ -366,6 +366,20 @@ resource "google_cloud_run_v2_service" "web" {
         startup_cpu_boost = true
       }
 
+      # The Go site's content (cmd/web). The project is set so the client
+      # skips a metadata-server lookup on a cold start. The Supabase pair
+      # stays until Phase 9b, so a deploy of either the Go or the Qwik image
+      # starts.
+      env {
+        name  = "FIRESTORE_DATABASE"
+        value = google_firestore_database.site[each.key].name
+      }
+
+      env {
+        name  = "GOOGLE_CLOUD_PROJECT"
+        value = var.project_id
+      }
+
       env {
         name  = "SUPABASE_URL"
         value = each.value.supabase_url
@@ -423,6 +437,7 @@ resource "google_cloud_run_v2_service" "web" {
 
   depends_on = [
     google_project_service.required,
+    google_project_iam_member.runtime_firestore_reader,
     google_secret_manager_secret_iam_member.runtime_access,
     google_service_account_iam_member.iac_act_as,
   ]
