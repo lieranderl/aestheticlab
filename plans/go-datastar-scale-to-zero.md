@@ -539,7 +539,7 @@ Status (2026-10-26): done on `feat/go-compat`; `internal/server/compat.go` holds
 5. Before merging, deploy the Go image as a no-traffic tagged revision on staging for a preview URL.
 6. Merge, let the staging deploy run (it copies the Phase 8 template), and measure staging cold starts against the targets.
 
-Status (2026-10-26): steps 1–4 are in two PRs to `staging`: the template change alone on `feat/go-firestore-env`, and the rest on `feat/go-staging-cutover` with the `Dockerfile.web` fix left over from Phase 7. Steps 5 and 6 and the IaC apply are still to do.
+Status (2026-10-26): the template change merged in [#257](https://github.com/lieranderl/qwik-aestheticlab/pull/257) as `d797f35`, with the `Dockerfile.web` fix left over from Phase 7. Steps 2–4 are in [#258](https://github.com/lieranderl/qwik-aestheticlab/pull/258). The IaC apply and steps 5 and 6 are still to do.
 
 - **Template (step 1):** the Cloud Run container gets `FIRESTORE_DATABASE` (from the `google_firestore_database.site` resource) and `GOOGLE_CLOUD_PROJECT`, as Phase 5 noted. The service now depends on the conditioned Firestore grant. `tofu fmt` and `validate` pass.
 - **Image (step 2):** `Dockerfile.web` replaces `Dockerfile`. The Qwik Dockerfile is gone; its revisions remain the rollback targets.
