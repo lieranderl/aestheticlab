@@ -567,7 +567,18 @@ Status (2026-10-26): the template change merged in [#257](https://github.com/lie
     - request served at +1.10 s, in 2.6 ms.
   - **Probe-bound:** the server is ready at +0.37 s. The HTTP startup probe's first attempt comes before the port is open, and the next one is a full second later (`period_seconds = 1`, the minimum). About 0.7 s of each cold start is spent waiting for that second attempt.
   - **Warm:** first byte 43–48 ms for `/en-BE/`, with 1.5–3.2 ms in the handler.
-  - **Next step:** switch to Cloud Run's default TCP startup probe (one attempt with a 240 s timeout). Moviestracker uses it and reaches p95 667 ms. That should bring startup to about 0.4 s and the cold first byte to about 0.6 s; measure it again on staging after the template change is applied and deployed. The liveness probe keeps `/healthz`.
+  - **Fix:** Cloud Run's default TCP startup probe (one attempt with a 240 s timeout), as Moviestracker uses. It merged in [#261](https://github.com/lieranderl/qwik-aestheticlab/pull/261) as `2226769`, was applied (0 to add, 2 to change), and was deployed to staging as `…-40319793861-2`. The liveness probe keeps `/healthz`.
+  - **Remeasured 12:31 UTC, after 17 minutes idle, both targets met:**
+    - first byte 0.57 s for `/en-BE/`; Cloud Run's request latency 0.39 s;
+    - `startup_latencies` 229 ms.
+  - **Timeline of the cold instance:**
+    - `Starting new instance` at +0;
+    - TCP probe passed on its first attempt at +0.32 s;
+    - `server_started` logged at +0.34 s;
+    - content fetched from Firestore in 128 ms;
+    - first request served at +0.48 s. It took 131 ms in the handler, because it joined the startup content fetch.
+  - **Warm:** first byte 46–51 ms.
+  - **Side effect:** re-running a staging job that already succeeded fails at "Mark staging-approved digest as verified". The `verified-<sha>` tag already exists, and moving it needs `artifactregistry.tags.delete`, which the deployer doesn't have. The tag still points to the right digest.
 - **Content (Phase 5's open item 3):** on 2026-10-26 a fresh Supabase export matched `internal/content/snapshot.json` exactly. It was imported into `site-staging`: 90 documents (8 groups, 77 services, 4 staff, 1 contact), and an export of the database matches it. The same file was then imported into `site-production`, also 90 documents. Phase 9a step 1 still re-imports, unless content wasn't edited in Supabase after this date.
 
 ### Phase 9: Production and Scale-to-Zero
