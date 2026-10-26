@@ -54,10 +54,10 @@
   --color-rosewood: #8e5a4c;
 
   /* Page opens: headline lines rise out of a mask, text fades up after them. */
-  --animate-line-up: line-up 1000ms var(--ease-smooth) both;
-  --animate-fade-rise: fade-rise 900ms var(--ease-quint) both;
+  --animate-line-up: line-up 600ms var(--ease-smooth) both;
+  --animate-fade-rise: fade-rise 550ms var(--ease-quint) both;
   /* Page opens: the hero media slides 60px inside its fixed frame (never resizes). */
-  --animate-media-slide: media-slide 1400ms var(--ease-quint) 120ms both;
+  --animate-media-slide: media-slide 800ms var(--ease-quint) 0ms both;
   --animate-fade-in: fade-in 200ms var(--ease-snappy) both;
   /* Reviews: the next quote cross-fades in. */
   --animate-quote-in: quote-in 500ms var(--ease-smooth) both;
@@ -67,7 +67,7 @@
     to { transform: translateY(0); }
   }
   @keyframes fade-rise {
-    from { opacity: 0; transform: translateY(40px); }
+    from { opacity: 0; transform: translateY(16px); }
     to { opacity: 1; transform: translateY(0); }
   }
   @keyframes media-slide {
@@ -136,7 +136,7 @@
 
 @font-face {
   font-family: "qestero";
-  src: url("/static/fonts/QESTERO-Regular.ttf") format("truetype");
+  src: url("/static/fonts/QESTERO-Web.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -213,9 +213,9 @@
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
   .fade-up {
     opacity: 0;
-    transform: translateY(40px);
+    transform: translateY(16px);
     pointer-events: none;
-    transition: opacity 900ms var(--ease-quint), transform 900ms var(--ease-quint);
+    transition: opacity 550ms var(--ease-quint), transform 550ms var(--ease-quint);
   }
   .fade-up.in-view {
     opacity: 1;
@@ -224,7 +224,7 @@
   }
   .fade-mask > * {
     transform: translateY(110%);
-    transition: transform 1000ms var(--ease-smooth);
+    transition: transform 600ms var(--ease-smooth);
   }
   .fade-mask.in-view > * {
     transform: none;
@@ -276,4 +276,31 @@
 /* The phone menu is a modal dialog: the page behind it does not scroll. */
 html:has(#mobile-menu[open]) {
   overflow: hidden;
+}
+
+
+/* Keep the old content readable while a selection is loading. */
+#services-body { view-transition-name: treatments; transition: opacity 120ms ease-out; }
+#services[aria-busy="true"] #services-body { opacity: 0.65; cursor: progress; }
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+::view-transition-old(treatments), ::view-transition-new(treatments) { animation-duration: 200ms; }
+
+@keyframes reading-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@supports (animation-timeline: scroll()) {
+  #reading-progress { animation: reading-progress linear both; animation-timeline: scroll(root); }
+}
+
+/* Native top-layer transitions retain Escape, focus and scroll locking. */
+@media (prefers-reduced-motion: no-preference) {
+  #mobile-menu {
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 200ms ease-out, transform 200ms var(--ease-smooth), display 200ms allow-discrete, overlay 200ms allow-discrete;
+  }
+  #mobile-menu[open] { opacity: 1; transform: none; }
+  @starting-style { #mobile-menu[open] { opacity: 0; transform: translateY(-8px); } }
+}
+@media (prefers-reduced-motion: reduce) {
+  #services-body { transition: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none; }
 }

@@ -19,14 +19,15 @@ type PageMeta struct {
 //     button that opened it), load state and that button's analytics
 //     parameters (JSON);
 //   - menu: the phone menu is open;
-//   - scrolled, overHero, bar, progress, section: the header's scroll state
-//     (see scrollState).
-const pageSignals = `{cookies: false, bookingUrl: '', bookingTitle: '', bookingLoaded: false, bookingEvent: '{}', menu: false, scrolled: false, overHero: false, bar: false, progress: 0, section: ''}`
+//   - scrolled, overHero, bar, section: the header's scroll state
+//     (frontend/site.js).
+const pageSignals = `{cookies: false, bookingUrl: '', bookingTitle: '', bookingLoaded: false, bookingEvent: '{}', menu: false, scrolled: false, overHero: false, bar: false, section: ''}`
 
 // Layout is the document shell: the head with the page's SEO and
 // link-preview tags, then the page, the cookie banner and the one booking
 // dialog every Book button opens.
 templ Layout(meta PageMeta) {
+	{{ cyrillic := i18n.FromContext(ctx).Language() == "ru" || i18n.FromContext(ctx).Language() == "uk" }}
 	<!DOCTYPE html>
 	<html lang={ pageLang(ctx) }>
 		<head>
@@ -38,6 +39,13 @@ templ Layout(meta PageMeta) {
 			<link rel="apple-touch-icon" href="/icon-192.svg"/>
 			<link rel="manifest" href="/manifest.json"/>
 			<meta name="theme-color" content="#8b9687"/>
+			if cyrillic {
+				<link rel="preload" href={ assets.URL("fonts/onest-cyrillic-wght-normal.woff2") } as="font" type="font/woff2" crossorigin="anonymous"/>
+				<link rel="preload" href={ assets.URL("fonts/cormorant-garamond-500-cyrillic.woff2") } as="font" type="font/woff2" crossorigin="anonymous"/>
+			} else {
+				<link rel="preload" href={ assets.URL("fonts/onest-latin-wght-normal.woff2") } as="font" type="font/woff2" crossorigin="anonymous"/>
+				<link rel="preload" href={ assets.URL("fonts/cormorant-garamond-500.woff2") } as="font" type="font/woff2" crossorigin="anonymous"/>
+			}
 			<link rel="stylesheet" href={ assets.URL("app.css") }/>
 			@templ.Raw(jsonLDScript())
 			<!-- Consent defaults and gtag first, then Datastar: deferred and module
@@ -155,7 +163,7 @@ templ bookingDialog() {
 			<h2 id="booking-title" class="sr-only" data-text="$bookingTitle">{ tr(ctx, "Book your appointment") }</h2>
 			<form method="dialog">
 				<button type="submit" class="btn btn-ghost btn-square absolute right-1 top-1 min-h-11 min-w-11" aria-label={ tr(ctx, "Close") }>
-					<span aria-hidden="true">✕</span>
+					@Icon("mini/x-mark", "size-5")
 				</button>
 			</form>
 			<div class="relative min-h-[60vh] grow" data-attr:aria-busy="$bookingLoaded ? 'false' : 'true'">

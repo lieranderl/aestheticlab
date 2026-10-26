@@ -38,9 +38,8 @@ func navLinks(ctx context.Context) []navLink {
 // landing marks the home page: the header starts transparent over its hero.
 templ Navigation(landing, bookingBar bool) {
 	<div
-		data-init={ scrollState }
-		data-on:scroll__window__throttle.50ms.trail={ scrollState }
-		data-on:resize__window__throttle.100ms.trail={ scrollState }
+		data-init="aesthetic.navigation(el)"
+		data-on:navigation-state="$scrolled = evt.detail.scrolled; $overHero = evt.detail.overHero; $bar = evt.detail.bar; $section = evt.detail.section"
 	>
 		<header
 			class={ "fixed inset-x-0 top-0 z-40 border-b pt-[env(safe-area-inset-top)] transition-[background-color,border-color,color,box-shadow] duration-300 ease-(--ease-smooth) motion-reduce:transition-none lg:border-base-300 lg:bg-base-100/88 lg:text-base-content lg:backdrop-blur-md",
@@ -49,8 +48,7 @@ templ Navigation(landing, bookingBar bool) {
 			data-class="{'border-transparent': $overHero && !$menu, 'bg-transparent': $overHero && !$menu, 'text-ink': $overHero && !$menu, 'border-base-300': !$overHero || $menu, 'bg-base-100': !$overHero || $menu, 'text-base-content': !$overHero || $menu, 'lg:shadow-[0_6px_24px_-12px_rgb(26_36_26/0.25)]': $scrolled}"
 		>
 			<div
-				class="mx-auto grid h-16 w-full max-w-360 grid-cols-[1fr_auto] items-center pr-2 pl-4.5 transition-[height] duration-300 ease-(--ease-smooth) motion-reduce:transition-none sm:pl-6 lg:h-20 lg:grid-cols-[1fr_auto_1fr] lg:px-10 xl:px-16"
-				data-class="{'lg:h-16': $scrolled, 'lg:h-20': !$scrolled}"
+				class="mx-auto grid h-16 w-full max-w-360 grid-cols-[1fr_auto] items-center pr-2 pl-4.5 sm:pl-6 lg:h-16 lg:grid-cols-[1fr_auto_1fr] lg:px-10 xl:px-16"
 			>
 				<a href={ templ.SafeURL(href(ctx, "#")) } class="inline-flex min-h-11 items-center gap-2 justify-self-start lg:gap-2.5" aria-label={ "Aesthetic Lab — " + tr(ctx, "Home") }>
 					@Icon("logo/bird", "h-6.5 w-auto lg:h-8")
@@ -93,7 +91,7 @@ templ Navigation(landing, bookingBar bool) {
 					</button>
 				</div>
 			</div>
-			<span aria-hidden="true" class="absolute inset-x-0 bottom-0 hidden h-0.5 origin-left scale-x-0 bg-primary lg:block" data-style:transform="'scaleX(' + $progress + ')'"></span>
+			<span aria-hidden="true" class="absolute inset-x-0 bottom-0 hidden h-0.5 origin-left scale-x-0 bg-primary lg:block" id="reading-progress"></span>
 		</header>
 		@mobileMenu()
 		if bookingBar {
@@ -321,7 +319,7 @@ templ Picture(name, alt, class, sizes string, eager bool) {
 }
 
 // FadeUp reveals its content the first time it scrolls into view: text
-// rises 40px as it fades in, or, with mask, slides up from behind its own
+// rises 16px as it fades in, or, with mask, slides up from behind its own
 // edge. Nothing moves with reduced motion or without JavaScript.
 templ FadeUp(delay int, mask bool, class string) {
 	if mask {
@@ -384,7 +382,7 @@ templ Footer(readyBand, bookingBar bool) {
 							Class: "btn btn-accent h-14 min-h-14 px-8 font-main text-[0.9375rem] font-semibold"})
 						<a href={ templ.SafeURL(href(ctx, "pricelist/")) } class="group inline-flex min-h-11 items-center gap-2.5 font-main text-[0.9375rem] font-semibold text-rosewood">
 							{ tr(ctx, "See prices") }
-							<span aria-hidden="true" class="transition-transform duration-500 ease-(--ease-quint) group-hover:translate-x-1.5">→</span>
+							<span aria-hidden="true" class="transition-transform duration-500 ease-(--ease-quint) group-hover:translate-x-1.5">@Icon("outline/arrow-long-right", "size-4.5")</span>
 						</a>
 					}
 				</div>

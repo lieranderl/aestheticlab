@@ -559,7 +559,7 @@ func categoryTiles(t treatments, cats []content.Category, idPrefix, columns stri
 			var templ_7745c5c3_Var31 string
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.ResolveAttributeValue(tileOpen(ctx, t, c, columns))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 103, Col: 49}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 105, Col: 49}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
 			if templ_7745c5c3_Err != nil {
@@ -572,7 +572,7 @@ func categoryTiles(t treatments, cats []content.Category, idPrefix, columns stri
 			var templ_7745c5c3_Var32 string
 			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.ResolveAttributeValue(descriptionID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 104, Col: 37}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 106, Col: 37}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var32)
 			if templ_7745c5c3_Err != nil {
@@ -582,7 +582,7 @@ func categoryTiles(t treatments, cats []content.Category, idPrefix, columns stri
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = Picture(coverImage(categoryImageName(c)), "", "absolute inset-x-0 -top-3 h-[calc(100%+1.5rem)] w-full object-cover transition-transform duration-700 ease-(--ease-quint) group-hover:-translate-y-3 motion-reduce:transition-none", "(min-width: 1280px) 15rem, (min-width: 768px) 30vw, 72vw", true).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = Picture(coverImage(categoryImageName(c)), "", "absolute inset-x-0 -top-3 h-[calc(100%+1.5rem)] w-full object-cover transition-transform duration-700 ease-(--ease-quint) group-hover:-translate-y-3 motion-reduce:transition-none", "(min-width: 1280px) 15rem, (min-width: 768px) 30vw, 72vw", false).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -594,7 +594,7 @@ func categoryTiles(t treatments, cats []content.Category, idPrefix, columns stri
 				var templ_7745c5c3_Var33 string
 				templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(from)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 110, Col: 124}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 112, Col: 124}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 				if templ_7745c5c3_Err != nil {
@@ -612,7 +612,7 @@ func categoryTiles(t treatments, cats []content.Category, idPrefix, columns stri
 			var templ_7745c5c3_Var34 string
 			templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(tileTitle(ctx, c))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 114, Col: 107}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 116, Col: 107}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 			if templ_7745c5c3_Err != nil {
@@ -625,7 +625,7 @@ func categoryTiles(t treatments, cats []content.Category, idPrefix, columns stri
 			var templ_7745c5c3_Var35 string
 			templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(twoDigits(i + 1))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 115, Col: 102}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 117, Col: 102}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 			if templ_7745c5c3_Err != nil {
@@ -638,7 +638,7 @@ func categoryTiles(t treatments, cats []content.Category, idPrefix, columns stri
 			var templ_7745c5c3_Var36 string
 			templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(treatmentCount(ctx, c.Services))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 118, Col: 39}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 120, Col: 39}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 			if templ_7745c5c3_Err != nil {
@@ -659,7 +659,7 @@ func categoryTiles(t treatments, cats []content.Category, idPrefix, columns stri
 			var templ_7745c5c3_Var37 string
 			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.ResolveAttributeValue(descriptionID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 123, Col: 29}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 125, Col: 29}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var37)
 			if templ_7745c5c3_Err != nil {
@@ -672,7 +672,7 @@ func categoryTiles(t treatments, cats []content.Category, idPrefix, columns stri
 			var templ_7745c5c3_Var38 string
 			templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(categoryDescription(ctx, c.Group))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 123, Col: 155}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 125, Col: 155}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 			if templ_7745c5c3_Err != nil {
@@ -726,7 +726,7 @@ func treatmentDetail(t treatments, location string) templ.Component {
 			var templ_7745c5c3_Var40 string
 			templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(detailSummary(ctx, d))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 138, Col: 93}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 140, Col: 93}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 			if templ_7745c5c3_Err != nil {
@@ -739,7 +739,7 @@ func treatmentDetail(t treatments, location string) templ.Component {
 			var templ_7745c5c3_Var41 string
 			templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(detailTitle(ctx, d))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 139, Col: 172}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 141, Col: 172}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 			if templ_7745c5c3_Err != nil {
@@ -752,7 +752,7 @@ func treatmentDetail(t treatments, location string) templ.Component {
 			var templ_7745c5c3_Var42 string
 			templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(categoryDescription(ctx, d.Group))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 141, Col: 136}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 143, Col: 136}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 			if templ_7745c5c3_Err != nil {
@@ -779,7 +779,7 @@ func treatmentDetail(t treatments, location string) templ.Component {
 		var templ_7745c5c3_Var44 string
 		templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.ResolveAttributeValue(backToOverview)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 148, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 150, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var44)
 		if templ_7745c5c3_Err != nil {
@@ -792,7 +792,7 @@ func treatmentDetail(t treatments, location string) templ.Component {
 		var templ_7745c5c3_Var45 string
 		templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.ResolveAttributeValue(trc(ctx, "treatment overview", "Back to categories"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 148, Col: 124}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 150, Col: 124}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var45)
 		if templ_7745c5c3_Err != nil {
@@ -818,7 +818,7 @@ func treatmentDetail(t treatments, location string) templ.Component {
 		var templ_7745c5c3_Var47 string
 		templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(trc(ctx, "treatment overview", "Back to categories"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 150, Col: 90}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 152, Col: 90}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 		if templ_7745c5c3_Err != nil {
@@ -841,7 +841,7 @@ func treatmentDetail(t treatments, location string) templ.Component {
 			var templ_7745c5c3_Var49 string
 			templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.ResolveAttributeValue(backToLaser)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 153, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 155, Col: 54}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var49)
 			if templ_7745c5c3_Err != nil {
@@ -854,7 +854,7 @@ func treatmentDetail(t treatments, location string) templ.Component {
 			var templ_7745c5c3_Var50 string
 			templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.ResolveAttributeValue(tr(ctx, "Back to laser category"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 153, Col: 103}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 155, Col: 103}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var50)
 			if templ_7745c5c3_Err != nil {
@@ -880,7 +880,7 @@ func treatmentDetail(t treatments, location string) templ.Component {
 			var templ_7745c5c3_Var52 string
 			templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Laser"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 155, Col: 48}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 157, Col: 48}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 			if templ_7745c5c3_Err != nil {
@@ -893,7 +893,7 @@ func treatmentDetail(t treatments, location string) templ.Component {
 			var templ_7745c5c3_Var53 string
 			templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Back to laser category"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 156, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 158, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
 			if templ_7745c5c3_Err != nil {
@@ -911,7 +911,7 @@ func treatmentDetail(t treatments, location string) templ.Component {
 		var templ_7745c5c3_Var54 string
 		templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.ResolveAttributeValue(tr(ctx, "Services"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 160, Col: 149}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 162, Col: 149}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var54)
 		if templ_7745c5c3_Err != nil {
@@ -934,7 +934,7 @@ func treatmentDetail(t treatments, location string) templ.Component {
 			var templ_7745c5c3_Var56 string
 			templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.ResolveAttributeValue(openTreatment(ctx, c.ID, "", c, "services_overview"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 165, Col: 75}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 167, Col: 75}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var56)
 			if templ_7745c5c3_Err != nil {
@@ -960,7 +960,7 @@ func treatmentDetail(t treatments, location string) templ.Component {
 			var templ_7745c5c3_Var58 string
 			templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.ResolveAttributeValue(boolString(c.ID == t.Category))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 167, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 169, Col: 52}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var58)
 			if templ_7745c5c3_Err != nil {
@@ -973,7 +973,7 @@ func treatmentDetail(t treatments, location string) templ.Component {
 			var templ_7745c5c3_Var59 string
 			templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.JoinStringErrs(tileTitle(ctx, c))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 169, Col: 26}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 171, Col: 26}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var59))
 			if templ_7745c5c3_Err != nil {
@@ -1046,7 +1046,7 @@ func serviceRow(s content.Service, category, location string) templ.Component {
 		var templ_7745c5c3_Var61 string
 		templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.JoinStringErrs(upperFirst(s.Name))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 191, Col: 109}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 193, Col: 109}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var61))
 		if templ_7745c5c3_Err != nil {
@@ -1064,7 +1064,7 @@ func serviceRow(s content.Service, category, location string) templ.Component {
 			var templ_7745c5c3_Var62 string
 			templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.JoinStringErrs(minutesNoBreak(ctx, s.Duration))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 193, Col: 106}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 195, Col: 106}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var62))
 			if templ_7745c5c3_Err != nil {
@@ -1082,7 +1082,7 @@ func serviceRow(s content.Service, category, location string) templ.Component {
 		var templ_7745c5c3_Var63 string
 		templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.JoinStringErrs(price(ctx, s.Price))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 196, Col: 164}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 198, Col: 164}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var63))
 		if templ_7745c5c3_Err != nil {
@@ -1153,7 +1153,7 @@ func expandableText(text string) templ.Component {
 		var templ_7745c5c3_Var65 string
 		templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinStringErrs(text)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 213, Col: 99}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 215, Col: 99}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var65))
 		if templ_7745c5c3_Err != nil {
@@ -1171,7 +1171,7 @@ func expandableText(text string) templ.Component {
 			var templ_7745c5c3_Var66 string
 			templ_7745c5c3_Var66, templ_7745c5c3_Err = templ.ResolveAttributeValue(readMore(ctx))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 218, Col: 33}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 220, Col: 33}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var66)
 			if templ_7745c5c3_Err != nil {
@@ -1184,7 +1184,7 @@ func expandableText(text string) templ.Component {
 			var templ_7745c5c3_Var67 string
 			templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Read more"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 221, Col: 26}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/services.templ`, Line: 223, Col: 26}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var67))
 			if templ_7745c5c3_Err != nil {

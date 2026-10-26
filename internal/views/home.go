@@ -61,11 +61,13 @@ func lightboxImages(ctx context.Context) string {
 		Src    string `json:"src"`
 		SrcSet string `json:"srcset"`
 		Alt    string `json:"alt"`
+		Width  int    `json:"width"`
+		Height int    `json:"height"`
 	}
 	var out []image
 	for _, item := range galleryItems(ctx) {
 		img, _ := assets.Lookup(item.Image)
-		out = append(out, image{img.Src, img.SrcSet, item.Alt})
+		out = append(out, image{img.Src, img.SrcSet, item.Alt, img.Width, img.Height})
 	}
 	data, err := json.Marshal(out)
 	if err != nil {
@@ -204,7 +206,7 @@ func parkingClicked(p content.Place) string {
 func lightboxOpen(i int) string {
 	return "$lightbox = " + strconv.Itoa(i) +
 		"; el.focus({preventScroll: true}); const dialog = document.getElementById('gallery-lightbox');" +
-		" dialog.showModal(); requestAnimationFrame(() => dialog.querySelector('[autofocus]').focus({preventScroll: true}))"
+		" dialog.showModal(); aesthetic.showGallery(dialog, $lightbox); requestAnimationFrame(() => dialog.querySelector('[autofocus]').focus({preventScroll: true}))"
 }
 
 // instagramClicked records the gallery's Instagram link.
