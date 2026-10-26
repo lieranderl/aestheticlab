@@ -271,11 +271,19 @@ async function build() {
 		const stem = join(dirname(first), basename(first, extname(first)));
 		// Rotated per EXIF orientation, as the Qwik site renders them.
 		const { width, height } = (await sharp(bytes).metadata()).autoOrient;
+		// These detailed gallery photos dominated the image-delivery audit.
+		const quality = [
+			"gallery/pink-shimmer.jpg",
+			"gallery/white-shimmer.jpg",
+			"gallery/lash-lift-result.jpg",
+		].includes(first)
+			? 68
+			: webpQuality;
 		const variants = [];
 		for (const w of variantWidths(width)) {
 			const hash = contentHash(
 				bytes,
-				`webp|q${webpQuality}|w${w}|sharp${sharpVersion}`,
+				`webp|q${quality}|w${w}|sharp${sharpVersion}`,
 			);
 			const url = await emit(
 				`media/${hashedName(`${stem}-${w}`, hash, ".webp")}`,
@@ -283,7 +291,7 @@ async function build() {
 					sharp(bytes)
 						.rotate()
 						.resize({ width: w })
-						.webp({ quality: webpQuality })
+						.webp({ quality })
 						.toBuffer(),
 			);
 			variants.push({ url, w });

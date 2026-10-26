@@ -132,7 +132,7 @@ func openTreatment(ctx context.Context, category, area string, c content.Categor
 // expression), cancelling any section request still under way, whatever its
 // URL.
 func sectionGet(url string) string {
-	return "@get(" + url + ", {requestCancellation: aesthetic.sectionSignal()})"
+	return "aesthetic.loadSection(() => @get(" + url + ", {requestCancellation: aesthetic.sectionSignal()}))"
 }
 
 // The back buttons' and the browser back button's expressions.
@@ -159,10 +159,6 @@ func tileOpen(ctx context.Context, t treatments, c content.Category, columns str
 	return openTreatment(ctx, c.ID, "", c, "services_overview")
 }
 
-// smoothBehavior is scrollIntoView's behavior: smooth unless the visitor
-// prefers reduced motion.
-const smoothBehavior = "matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'"
-
 // revealTreatments brings a freshly patched section into view: the
 // treatments (focusing their heading for screen readers) or, for the
 // overview, the section top. The expression names the selection: a patch
@@ -171,11 +167,10 @@ const smoothBehavior = "matchMedia('(prefers-reduced-motion: reduce)').matches ?
 func revealTreatments(t treatments) string {
 	selection := "void " + jsString("services:"+t.Category+"/"+t.Area) + "; "
 	if t.Category == "" {
-		return selection + "document.getElementById('services')?.scrollIntoView({behavior: " + smoothBehavior + "})"
+		return selection + "aesthetic.revealTreatments('services')"
 	}
-	return selection + "document.getElementById('service-details-card')?.scrollIntoView({behavior: " + smoothBehavior + "}); " +
-		"document.getElementById('service-details-heading')?.focus({preventScroll: true}); " +
-		`document.querySelector('#service-category-nav [aria-pressed="true"]')?.scrollIntoView({block: 'nearest', inline: 'center'})`
+	return selection + "aesthetic.revealTreatments('service-details-card'); " +
+		"document.getElementById('service-details-heading')?.focus({preventScroll: true})"
 }
 
 // readMore toggles a clamped description and its button.

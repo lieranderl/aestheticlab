@@ -163,6 +163,133 @@
 		return sectionRequest;
 	}
 
+	/** Keep old treatments visible until the newest request completes. */
+	function loadSection(fetchSection) {
+		const section = document.getElementById("services");
+		section?.setAttribute("aria-busy", "true");
+		const pending = fetchSection();
+		const request = sectionRequest;
+		return pending.finally(() => {
+			if (sectionRequest === request)
+				section?.setAttribute("aria-busy", "false");
+		});
+	}
+
+	function revealTreatments(id) {
+		const target = document.getElementById(id);
+		if (!target) return;
+		const { top } = target.getBoundingClientRect();
+		if (top < 90 || top > window.innerHeight * 0.7) {
+			target.scrollIntoView({
+				behavior: reducedMotion() ? "instant" : "smooth",
+			});
+		}
+		// Scroll the chips horizontally without moving any outer ancestor.
+		const nav = document.getElementById("service-category-nav");
+		const active = nav?.querySelector('[aria-pressed="true"]');
+		if (!active) return;
+		const frame = nav.getBoundingClientRect();
+		const chip = active.getBoundingClientRect();
+		if (chip.left < frame.left || chip.right > frame.right) {
+			nav.scrollTo({
+				left:
+					nav.scrollLeft +
+					chip.left -
+					frame.left -
+					(frame.width - chip.width) / 2,
+				behavior: reducedMotion() ? "instant" : "smooth",
+			});
+		}
+	}
+
+	const reducedMotion = () =>
+		window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+	const galleryRequests = new WeakMap();
+	/** Decode before replacing the visible photo; obsolete loads never win. */
+	async function showGallery(dialog, index) {
+		const request = {};
+		galleryRequests.set(dialog, request);
+		const photo = JSON.parse(dialog.dataset.images)[index];
+		const image = dialog.querySelector("img");
+		dialog.setAttribute("aria-busy", "true");
+		const next = new Image();
+		next.sizes = image.sizes;
+		next.srcset = photo.srcset;
+		next.src = photo.src;
+		try {
+			await next.decode();
+		} catch {
+			/* The image's alt remains available on failure. */
+		}
+		if (galleryRequests.get(dialog) !== request || !dialog.open) return;
+		image.width = photo.width;
+		image.height = photo.height;
+		image.alt = photo.alt;
+		image.srcset = photo.srcset;
+		image.src = photo.src;
+		dialog.setAttribute("aria-busy", "false");
+		for (const animation of image.getAnimations()) animation.cancel();
+		if (!reducedMotion())
+			image.animate([{ opacity: 0 }, { opacity: 1 }], {
+				duration: 180,
+				easing: "ease-out",
+			});
+	}
+
+	function closeGallery(dialog) {
+		galleryRequests.delete(dialog);
+		const image = dialog.querySelector("img");
+		image.removeAttribute("srcset");
+		image.removeAttribute("src");
+		dialog.setAttribute("aria-busy", "false");
+	}
+
+	/** One frame-aligned observer for navigation; read geometry before writes. */
+	function navigation(root) {
+		const hero = document.getElementById("hero");
+		const sections = [
+			...document.querySelectorAll(
+				"#services, #gallery, #team, #faq, #contact",
+			),
+		];
+		const progress = document.getElementById("reading-progress");
+		const cssProgress = CSS.supports("animation-timeline", "scroll()");
+		let scheduled = false;
+		function update() {
+			scheduled = false;
+			const y = window.scrollY;
+			const height = window.innerHeight;
+			const heroBottom = hero?.getBoundingClientRect().bottom ?? 0;
+			const section =
+				sections.find((el) => {
+					const rect = el.getBoundingClientRect();
+					return rect.top < height * 0.5 && rect.bottom > height * 0.45;
+				})?.id ?? "";
+			const fraction =
+				y / Math.max(1, document.documentElement.scrollHeight - height);
+			root.dispatchEvent(
+				new CustomEvent("navigation-state", {
+					detail: {
+						scrolled: y > 24,
+						overHero: heroBottom > 64,
+						bar: heroBottom < height * 0.35,
+						section,
+					},
+				}),
+			);
+			if (!cssProgress && progress)
+				progress.style.transform = `scaleX(${Math.min(1, fraction)})`;
+		}
+		function schedule() {
+			if (scheduled) return;
+			scheduled = true;
+			requestAnimationFrame(update);
+		}
+		window.addEventListener("scroll", schedule, { passive: true });
+		window.addEventListener("resize", schedule, { passive: true });
+		schedule();
+	}
+
 	/**
 	 * Scroll-linked motion where CSS scroll-driven animations are missing
 	 * (Firefox): the same curves app.css draws with animation-timeline, as
@@ -205,8 +332,9 @@
 		let ticking = false;
 		function update() {
 			ticking = false;
-			for (const item of items) {
-				const { y, opacity } = motion(item.el);
+			const positions = items.map((item) => motion(item.el));
+			for (const [i, item] of items.entries()) {
+				const { y, opacity } = positions[i];
 				const next = `${y.toFixed(1)}|${opacity ?? ""}`;
 				if (next === item.last) continue;
 				item.last = next;
@@ -237,5 +365,10 @@
 		toggleVideo,
 		videoState,
 		sectionSignal,
+		loadSection,
+		revealTreatments,
+		showGallery,
+		closeGallery,
+		navigation,
 	};
 })();

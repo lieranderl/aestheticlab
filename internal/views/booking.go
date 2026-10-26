@@ -92,17 +92,6 @@ func fadeDelay(ms int) string {
 	return ""
 }
 
-// scrollState updates the header's signals from the scroll position, as
-// src/components/sections/navigation.tsx does: scrolled past 24px, the hero
-// still under the header, the phone booking bar shown once the hero is
-// mostly gone, the reading progress, and the landing-page section in the
-// middle of the screen.
-const scrollState = `$scrolled = window.scrollY > 24;
-$overHero = (document.getElementById('hero')?.getBoundingClientRect().bottom ?? 0) > 64;
-$bar = (document.getElementById('hero')?.getBoundingClientRect().bottom ?? 0) < window.innerHeight * 0.35;
-$progress = Math.min(1, window.scrollY / Math.max(1, document.documentElement.scrollHeight - window.innerHeight));
-$section = ['services', 'gallery', 'team', 'faq', 'contact'].find((id) => { const r = document.getElementById(id)?.getBoundingClientRect(); return !!r && r.top < window.innerHeight * 0.5 && r.bottom > window.innerHeight * 0.45 }) || ''`
-
 // scrollTo is the expression that scrolls to the element id names (less
 // the 64px header), or to the top for "", smoothly unless the visitor
 // prefers reduced motion.

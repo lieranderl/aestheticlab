@@ -50,7 +50,7 @@ func home(l i18n.Locale, store *content.Store, log *slog.Logger) http.HandlerFun
 		loc := store.Content(ctx).In(l)
 		w.Header().Set("Cache-Control", "no-store")
 		sse := datastar.NewSSE(w, r)
-		if err := sse.PatchElementTempl(views.ServicesFragment(loc, r.URL.Query())); err != nil {
+		if err := sse.PatchElementTempl(views.ServicesFragment(loc, r.URL.Query()), datastar.WithUseViewTransitions(true)); err != nil {
 			log.ErrorContext(ctx, "services_patch_failed", "path", r.URL.Path, "error", err.Error())
 		}
 	}

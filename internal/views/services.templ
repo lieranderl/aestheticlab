@@ -92,9 +92,11 @@ templ categoryTiles(t treatments, cats []content.Category, idPrefix, columns str
 			</li>
 		}
 	</ul>
-	<ul class={ "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3.5 overflow-x-auto overscroll-x-contain px-4 pb-2 [scrollbar-width:none] sm:-mx-6 sm:scroll-px-6 sm:px-6 md:mx-0 md:grid md:gap-6 md:overflow-visible md:px-0 md:pb-0",
+	<ul
+		class={ "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3.5 overflow-x-auto overscroll-x-contain px-4 pb-2 [scrollbar-width:none] sm:-mx-6 sm:scroll-px-6 sm:px-6 md:mx-0 md:grid md:gap-6 md:overflow-visible md:px-0 md:pb-0",
 		templ.KV("md:grid-cols-3 xl:grid-cols-5", columns == "overview"),
-		templ.KV("md:grid-cols-2 lg:grid-cols-4", columns != "overview") }>
+		templ.KV("md:grid-cols-2 lg:grid-cols-4", columns != "overview") }
+	>
 		for i, c := range cats {
 			{{ descriptionID := idPrefix + "-" + c.ID + "-description" }}
 			<li class="w-[72vw] max-w-72 shrink-0 snap-start md:w-auto md:max-w-none">
@@ -105,7 +107,7 @@ templ categoryTiles(t treatments, cats []content.Category, idPrefix, columns str
 					class="group flex h-full w-full flex-col gap-3.5 cursor-pointer text-left transition-[translate] duration-700 ease-(--ease-quint) hover:-translate-y-1.5 motion-reduce:transition-none"
 				>
 					<span class="relative block aspect-4/5 overflow-hidden bg-stone">
-						@Picture(coverImage(categoryImageName(c)), "", "absolute inset-x-0 -top-3 h-[calc(100%+1.5rem)] w-full object-cover transition-transform duration-700 ease-(--ease-quint) group-hover:-translate-y-3 motion-reduce:transition-none", "(min-width: 1280px) 15rem, (min-width: 768px) 30vw, 72vw", true)
+						@Picture(coverImage(categoryImageName(c)), "", "absolute inset-x-0 -top-3 h-[calc(100%+1.5rem)] w-full object-cover transition-transform duration-700 ease-(--ease-quint) group-hover:-translate-y-3 motion-reduce:transition-none", "(min-width: 1280px) 15rem, (min-width: 768px) 30vw, 72vw", false)
 						if from := fromPrice(ctx, c.Services); from != "" {
 							<span class="absolute top-3.5 left-3.5 bg-blush px-3 py-1.5 font-main text-[0.8125rem] font-semibold text-ink">{ from }</span>
 						}

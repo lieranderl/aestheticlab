@@ -2,6 +2,7 @@ package views
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/lieranderl/aestheticlab/internal/assets"
 	"github.com/lieranderl/aestheticlab/internal/content"
@@ -72,15 +73,15 @@ templ hero() {
 				<h1 class={ "overflow-clip pb-[0.06em] text-center font-cormorant leading-[0.9] font-medium tracking-[-0.02em] text-balance lg:text-left lg:text-[clamp(4rem,5.6vw,6rem)]", sloganSize(slogan) }>
 					<span class="block motion-safe:animate-line-up [animation-delay:160ms]">{ slogan }</span>
 				</h1>
-				<p class="max-w-[30rem] font-main text-[0.9375rem] [@media(max-height:620px)]:max-lg:hidden leading-relaxed motion-safe:animate-fade-rise [animation-delay:500ms] lg:text-lg">
+				<p class="max-w-[30rem] font-main text-[0.9375rem] [@media(max-height:620px)]:max-lg:hidden leading-relaxed motion-safe:animate-fade-rise [animation-delay:100ms] lg:text-lg">
 					{ tr(ctx, "Manicure, pedicure, brows, lashes and laser, in a calm studio in the heart of Leuven.") }
 				</p>
-				<div class="flex flex-col gap-3 motion-safe:animate-fade-rise [animation-delay:600ms] lg:flex-row lg:items-center lg:gap-7">
+				<div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-7">
 					@BookButton(Booking{ID: "hero-book-btn", Text: tr(ctx, "Book appointment"), Placement: "hero",
 						Class: "btn btn-accent h-13.5 min-h-13.5 px-8 font-main text-[0.9375rem] font-semibold lg:h-14 lg:min-h-14"})
 					<a href={ templ.SafeURL(href(ctx, "pricelist/")) } data-on:click={ pricingClicked("hero") } class="group inline-flex min-h-11 items-center justify-center gap-2.5 font-main text-[0.9375rem] font-semibold">
 						{ tr(ctx, "See prices") }
-						<span aria-hidden="true" class="transition-transform duration-500 ease-(--ease-quint) group-hover:translate-x-1.5">→</span>
+						<span aria-hidden="true" class="transition-transform duration-500 ease-(--ease-quint) group-hover:translate-x-1.5">@Icon("outline/arrow-long-right", "size-4.5")</span>
 					</a>
 				</div>
 				<a
@@ -88,11 +89,17 @@ templ hero() {
 					target="_blank"
 					rel="noopener noreferrer"
 					data-on:click={ track("google_reviews_clicked", map[string]string{"placement": "hero", "link_url": googlePlaceURL}) }
-					class="inline-flex min-h-11 items-center justify-center font-main text-sm font-medium motion-safe:animate-fade-rise [animation-delay:700ms] hover:underline lg:justify-start lg:border-t lg:border-ink/30 lg:pt-5"
+					aria-label={ ratingLabel(ctx) }
+					class="inline-flex min-h-11 items-center justify-center gap-2 font-main text-sm font-medium motion-safe:animate-fade-rise [animation-delay:160ms] hover:underline lg:justify-start lg:border-t lg:border-ink/30 lg:pt-5"
 				>
-					{ ratingLabel(ctx) }
+					<span aria-hidden="true" class="inline-flex">
+						for range 5 {
+							@Icon("mini/star", "size-3")
+						}
+					</span>
+					<span>{ strings.TrimPrefix(ratingLabel(ctx), "★★★★★ ") }</span>
 				</a>
-				<div class="motion-safe:animate-fade-rise [animation-delay:800ms]">
+				<div class="motion-safe:animate-fade-rise [animation-delay:220ms]">
 					@Kicker("sage", "mb-0 justify-center lg:justify-start") {
 						{ tr(ctx, "Leuven · since 2024") }
 					}
@@ -208,10 +215,12 @@ templ lightbox() {
 	{{ img, _ := assets.Lookup(first.Image) }}
 	<dialog
 		id="gallery-lightbox"
+		data-images={ images }
+		data-on:close="aesthetic.closeGallery(el)"
 		class="modal bg-black/90 p-0 backdrop:bg-black/90"
 		aria-label={ tr(ctx, "Gallery image viewer") }
 		data-on:click="evt.target === el && el.close()"
-		data-on:keydown="if (evt.key === 'ArrowLeft' || evt.key === '<') { evt.preventDefault(); $lightbox = ($lightbox + 7) % 8 } else if (evt.key === 'ArrowRight' || evt.key === '>') { evt.preventDefault(); $lightbox = ($lightbox + 1) % 8 }"
+		data-on:keydown="if (evt.key === 'ArrowLeft' || evt.key === '<') { evt.preventDefault(); $lightbox = ($lightbox + 7) % 8; aesthetic.showGallery(document.getElementById('gallery-lightbox'), $lightbox) } else if (evt.key === 'ArrowRight' || evt.key === '>') { evt.preventDefault(); $lightbox = ($lightbox + 1) % 8; aesthetic.showGallery(document.getElementById('gallery-lightbox'), $lightbox) }"
 	>
 		<div class="modal-box flex h-dvh max-h-none w-screen max-w-none items-center justify-center overflow-hidden rounded-none bg-transparent p-4 shadow-none">
 			<form method="dialog">
@@ -220,20 +229,18 @@ templ lightbox() {
 				</button>
 			</form>
 			<span class="absolute top-4 left-4 z-10 font-main text-sm text-white/70" data-text="($lightbox + 1) + ' / 8'">1 / 8</span>
-			<button type="button" class="btn btn-ghost btn-square absolute left-2 z-20 min-h-12 min-w-12 touch-manipulation text-white hover:bg-white/10 md:left-4" data-on:click="$lightbox = ($lightbox + 7) % 8" aria-label={ tr(ctx, "Previous") }>
+			<button type="button" class="btn btn-ghost btn-square absolute left-2 z-20 min-h-12 min-w-12 touch-manipulation text-white hover:bg-white/10 md:left-4" data-on:click="$lightbox = ($lightbox + 7) % 8; aesthetic.showGallery(document.getElementById('gallery-lightbox'), $lightbox)" aria-label={ tr(ctx, "Previous") }>
 				<span aria-hidden="true" class="text-3xl">‹</span>
 			</button>
 			<img
-				src={ img.Src }
-				srcset={ img.SrcSet }
-				sizes="90vw"
+				width={ strconv.Itoa(img.Width) }
+				height={ strconv.Itoa(img.Height) }
 				alt={ first.Alt }
+				sizes="90vw"
+				decoding="async"
 				class="max-h-[85vh] max-w-[90vw] object-contain"
-				data-attr:src={ images + "[$lightbox].src" }
-				data-attr:srcset={ images + "[$lightbox].srcset" }
-				data-attr:alt={ images + "[$lightbox].alt" }
 			/>
-			<button type="button" class="btn btn-ghost btn-square absolute right-2 z-20 min-h-12 min-w-12 touch-manipulation text-white hover:bg-white/10 md:right-4" data-on:click="$lightbox = ($lightbox + 1) % 8" aria-label={ tr(ctx, "Next") }>
+			<button type="button" class="btn btn-ghost btn-square absolute right-2 z-20 min-h-12 min-w-12 touch-manipulation text-white hover:bg-white/10 md:right-4" data-on:click="$lightbox = ($lightbox + 1) % 8; aesthetic.showGallery(document.getElementById('gallery-lightbox'), $lightbox)" aria-label={ tr(ctx, "Next") }>
 				<span aria-hidden="true" class="text-3xl">›</span>
 			</button>
 		</div>

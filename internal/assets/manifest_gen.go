@@ -8,11 +8,13 @@ func fileURL(name string) string {
 	case "Bird.svg":
 		return "/static/dist/media/Bird.02de9cbcb0.svg"
 	case "app.css":
-		return "/static/dist/app.0a8097d3ab.css"
+		return "/static/dist/app.be10266026.css"
 	case "datastar.js":
 		return "/static/dist/datastar.727844adfc.js"
 	case "fonts/QESTERO-Regular.ttf":
 		return "/static/dist/fonts/QESTERO-Regular.e6a06d4db8.ttf"
+	case "fonts/QESTERO-Web.woff2":
+		return "/static/dist/fonts/QESTERO-Web.b94ba4eaed.woff2"
 	case "fonts/cormorant-garamond-400-cyrillic.woff2":
 		return "/static/dist/fonts/cormorant-garamond-400-cyrillic.d81372bae1.woff2"
 	case "fonts/cormorant-garamond-400.woff2":
@@ -40,7 +42,7 @@ func fileURL(name string) string {
 	case "fonts/onest-vietnamese-wght-normal.woff2":
 		return "/static/dist/fonts/onest-vietnamese-wght-normal.d852d4d094.woff2"
 	case "site.js":
-		return "/static/dist/site.a2759e8c8f.js"
+		return "/static/dist/site.085e0767dc.js"
 	case "video/cateye-poster.jpg":
 		return "/static/dist/media/video/cateye-poster.6b3602984d.jpg"
 	case "video/cateye.mp4":
@@ -91,7 +93,7 @@ func image(name string) (Image, bool) {
 	case "gallery/lash-lift-process.jpg":
 		return Image{Src: "/static/dist/media/gallery/lash-lift-process-720.072d48c9c1.webp", SrcSet: "/static/dist/media/gallery/lash-lift-process-200.3c28160819.webp 200w, /static/dist/media/gallery/lash-lift-process-400.6cc82a3308.webp 400w, /static/dist/media/gallery/lash-lift-process-600.816b738702.webp 600w, /static/dist/media/gallery/lash-lift-process-720.072d48c9c1.webp 720w", Width: 720, Height: 1280}, true
 	case "gallery/lash-lift-result.jpg":
-		return Image{Src: "/static/dist/media/gallery/lash-lift-result-720.c6dc1a7306.webp", SrcSet: "/static/dist/media/gallery/lash-lift-result-200.e9e7867044.webp 200w, /static/dist/media/gallery/lash-lift-result-400.a980727069.webp 400w, /static/dist/media/gallery/lash-lift-result-600.5c0bac5379.webp 600w, /static/dist/media/gallery/lash-lift-result-720.c6dc1a7306.webp 720w", Width: 720, Height: 1280}, true
+		return Image{Src: "/static/dist/media/gallery/lash-lift-result-720.ef6e6dc11d.webp", SrcSet: "/static/dist/media/gallery/lash-lift-result-200.fc1109aed6.webp 200w, /static/dist/media/gallery/lash-lift-result-400.c9b13aa683.webp 400w, /static/dist/media/gallery/lash-lift-result-600.bed9893f9c.webp 600w, /static/dist/media/gallery/lash-lift-result-720.ef6e6dc11d.webp 720w", Width: 720, Height: 1280}, true
 	case "gallery/lazer1.jpg":
 		return Image{Src: "/static/dist/media/gallery/lazer1-1200.4f3b98a7c5.webp", SrcSet: "/static/dist/media/gallery/lazer1-200.0313826b17.webp 200w, /static/dist/media/gallery/lazer1-400.112e77e080.webp 400w, /static/dist/media/gallery/lazer1-600.20d13faf91.webp 600w, /static/dist/media/gallery/lazer1-800.774a440054.webp 800w, /static/dist/media/gallery/lazer1-1200.4f3b98a7c5.webp 1200w", Width: 1200, Height: 2133}, true
 	case "gallery/manicure1.jpg":
@@ -119,7 +121,7 @@ func image(name string) (Image, bool) {
 	case "gallery/pedicure6.jpg":
 		return Image{Src: "/static/dist/media/gallery/pedicure6-1200.2382ade7d8.webp", SrcSet: "/static/dist/media/gallery/pedicure6-200.47b24b7419.webp 200w, /static/dist/media/gallery/pedicure6-400.8dbe479237.webp 400w, /static/dist/media/gallery/pedicure6-600.2037758f44.webp 600w, /static/dist/media/gallery/pedicure6-800.21ae1fbda4.webp 800w, /static/dist/media/gallery/pedicure6-1200.2382ade7d8.webp 1200w", Width: 1200, Height: 2133}, true
 	case "gallery/pink-shimmer.jpg":
-		return Image{Src: "/static/dist/media/gallery/pink-shimmer-1200.2dbf53b220.webp", SrcSet: "/static/dist/media/gallery/pink-shimmer-200.88b34bb53c.webp 200w, /static/dist/media/gallery/pink-shimmer-400.51d885c2af.webp 400w, /static/dist/media/gallery/pink-shimmer-600.9ef5d16519.webp 600w, /static/dist/media/gallery/pink-shimmer-800.2392c710a6.webp 800w, /static/dist/media/gallery/pink-shimmer-1200.2dbf53b220.webp 1200w", Width: 1200, Height: 1600}, true
+		return Image{Src: "/static/dist/media/gallery/pink-shimmer-1200.4b3f286ccb.webp", SrcSet: "/static/dist/media/gallery/pink-shimmer-200.4b437c2fab.webp 200w, /static/dist/media/gallery/pink-shimmer-400.e021950c69.webp 400w, /static/dist/media/gallery/pink-shimmer-600.fa4542bd03.webp 600w, /static/dist/media/gallery/pink-shimmer-800.29f10c60fe.webp 800w, /static/dist/media/gallery/pink-shimmer-1200.4b3f286ccb.webp 1200w", Width: 1200, Height: 1600}, true
 	case "gallery/removal1.jpg":
 		return Image{Src: "/static/dist/media/gallery/removal1-720.adec94fe22.webp", SrcSet: "/static/dist/media/gallery/removal1-200.e33fe76707.webp 200w, /static/dist/media/gallery/removal1-400.ddc559dac7.webp 400w, /static/dist/media/gallery/removal1-600.fb6ff9f11c.webp 600w, /static/dist/media/gallery/removal1-720.adec94fe22.webp 720w", Width: 720, Height: 1280}, true
 	case "gallery/tortoise.jpg":
@@ -127,7 +129,7 @@ func image(name string) (Image, bool) {
 	case "gallery/universal.jpg":
 		return Image{Src: "/static/dist/media/gallery/lazer1-1200.4f3b98a7c5.webp", SrcSet: "/static/dist/media/gallery/lazer1-200.0313826b17.webp 200w, /static/dist/media/gallery/lazer1-400.112e77e080.webp 400w, /static/dist/media/gallery/lazer1-600.20d13faf91.webp 600w, /static/dist/media/gallery/lazer1-800.774a440054.webp 800w, /static/dist/media/gallery/lazer1-1200.4f3b98a7c5.webp 1200w", Width: 1200, Height: 2133}, true
 	case "gallery/white-shimmer.jpg":
-		return Image{Src: "/static/dist/media/gallery/white-shimmer-1200.6e4f502805.webp", SrcSet: "/static/dist/media/gallery/white-shimmer-200.7a5830db69.webp 200w, /static/dist/media/gallery/white-shimmer-400.18d3bccfcd.webp 400w, /static/dist/media/gallery/white-shimmer-600.8b2ed737de.webp 600w, /static/dist/media/gallery/white-shimmer-800.4bd5194b98.webp 800w, /static/dist/media/gallery/white-shimmer-1200.6e4f502805.webp 1200w", Width: 1200, Height: 1600}, true
+		return Image{Src: "/static/dist/media/gallery/white-shimmer-1200.60d0b73443.webp", SrcSet: "/static/dist/media/gallery/white-shimmer-200.6fb0acb85b.webp 200w, /static/dist/media/gallery/white-shimmer-400.12bbf6317f.webp 400w, /static/dist/media/gallery/white-shimmer-600.42ce065753.webp 600w, /static/dist/media/gallery/white-shimmer-800.3354a612d8.webp 800w, /static/dist/media/gallery/white-shimmer-1200.60d0b73443.webp 1200w", Width: 1200, Height: 1600}, true
 	case "hero/taupe-manicure.jpg":
 		return Image{Src: "/static/dist/media/hero/taupe-manicure-1200.b0bbd158ab.webp", SrcSet: "/static/dist/media/hero/taupe-manicure-200.9bc6e59cda.webp 200w, /static/dist/media/hero/taupe-manicure-400.2664b7ab70.webp 400w, /static/dist/media/hero/taupe-manicure-600.ee10583c76.webp 600w, /static/dist/media/hero/taupe-manicure-800.b59b8d0ffe.webp 800w, /static/dist/media/hero/taupe-manicure-1200.b0bbd158ab.webp 1200w", Width: 1200, Height: 675}, true
 	case "julia.jpg":
@@ -167,6 +169,7 @@ var fileNames = []string{
 	"app.css",
 	"datastar.js",
 	"fonts/QESTERO-Regular.ttf",
+	"fonts/QESTERO-Web.woff2",
 	"fonts/cormorant-garamond-400-cyrillic.woff2",
 	"fonts/cormorant-garamond-400.woff2",
 	"fonts/cormorant-garamond-500-cyrillic.woff2",
