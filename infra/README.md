@@ -7,7 +7,7 @@
 - Dedicated GitHub WIF pool and per-environment providers restricted by repository, immutable owner ID, exact environment subject, and staging-branch/semantic-tag ref
 - Separate staging/production GitHub deployers, runtime identities, and Secret Manager secrets
 - Separate read-only planner and protected privileged apply identity for saved-plan OpenTofu automation
-- Secret-level publishable/anon Supabase access; service-role keys are rejected by runtime readiness
+- Secret-level publishable/anon Supabase access, kept only so older revisions can start as rollback targets until Phase 9c; no current template reads it
 - The Go site's Firestore databases `site-staging` and `site-production` (delete-protected), each readable only by its environment's runtime through a conditioned `roles/datastore.viewer`; the project's other databases are not managed here
 - Cloud Run v2 services, probes, scaling, and public invocation
 - Production 5xx, p95 latency, instance saturation, runtime-failure, content-failure, slow-cold-start, Firestore-read, and unexpected-mutation alerts; no uptime checks, so both services scale to zero
@@ -23,7 +23,7 @@
 6. Add the shared project's publishable/anon key to both environment-specific secrets through Secret Manager. Never use `service_role` or `sb_secret_*` keys in this application. Separate secrets preserve independent IAM and version promotion even when their value is initially identical.
 7. Push an immutable bootstrap image and set `initial_image` to its GAR digest. Existing services must be imported with their current immutable GAR digest.
 8. Run `tofu plan -out=tfplan`, review replacement/IAM/public-access changes, then apply the initial saved plan with the bootstrap identity.
-9. Bootstrap at least one Monitoring notification channel outside OpenTofu state, then add its non-sensitive full resource name to the `MONITORING_NOTIFICATION_CHANNEL_IDS` repository variable as a JSON list. Keep recipient addresses out of GitHub, plans, and state. Add `github_repository_variables` plus the state, image, and Supabase URL/version values below as repository variables. Add each `github_environment_variables` output to its matching environment.
+9. Bootstrap at least one Monitoring notification channel outside OpenTofu state, then add its non-sensitive full resource name to the `MONITORING_NOTIFICATION_CHANNEL_IDS` repository variable as a JSON list. Keep recipient addresses out of GitHub, plans, and state. Add `github_repository_variables` plus the state and image values below as repository variables. Add each `github_environment_variables` output to its matching environment.
 10. Grant the `infrastructure-plan` service account bucket-scoped `roles/storage.objectViewer`; grant the protected `infrastructure` service account bucket-scoped `roles/storage.objectAdmin` for state locking and writes.
 11. Configure required reviewers on `production` and `infrastructure`; restrict `infrastructure-plan` and `infrastructure` to `staging`; require PR/security checks on `staging` before enabling deployer variables.
 
@@ -37,8 +37,6 @@ Infrastructure workflow variables:
 | `TF_STATE_BUCKET`, `TF_STATE_PREFIX` | Remote GCS backend coordinates |
 | `GCP_PROJECT`, `GCP_REGION` | Target project and region |
 | `INITIAL_IMAGE` | Immutable GAR digest used only for bootstrap/import reconciliation |
-| `STAGING_SUPABASE_URL`, `PRODUCTION_SUPABASE_URL` | Supabase project URLs; they may be identical for this read-only site |
-| `STAGING_SUPABASE_SECRET_VERSION`, `PRODUCTION_SUPABASE_SECRET_VERSION` | Tested numeric versions |
 | `MONITORING_NOTIFICATION_CHANNEL_IDS` | JSON list of existing Monitoring notification channel resource names |
 
 Notification channel recipients are sensitive bootstrap data. OpenTofu manages alert policies and references channels by resource name, but deliberately does not manage notification-channel recipient configuration.
