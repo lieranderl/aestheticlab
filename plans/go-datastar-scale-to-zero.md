@@ -628,7 +628,14 @@ Status (2026-10-26): step 2 merged in [#264](https://github.com/lieranderl/qwik-
 2. Deploy and promote a Go revision built from it.
 3. From here on, rollback targets are this revision or a later one. Older Go revisions still reference the secret, which is fine while it exists. Qwik revisions keep working as an emergency rollback until 9c.
 
-Status (2026-10-29): step 1 is on `feat/drop-supabase-binding`.
+Status (2026-10-29): step 1 merged in [#270](https://github.com/lieranderl/qwik-aestheticlab/pull/270) as `88dd788` and was applied at 08:49 UTC (run 40842629332: 0 added, 2 changed). Both service templates now set only `FIRESTORE_DATABASE` and `GOOGLE_CLOUD_PROJECT`. Step 2 is the staging deploy from the next merge, then `v5.0.2`.
+
+- **The apply rolled staging's traffic back.**
+  - The plan was saved at 08:30, while the #270 staging deploy was still running. That deploy promoted `…-40842587846-1` at 08:37.
+  - The apply's `UpdateService` then sent the traffic recorded at plan time, so 100% went back to `…-40381209751-1`.
+  - `ignore_changes = [traffic]` keeps OpenTofu from planning a traffic change, but the provider still sends the whole service, with the traffic in state.
+  - Both are Go builds of the same app code, so the site didn't change. Production's traffic was the same at plan and apply time.
+  - From now on, nothing deploys between an infrastructure plan and its apply. If a deploy runs in between, re-plan.
 
 - **Template:** `SUPABASE_URL` and the `SUPABASE_KEY` secret reference are gone from both services. The Go site never read them.
 - **Variables:** `*_supabase_url` and `*_supabase_secret_version` are removed, along with their `TF_VAR_*` inputs and checks in the infrastructure workflow. The repository variables `STAGING_SUPABASE_URL`, `PRODUCTION_SUPABASE_URL`, `STAGING_SUPABASE_SECRET_VERSION` and `PRODUCTION_SUPABASE_SECRET_VERSION` can be deleted in GitHub once this is applied.

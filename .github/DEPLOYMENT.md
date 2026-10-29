@@ -74,6 +74,7 @@ Required runtime configuration:
 - Pin OpenTofu and provider versions; commit `.terraform.lock.hcl`.
 - Pull requests validate OpenTofu. Post-bootstrap plans and applies run only through `.github/workflows/infrastructure.yml`; a read-only planning identity creates the immutable plan, while the privileged identity is available only after protected `infrastructure` approval.
 - Review plans for replacement, IAM expansion, public access, and secret exposure.
+- Don't merge to `staging` or publish a release between an infrastructure plan and its apply. The apply sends each service's traffic as it was when the plan was saved, even though `traffic` is in `ignore_changes`, so it undoes any promotion made in between. If a deploy ran, re-plan.
 - Import existing resources before the first apply; never recreate production merely to bring it under management.
 
 Typical local checks (follow `infra/README.md` for backend/environment inputs):
