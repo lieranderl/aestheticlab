@@ -614,12 +614,32 @@ Status (2026-10-26): step 2 merged in [#264](https://github.com/lieranderl/qwik-
   - When an alert's metric changes name, ship the repoint and the delete as separate applies.
 - **Service-level minimum:** after `v5.0.0`, production still had a service-level `scaling.minInstanceCount` of 1. That setting was made outside OpenTofu, and it applies across all revisions, overriding their minimum of 0. Staging had none. The service-level `scaling` block now sets it from `min_instances` and `max_instances`. Unlike the revision setting, it takes effect at apply.
 - **Content freeze held:** before the release, a fresh Supabase export hashed the same as the one imported into both databases that morning, so step 1 needs no re-import.
+- **Measured (step 4), 2026-10-29, over the 48–72 h after `v5.0.1`:**
+  - The serving revision `aestheticlab-web-candidate-40382462631-1` takes 100% of traffic, with min instances 0 and 512 MiB. The service-level minimum is gone; only `maxScale` 3 remains.
+  - `instance_count` reached 0 for 23 of 2,878 minutes in 48 h, at most 7 minutes in a row (02:17 UTC on 27 Oct). Production gets requests every hour (26–207 an hour), so an instance is rarely idle long enough to stop. That's traffic, not configuration, and idle instances aren't billed for CPU (`cpu_idle`).
+  - Container startup p95 was 280–597 ms per 6-hour window, under the 700 ms target.
+  - There were no 5xx out of about 15.9k requests in 72 h.
+  - `site-production` reads were 2.4k–5.8k a day, well under the 40k budget and the 2,000-an-hour alert.
+  - Still to do: the week with no alert regressions ends about 2 Nov.
 
 #### 9b: Drop the Supabase Binding
 
 1. Apply a template without `SUPABASE_URL` and the `SUPABASE_KEY` binding.
 2. Deploy and promote a Go revision built from it.
 3. From here on, rollback targets are this revision or a later one. Older Go revisions still reference the secret, which is fine while it exists. Qwik revisions keep working as an emergency rollback until 9c.
+
+Status (2026-10-29): step 1 is on `feat/drop-supabase-binding`.
+
+- **Template:** `SUPABASE_URL` and the `SUPABASE_KEY` secret reference are gone from both services. The Go site never read them.
+- **Variables:** `*_supabase_url` and `*_supabase_secret_version` are removed, along with their `TF_VAR_*` inputs and checks in the infrastructure workflow. The repository variables `STAGING_SUPABASE_URL`, `PRODUCTION_SUPABASE_URL`, `STAGING_SUPABASE_SECRET_VERSION` and `PRODUCTION_SUPABASE_SECRET_VERSION` can be deleted in GitHub once this is applied.
+- **Kept for 9c:** the `supabase_key` secrets, the `*_supabase_secret_id` variables, and the runtime's `secretAccessor` grant, so older revisions can still start. The content-failure alert still counts Qwik's Supabase messages while a Qwik rollback is possible.
+- **Rollout:**
+  1. Merge.
+  2. Apply through the protected infrastructure workflow. Expect 0 to add and 2 to change.
+  3. Deploy to staging with the next merge.
+  4. Promote with a patch release (`v5.0.2`).
+  5. Check that the serving revisions have no Supabase env or secret reference.
+- **Phase 5 open item 2, checked another way:** the project IAM policy gives each runtime one Firestore role, `roles/datastore.viewer`, conditioned on its own database (`site-staging` or `site-production`). Nothing grants it `(default)` or `aestheticlab-income`. A denied read as the runtime still needs someone who may impersonate it.
 
 #### 9c: Remove the Secret
 

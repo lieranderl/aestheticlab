@@ -41,26 +41,6 @@ variable "production_service_name" {
   default = "aestheticlab-web"
 }
 
-variable "staging_supabase_url" {
-  description = "Staging Supabase project URL."
-  type        = string
-
-  validation {
-    condition     = can(regex("^https://", var.staging_supabase_url))
-    error_message = "staging_supabase_url must use HTTPS."
-  }
-}
-
-variable "production_supabase_url" {
-  description = "Production Supabase project URL."
-  type        = string
-
-  validation {
-    condition     = can(regex("^https://", var.production_supabase_url))
-    error_message = "production_supabase_url must use HTTPS."
-  }
-}
-
 variable "staging_supabase_secret_id" {
   description = "Secret Manager secret ID containing the staging publishable/anon key."
   type        = string
@@ -71,26 +51,6 @@ variable "production_supabase_secret_id" {
   description = "Secret Manager secret ID containing the production publishable/anon key."
   type        = string
   default     = "SUPABASE_KEY_PRODUCTION"
-}
-
-variable "staging_supabase_secret_version" {
-  description = "Pinned numeric Secret Manager version containing the staging publishable/anon key."
-  type        = string
-
-  validation {
-    condition     = can(regex("^[1-9][0-9]*$", var.staging_supabase_secret_version))
-    error_message = "staging_supabase_secret_version must be a positive numeric version."
-  }
-}
-
-variable "production_supabase_secret_version" {
-  description = "Pinned numeric Secret Manager version containing the production publishable/anon key."
-  type        = string
-
-  validation {
-    condition     = can(regex("^[1-9][0-9]*$", var.production_supabase_secret_version))
-    error_message = "production_supabase_secret_version must be a positive numeric version."
-  }
 }
 
 variable "production_uptime_host" {

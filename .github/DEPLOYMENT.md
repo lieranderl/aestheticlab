@@ -54,7 +54,7 @@ curl --fail http://localhost:3000/healthz
 
 ## Cloud Run
 
-- Staging and production are separate services with dedicated runtime service accounts and Secret Manager secrets. They currently share one read-only Supabase project protected by RLS.
+- Staging and production are separate services with dedicated runtime service accounts and Firestore databases. Since Phase 9b no template sets `SUPABASE_URL` or `SUPABASE_KEY`; the per-environment Supabase secrets and the runtime access to them remain until Phase 9c, so older revisions can still start as rollback targets. A rollback to a Qwik revision keeps working because each revision keeps its own environment.
 - Runtime identities receive access only to the named Secret Manager secret, never project-wide secret roles.
 - Deployments create a revision with no traffic, validate the content dependency (`/dependencyz`) and localized pages through a temporary tagged URL, remove the tag after validation, then migrate traffic. The startup probe is Cloud Run's default TCP check on port 3000, which routes a cold start as soon as the server listens; the liveness probe uses the process-only `/healthz` endpoint.
 - Startup/liveness probes, scaling, concurrency, resource limits, labels, and environment variables are declared in `infra/`.
@@ -66,8 +66,6 @@ Required runtime configuration:
 | --- | --- | --- |
 | `FIRESTORE_DATABASE` | Cloud Run environment | `site-staging` or `site-production`; without it the Go site serves its embedded content snapshot and `/dependencyz` answers 503 |
 | `GOOGLE_CLOUD_PROJECT` | Cloud Run environment | Saves the Firestore client a metadata-server lookup on a cold start |
-| `SUPABASE_URL` | Cloud Run environment | Qwik only; kept until Phase 9b so a Qwik image still starts |
-| `SUPABASE_KEY` | Environment-specific Secret Manager secret | Qwik only, as above; publishable/anon key injected at runtime; `service_role` and `sb_secret_*` keys fail readiness |
 
 ## Infrastructure as Code
 

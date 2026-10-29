@@ -1,22 +1,18 @@
 locals {
   services = {
     staging = {
-      name                    = var.staging_service_name
-      min_instances           = var.staging_min_instances
-      max_instances           = var.staging_max_instances
-      supabase_url            = var.staging_supabase_url
-      supabase_secret_id      = var.staging_supabase_secret_id
-      supabase_secret_version = var.staging_supabase_secret_version
-      firestore_database      = "site-staging"
+      name               = var.staging_service_name
+      min_instances      = var.staging_min_instances
+      max_instances      = var.staging_max_instances
+      supabase_secret_id = var.staging_supabase_secret_id
+      firestore_database = "site-staging"
     }
     production = {
-      name                    = var.production_service_name
-      min_instances           = var.production_min_instances
-      max_instances           = var.production_max_instances
-      supabase_url            = var.production_supabase_url
-      supabase_secret_id      = var.production_supabase_secret_id
-      supabase_secret_version = var.production_supabase_secret_version
-      firestore_database      = "site-production"
+      name               = var.production_service_name
+      min_instances      = var.production_min_instances
+      max_instances      = var.production_max_instances
+      supabase_secret_id = var.production_supabase_secret_id
+      firestore_database = "site-production"
     }
   }
 
@@ -138,6 +134,9 @@ resource "google_artifact_registry_repository" "containers" {
   depends_on = [google_project_service.required]
 }
 
+# No revision template reads the Supabase key since Phase 9b. The secret and
+# the runtime's access to it stay until Phase 9c, so older Go and Qwik
+# revisions can still start as rollback targets.
 resource "google_secret_manager_secret" "supabase_key" {
   for_each = local.services
 
@@ -377,9 +376,7 @@ resource "google_cloud_run_v2_service" "web" {
       }
 
       # The Go site's content (cmd/web). The project is set so the client
-      # skips a metadata-server lookup on a cold start. The Supabase pair
-      # stays until Phase 9b, so a deploy of either the Go or the Qwik image
-      # starts.
+      # skips a metadata-server lookup on a cold start.
       env {
         name  = "FIRESTORE_DATABASE"
         value = google_firestore_database.site[each.key].name
@@ -388,21 +385,6 @@ resource "google_cloud_run_v2_service" "web" {
       env {
         name  = "GOOGLE_CLOUD_PROJECT"
         value = var.project_id
-      }
-
-      env {
-        name  = "SUPABASE_URL"
-        value = each.value.supabase_url
-      }
-
-      env {
-        name = "SUPABASE_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.supabase_key[each.key].secret_id
-            version = each.value.supabase_secret_version
-          }
-        }
       }
 
       # Cloud Run's default TCP startup probe: one attempt that waits up to 240 s

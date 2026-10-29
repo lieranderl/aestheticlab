@@ -31,10 +31,6 @@ jobs:
       TF_VAR_project_id: ${{ vars.GCP_PROJECT }}
       TF_VAR_region: ${{ vars.GCP_REGION }}
       TF_VAR_initial_image: ${{ vars.INITIAL_IMAGE }}
-      TF_VAR_staging_supabase_url: ${{ vars.STAGING_SUPABASE_URL }}
-      TF_VAR_staging_supabase_secret_version: ${{ vars.STAGING_SUPABASE_SECRET_VERSION }}
-      TF_VAR_production_supabase_url: ${{ vars.PRODUCTION_SUPABASE_URL }}
-      TF_VAR_production_supabase_secret_version: ${{ vars.PRODUCTION_SUPABASE_SECRET_VERSION }}
       TF_VAR_notification_channel_ids: ${{ vars.MONITORING_NOTIFICATION_CHANNEL_IDS }}
     steps:
       - name: Require staging workflow ref and complete inputs
@@ -43,7 +39,7 @@ jobs:
           DEPLOYER_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
         run: |
           [[ "$GITHUB_REF" == "refs/heads/staging" ]]
-          for name in TF_STATE_BUCKET TF_STATE_PREFIX TF_VAR_project_id TF_VAR_region TF_VAR_initial_image TF_VAR_staging_supabase_url TF_VAR_staging_supabase_secret_version TF_VAR_production_supabase_url TF_VAR_production_supabase_secret_version TF_VAR_notification_channel_ids WIF_PROVIDER DEPLOYER_SERVICE_ACCOUNT; do
+          for name in TF_STATE_BUCKET TF_STATE_PREFIX TF_VAR_project_id TF_VAR_region TF_VAR_initial_image TF_VAR_notification_channel_ids WIF_PROVIDER DEPLOYER_SERVICE_ACCOUNT; do
             [[ -n "${!name:-}" ]] || { echo "Missing required infrastructure variable: $name" >&2; exit 1; }
           done
 
@@ -95,10 +91,6 @@ jobs:
       TF_VAR_project_id: ${{ vars.GCP_PROJECT }}
       TF_VAR_region: ${{ vars.GCP_REGION }}
       TF_VAR_initial_image: ${{ vars.INITIAL_IMAGE }}
-      TF_VAR_staging_supabase_url: ${{ vars.STAGING_SUPABASE_URL }}
-      TF_VAR_staging_supabase_secret_version: ${{ vars.STAGING_SUPABASE_SECRET_VERSION }}
-      TF_VAR_production_supabase_url: ${{ vars.PRODUCTION_SUPABASE_URL }}
-      TF_VAR_production_supabase_secret_version: ${{ vars.PRODUCTION_SUPABASE_SECRET_VERSION }}
       TF_VAR_notification_channel_ids: ${{ vars.MONITORING_NOTIFICATION_CHANNEL_IDS }}
     steps:
       - name: Checkout exact planned revision
