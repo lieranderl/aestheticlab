@@ -8,7 +8,7 @@ import (
 )
 
 // Category is a service group with its services, as the home page's
-// service grid and the pricelist show them (src/shared/service-utils.ts).
+// service grid and the pricelist show them.
 type Category struct {
 	// ID is the group's ID, or LaserID for the merged laser category.
 	ID string

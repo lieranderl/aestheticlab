@@ -11,7 +11,7 @@ import (
 // ogLocale is l as Open Graph writes it: nl_BE.
 func ogLocale(l i18n.Locale) string { return strings.Replace(string(l), "-", "_", 1) }
 
-// jsonLD is the studio as schema.org BeautySalon (src/constants/metadata.ts),
+// jsonLD is the studio as schema.org BeautySalon,
 // the same on every page.
 var jsonLD = func() string {
 	address := street + ", " + zip + " " + city + ", BE"

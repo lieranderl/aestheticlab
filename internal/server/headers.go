@@ -5,8 +5,7 @@ import (
 	"strings"
 )
 
-// localContentSecurityPolicy keeps src/shared/security-headers.ts's
-// directives but drops 'unsafe-inline': Datastar evaluates its expressions
+// localContentSecurityPolicy allows no 'unsafe-inline': Datastar evaluates its expressions
 // ('unsafe-eval'), consent and gtag bootstrap come from a file, and pages
 // carry no style="" attributes.
 var localContentSecurityPolicy = strings.Join([]string{

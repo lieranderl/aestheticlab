@@ -10,9 +10,8 @@ import (
 )
 
 // NewLogger writes JSON lines that Cloud Logging reads as structured logs:
-// severity (DEBUG, INFO, WARNING, ERROR) and message, as
-// src/shared/server-logging.ts writes them. Messages are snake_case event
-// names, such as server_started.
+// severity (DEBUG, INFO, WARNING, ERROR) and message. Messages are snake_case
+// event names, such as server_started.
 func NewLogger(w io.Writer) *slog.Logger {
 	return slog.New(slog.NewJSONHandler(w, &slog.HandlerOptions{
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {

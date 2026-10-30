@@ -714,6 +714,7 @@ What 10a found and changed:
   - The Qwik build, Vitest, the Qwik e2e run and the handoff spec are gone.
 - **Hooks:** `pre-push` runs `make ci`; `pre-commit` runs only lint-staged.
 - **Dependencies:** what's left is Biome, Playwright, Tailwind and DaisyUI, Heroicons, Simple Icons, sharp, Onest, husky and lint-staged, plus the `sharp` override. `bun.lock` loses about 570 lines.
+- **10b (`docs/phase-10b`):** the five `.github/*.md` guides describe the Go site: coding standards, views, DaisyUI in use, content loading and texts. Also `REVIEW.md`, `docs/CONTENT.md` (the Supabase copy steps are gone), the prompt pack, the caching table in `.github/DEPLOYMENT.md`, and `aesthetic-lab-core`, which replaces the `qwik-aesthetic-core` skill. Go, CSS and JS comments no longer point at deleted `src/` files. `README.md` was shortened in [#277](https://github.com/lieranderl/qwik-aestheticlab/pull/277).
 - **Kept for now (step 2):** the `/build/*.js` shim, the service-worker kill switch, the `/assets/` redirects and the canary's skew gate.
 
 ## Phase-Wise Gating

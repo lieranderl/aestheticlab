@@ -12,7 +12,7 @@ import (
 	"github.com/lieranderl/aestheticlab/internal/i18n"
 )
 
-// The studio's fixed facts (src/constants/metadata.ts, src/consts.ts).
+// The studio's fixed facts.
 const (
 	siteName  = "Aesthetic Lab"
 	siteURL   = "https://aestheticlab.be"

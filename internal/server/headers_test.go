@@ -6,7 +6,7 @@ import (
 	"github.com/lieranderl/aestheticlab/internal/server"
 )
 
-// The policy is src/shared/security-headers.ts's, without 'unsafe-inline':
+// The policy has no 'unsafe-inline':
 // Datastar evaluates expressions ('unsafe-eval'), and pages carry no inline
 // scripts or style attributes.
 func TestEveryResponseCarriesTheSecurityHeaders(t *testing.T) {
