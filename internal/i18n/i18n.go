@@ -1,7 +1,7 @@
 // Package i18n translates the site into its five locales. English text is
 // the key: a page writes T(ctx, "Book appointment") and gets the text in the
-// locale the request carries. The texts come from the Qwik site's locale
-// files (messages_gen.go, written by cmd/i18n-convert).
+// locale the request carries. The texts come from locales/*.json
+// (messages_gen.go, written by cmd/i18n-convert).
 package i18n
 
 import (
@@ -25,11 +25,11 @@ const (
 // Default is the locale of / and of paths no locale names.
 const Default = EnBE
 
-// supported is the Qwik site's order (src/speak-config.ts).
+// supported is the order the language switcher lists them in.
 var supported = []Locale{EnBE, RuBE, NlBE, FrBE, UkBE}
 
 // nativeNames name each language in itself, so "UK" cannot be read as
-// English (src/shared/locale-navigation.ts).
+// English.
 var nativeNames = map[Locale]string{
 	EnBE: "English",
 	NlBE: "Nederlands",

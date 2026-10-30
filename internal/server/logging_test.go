@@ -29,8 +29,7 @@ func entries(t *testing.T, buf *bytes.Buffer) []map[string]any {
 	return out
 }
 
-// Cloud Logging reads severity and message from these fields, as it does for
-// src/shared/server-logging.ts.
+// Cloud Logging reads severity and message from these fields.
 func TestLogsUseCloudLoggingFields(t *testing.T) {
 	var buf bytes.Buffer
 	log := server.NewLogger(&buf)

@@ -10,9 +10,8 @@ import (
 	"github.com/lieranderl/aestheticlab/internal/content"
 )
 
-// treatments is the home page's services section in one state
-// (src/components/sections/service-grid.tsx): the category overview, a
-// category's treatments, or the laser category's areas.
+// treatments is the home page's services section in one state: the
+// category overview, a category's treatments, or the laser category's areas.
 type treatments struct {
 	loc *content.Localized
 	// Display are the categories with the laser groups merged; Laser are the

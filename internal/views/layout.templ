@@ -65,8 +65,7 @@ templ Layout(meta PageMeta) {
 	</html>
 }
 
-// seoHead is the page's canonical and alternate URLs and its link preview
-// (src/components/router-head/router-head.tsx).
+// seoHead is the page's canonical and alternate URLs and its link preview.
 templ seoHead(meta PageMeta) {
 	{{ path := requestOf(ctx).path }}
 	{{ current := i18n.FromContext(ctx) }}
