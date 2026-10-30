@@ -14,7 +14,7 @@
 
 The website of [Aesthetic Lab](https://aestheticlab.be/), a beauty studio in Leuven, Belgium. It presents the studio's treatments, prices and team, and lets visitors book an appointment online.
 
-The site is available in English, Dutch, French, Russian and Ukrainian. It is built with Go and Datastar, runs on Google Cloud Run, and keeps its content in Firestore.
+The site is available in English, Dutch, French, Russian and Ukrainian. It is built with Go, Datastar and DaisyUI, runs on Google Cloud Run, and keeps its content in Firestore.
 
 Contributors and coding agents start with [AGENTS.md](AGENTS.md).
 
