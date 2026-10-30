@@ -400,8 +400,7 @@ async function heroMotion(page: Page, y: number) {
 // The visit and closing photos lag behind the scroll: shifted up while their
 // frame is below the middle of the screen, down once it is above. The Go site
 // draws this with CSS scroll-driven animation, and a script where the browser
-// lacks it (Firefox). The Qwik site starts its motion once a photo is in
-// view, after loading that code, so the offsets are polled.
+// lacks it (Firefox). The offsets are polled while the scroll settles.
 test("framed photos drift against the scroll", async ({ page }) => {
 	await page.setViewportSize({ width: 1280, height: 800 });
 	await page.goto("/en-BE/");
@@ -421,7 +420,7 @@ test("framed photos drift against the scroll", async ({ page }) => {
 	}
 });
 
-// Go site: the hero video lags at a quarter of the scroll speed for the first
+// The hero video lags at a quarter of the scroll speed for the first
 // screen, and the text drifts up and fades out over the first 420px; the
 // same curves in every browser, by CSS or by script.
 test("the hero lags behind and its text fades as the page scrolls", async ({
@@ -429,12 +428,6 @@ test("the hero lags behind and its text fades as the page scrolls", async ({
 }) => {
 	await page.setViewportSize({ width: 390, height: 844 });
 	await page.goto("/en-BE/");
-	// biome-ignore lint/suspicious/noSkippedTests: the Qwik site measures its hero from the frame, not the page; this pins the Go curves.
-	test.skip(
-		(await page.locator(".parallax-top").count()) === 0,
-		"the Qwik site measures its hero differently",
-	);
-
 	const halfway = await heroMotion(page, 210);
 	expect(halfway.video).toBeCloseTo(53, -1);
 	expect(halfway.text).toBeCloseTo(-32, -1);

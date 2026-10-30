@@ -83,3 +83,12 @@ func TestAMissingTranslationOrPlaceholderFailsTheConversion(t *testing.T) {
 		}
 	}
 }
+
+func TestATranslationWithoutEnglishFailsTheConversion(t *testing.T) {
+	en := map[string]string{"app.a.x": "Hello"}
+	nl := map[string]string{"app.a.x": "Hallo", "app.b.y": "Dag"}
+	_, _, err := render([]string{"app.a.x"}, tables(en, nl))
+	if err == nil || !strings.Contains(err.Error(), "app.b.y: nl-BE has it, English doesn't") {
+		t.Fatalf("err = %v, want the stray nl-BE key reported", err)
+	}
+}

@@ -1,0 +1,301 @@
+{
+	"app": {
+		"book": {
+			"book_app": "Rendez-vous",
+			"book_now": "Réserver"
+		},
+		"booking": {
+			"loading": "Chargement des options de réservation",
+			"widget_title": "Widget de réservation"
+		},
+		"care": {
+			"intro": "À lire avant votre rendez-vous pour un résultat plus beau et plus durable.",
+			"kicker": "Avant et après votre visite",
+			"laser": "Laser",
+			"laser_before": "Avant votre séance",
+			"laser_shave": "Rasez la zone 24 heures avant votre séance.",
+			"laser_sun": "Évitez le soleil, les UV et l’autobronzant pendant au moins 2 semaines avant.",
+			"nails": "Ongles",
+			"title": "Conseils de soin"
+		},
+		"common": {
+			"close": "Fermer",
+			"next": "Suivant",
+			"previous": "Précédent",
+			"read_less": "Lire moins",
+			"read_more": "Lire plus",
+			"scroll_to_top": "Haut de page"
+		},
+		"contact": {
+			"appointment_only": "Les visites se font uniquement sur rendez-vous",
+			"bookings": "Rendez-vous",
+			"contact": "Contact",
+			"directions": "Obtenir l'itinéraire",
+			"email": "E-mail",
+			"email_us": "Nous écrire",
+			"get_directions": "Itinéraire",
+			"image_alt": "Manucure argentée tenant une carte Aesthetic Lab",
+			"message_instagram": "Écrire sur Instagram",
+			"monday": "Lundi",
+			"opening_hours": "Heures d'ouverture",
+			"parking_label": "Parking",
+			"saturday": "Samedi",
+			"visit_kicker": "Venir au studio"
+		},
+		"cookies": {
+			"accept": "Accepter l'analyse",
+			"heading": "Cookies",
+			"privacy_link": "Lire notre politique de confidentialité",
+			"reject": "Refuser l'analyse",
+			"settings": "Paramètres des cookies",
+			"summary": "Les cookies nécessaires font fonctionner le site. Les cookies d’analyse ne sont déposés que si vous l’acceptez."
+		},
+		"faq": {
+			"booking": {
+				"answer_direct": "Touchez un bouton Réserver pour voir les disponibilités, puis choisissez votre soin et votre spécialiste.",
+				"question": "Comment prendre rendez-vous ?"
+			},
+			"cancellation": {
+				"answer_direct": "Oui, au moins 24 heures à l’avance via le système de réservation, ou écrivez-nous sur <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> ou par <a href='mailto:aestheticlabbe@gmail.com'>e-mail</a>. Les annulations tardives peuvent être facturées.",
+				"question_short": "Puis-je annuler ou déplacer ?"
+			},
+			"consultation": {
+				"answer_direct": "Oui. Si vous hésitez sur le soin qui vous convient, <a href='https://ig.me/m/aestheticlabbe' target='_blank' rel='noopener noreferrer'>demandez-nous</a> un court conseil gratuit.",
+				"question_short": "Puis-je avoir un conseil avant de réserver ?"
+			},
+			"duration": {
+				"answer_fallback": "La durée de chaque soin figure dans la <a href='./pricelist'>liste de prix</a>.",
+				"answer_range": "De {{min}} à {{max}} minutes, selon le soin. La durée de chaque soin figure dans la <a href='./pricelist'>liste de prix</a>.",
+				"question": "Combien de temps durent les soins ?"
+			},
+			"heading": "Bon à savoir",
+			"kicker": "Avant votre visite",
+			"laser_prep": {
+				"answer_direct": "Rasez la zone 24 heures avant et évitez le soleil, les UV et l’autobronzant pendant au moins 2 semaines. Lisez les <a href='./notice?tab=laser'>conseils de soin</a> complets avant votre visite.",
+				"question_short": "Comment me préparer au laser ?"
+			},
+			"location": {
+				"answer_direct": "{{address}}, au centre de Louvain. Itinéraire et parkings proches sous <a href='#contact'>Venir</a>.",
+				"question_short": "Où se trouve le studio ?"
+			},
+			"message_instagram": "Écrivez-nous sur Instagram",
+			"still_question": "Encore une question ?",
+			"still_question_body": "Écrivez-nous sur Instagram ou à {{email}}."
+		},
+		"footer": {
+			"explore": "Découvrir",
+			"legal": "Mentions légales",
+			"navigation": "Navigation de pied de page",
+			"ready": "Prêtes quand vous l’êtes.",
+			"ready_image_alt": "Manucure taupe brillante posée sur du lin",
+			"ready_note": "Choisissez un soin et un moment qui vous convient. La réservation prend environ une minute.",
+			"studio": "Studio"
+		},
+		"head": {
+			"care": {
+				"title": "Conseils de soin | Aesthetic Lab"
+			},
+			"home": {
+				"description": "Manucure, pédicure, sourcils, cils et laser à Louvain. Réservez votre rendez-vous en ligne.",
+				"title": "Aesthetic Lab — Manucure · Pédicure · Sourcils · Cils · Laser à Louvain"
+			},
+			"not_found": {
+				"title": "Page introuvable | Aesthetic Lab"
+			},
+			"notice": {
+				"description": "Informations importantes sur la tenue des soins, l’entretien et les retouches offertes aux clientes d’Aesthetic Lab."
+			},
+			"pricelist": {
+				"description_leuven": "Tarifs et durées des manucures, pédicures, sourcils, cils, épilation à la cire et épilation laser chez Aesthetic Lab à Louvain. Réservez en ligne.",
+				"title_leuven": "Tarifs manucure, pédicure, sourcils & laser à Louvain | Aesthetic Lab"
+			},
+			"privacy": {
+				"description": "Comment Aesthetic Lab collecte, utilise et protège vos données personnelles.",
+				"title": "Politique de confidentialité | Aesthetic Lab"
+			},
+			"share_alt": "Aesthetic Lab, Louvain : une manucure taupe brillante dans une mousse douce"
+		},
+		"hero": {
+			"google_reviews": "{{count}} avis Google",
+			"kicker": "Louvain · depuis 2024",
+			"lead": "Manucure, pédicure, sourcils, cils et laser, dans un studio calme au cœur de Louvain.",
+			"see_prices": "Voir les prix",
+			"slogan": "L'art de la beauté naturelle",
+			"video_label": "Manucure gel rose lavée dans une mousse douce"
+		},
+		"language": {
+			"options": "Options de langue",
+			"select": "Choisir la langue"
+		},
+		"nav": {
+			"close_menu": "Fermer le menu",
+			"faq": "Bon à savoir",
+			"home": "Accueil",
+			"mobile_menu": "Navigation mobile",
+			"open_menu": "Ouvrir le menu",
+			"prices": "Tarifs",
+			"primary": "Navigation principale",
+			"services": "Services",
+			"skip_to_content": "Aller au contenu",
+			"team": "Équipe",
+			"visit": "Venir",
+			"work": "Travaux"
+		},
+		"not_found": {
+			"body": "Le lien est peut-être ancien. Tout ce qu’il vous faut est à portée de main.",
+			"image_alt": "Manucure blanche pailletée posée sur une laine verte douce",
+			"kicker": "Page introuvable · 404",
+			"popular": "Pages populaires",
+			"prices_note": "Chaque soin, sa durée et son prix",
+			"services_note": "Ongles, sourcils, cils et laser",
+			"title": "Cette page a déménagé",
+			"visit_note": "Diestsestraat 174, Louvain"
+		},
+		"notice": {
+			"durability_intro": "Notre salon travaille exclusivement avec des matériaux professionnels, y compris des vernis gels, des gels de construction et des gels durs de marques de confiance. Selon les fabricants, ces produits sont conçus pour durer jusqu'à 3 semaines avec une application et des soins appropriés.",
+			"durability_title": "Avis de non-responsabilité sur la durabilité des produits",
+			"factor1": "La durabilité déclarée dépend non seulement de la qualité des produits, mais aussi des caractéristiques individuelles des ongles et des soins après.",
+			"factor2": "Des facteurs externes tels qu'une exposition fréquente à l'eau, des produits chimiques agressifs et des dommages mécaniques peuvent réduire la durée de tenue.",
+			"factor3": "La physiologie personnelle, y compris les changements hormonaux, peut également affecter l'adhérence et la durabilité du produit.",
+			"guarantee": "Le salon garantit une application correcte et professionnelle des matériaux, mais nous ne pouvons garantir une durée de tenue maximale si des facteurs externes ou individuels interfèrent.",
+			"hormonal_intro": "La durabilité des revêtements d'ongles peut varier en fonction des caractéristiques individuelles, y compris les fluctuations hormonales. Veuillez noter que pendant les périodes de changements hormonaux (tels que le SPM, la grossesse, l'allaitement, la prise de médicaments hormonaux ou des niveaux de stress élevés), l'adhérence du produit à la plaque de l'ongle peut diminuer, ce qui peut affecter la longévité du revêtement.",
+			"hormonal_title": "Avis important",
+			"however": "Cependant, veuillez noter :",
+			"individual_features": "Caractéristiques individuelles des ongles (telles qu'une humidité accrue, une fragilité ou une tendance au décollement)",
+			"intro": "Dans notre salon, nous nous efforçons de fournir des services d'ongles de haute qualité et durables en utilisant uniquement des produits et des techniques professionnels. Pour assurer la transparence et gérer les attentes, veuillez lire attentivement les informations suivantes :",
+			"last_update_date": "Dernière mise à jour : 01.07.2025",
+			"mechanical_damage": "Dommages mécaniques aux ongles",
+			"other_factors": "Autres facteurs pouvant affecter la durabilité :",
+			"policy_care": "Nous nous soucions de votre satisfaction et serons heureux de résoudre tout problème pouvant survenir au cours de cette période.",
+			"policy_description": "Si vous rencontrez des problèmes avec votre manucure dans les 5 jours suivant votre rendez-vous, vous êtes invités à revenir pour une correction gratuite.",
+			"policy_title": "Politique de correction gratuite",
+			"thank_you": "Merci de votre compréhension, de votre confiance et de votre coopération ! Nous avons hâte de rendre vos ongles beaux et durables.",
+			"understanding": "Veuillez comprendre qu'en présence de ces facteurs, le salon ne peut garantir la durée de tenue standard du revêtement.",
+			"water_contact": "Contact fréquent avec l'eau ou des produits chimiques agressifs sans gants"
+		},
+		"pricelist": {
+			"add_ons": "Suppléments · avec tout soin",
+			"back_to_categories": "Retour aux catégories",
+			"book_treatment": "Réserver ce soin",
+			"category_nav": "Catégories de services",
+			"empty": "Les tarifs sont temporairement indisponibles. Contactez-nous pour connaître les soins actuels.",
+			"intro": "Chaque soin avec sa durée. Les prix concernent le soin lui-même ; les suppléments sont indiqués à part.",
+			"kicker": "Liste de prix",
+			"laser_body": "Corps",
+			"laser_face": "Visage",
+			"laser_men": "Hommes",
+			"laser_sets": "Forfaits",
+			"price": "Prix",
+			"time": "Durée",
+			"title": "Prix & durée",
+			"treatment": "Soin"
+		},
+		"privacy": {
+			"change_cookies": "Modifier les cookies",
+			"changes": "7. Modifications de cette politique",
+			"changes_text": "Nous pouvons mettre à jour cette politique de confidentialité de temps à autre. La dernière version sera toujours disponible sur notre site Web.",
+			"cookies": "6. Cookies et technologies de suivi",
+			"cookies_analytics": "Cookies d'analyse : facultatifs ; le stockage analytique n'est autorisé qu'après votre consentement.",
+			"cookies_necessary": "Cookies strictement nécessaires : toujours actifs pour le fonctionnement de base du site.",
+			"cookies_text": "Nous utilisons des cookies strictement nécessaires pour faire fonctionner le site. Google Analytics fonctionne en Consent Mode v2. Avant votre consentement, ou si vous refusez l'analyse, le stockage analytique et les consentements liés à la publicité restent refusés ; Google peut recevoir des pings de consentement et de mesure sans cookies, et les cookies d'analyse ne sont pas déposés. Si vous acceptez l'analyse, Google Analytics peut utiliser des cookies d'analyse afin de comprendre l'utilisation du site et d'améliorer nos services. Vous pouvez modifier votre choix à tout moment via les paramètres des cookies.",
+			"email": "Adresse e-mail",
+			"email_request": "Envoyer une demande",
+			"improve": "Améliorer nos services",
+			"info": "1. Informations que nous collectons",
+			"info_text": "Nous collectons les informations personnelles suivantes lorsque vous prenez rendez-vous ou nous contactez :",
+			"kicker": "Mentions légales",
+			"last_update_date": "Dernière mise à jour : 19.02.2026",
+			"legal": "Autorités légales si la loi l'exige",
+			"name": "Nom",
+			"on_this_page": "Sur cette page",
+			"phone": "Numéro de téléphone",
+			"privacy_title": "Politique de confidentialité",
+			"respond": "Répondre à vos demandes",
+			"rights": "5. Vos droits",
+			"rights_text": "Vous pouvez demander l'accès, la mise à jour ou la suppression de vos données personnelles. Pour faire une demande, contactez-nous à :",
+			"schedule": "Planifier et confirmer les rendez-vous",
+			"security": "3. Protection des données et sécurité",
+			"security_text": "Nous prenons des mesures raisonnables pour protéger vos données personnelles contre l'accès non autorisé, la perte ou l'utilisation abusive.",
+			"send": "Envoyer des rappels de rendez-vous et des mises à jour",
+			"service": "Prestataires de services (par ex., plateformes de réservation)",
+			"sharing": "4. Partage de vos informations",
+			"sharing_text": "Nous ne vendons ni ne louons vos informations personnelles. Nous pouvons les partager avec :",
+			"use": "2. Comment nous utilisons vos informations",
+			"use_text": "nous utilisons vos informations pour :",
+			"who": "Qui sommes-nous",
+			"who_text": "Aesthetic Lab, {{address}}. Pour toute question sur vos données, écrivez à {{email}}."
+		},
+		"services": {
+			"add_on_note": "Les prix concernent le soin lui-même. Réparations, nail art et dépose sont en supplément, dès {{price}}.",
+			"all_prices": "Tous les prix",
+			"ask_consultation": "Demander un conseil",
+			"ask_us": "Demandez-nous",
+			"back": "Retour à l'aperçu",
+			"back_laser": "Retour au laser",
+			"brows_desc": "Épilation, teinture et lamination pour une arche parfaite.",
+			"catalogue": "Soins",
+			"consultation_offer": "Nous vous aidons, gratuitement.",
+			"consultation_question": "Vous hésitez ?",
+			"default_category": "Services",
+			"editorial_title": "Des soins experts, des résultats naturels",
+			"empty": "Les soins sont temporairement indisponibles. Contactez-nous pour connaître les options actuelles.",
+			"from_price": "À partir de",
+			"general_desc": "Soins de beauté professionnels pour votre look raffiné.",
+			"index_label": "Aller à un soin",
+			"laser_category": "Laser",
+			"laser_desc": "Technologie sûre, efficace et indolore pour une peau lisse.",
+			"manicure_desc": "Art du gel haut de gamme et techniques russes de précision pour des ongles naturellement parfaits.",
+			"minutes": "minutes",
+			"pedicure_desc": "Soins thérapeutiques professionnels et raffinement esthétique pour des pieds sains et éclatants.",
+			"treatments": "Soins",
+			"view_full": "Voir la liste complète des prix",
+			"waxing_desc": "Épilation à la cire rapide et précise des sourcils, de la lèvre supérieure, du menton, des joues et du visage entier."
+		},
+		"team": {
+			"book": "Réserver",
+			"book_with": "Réserver avec {{name}}",
+			"heading": "L’équipe",
+			"intro": "Ouvert en 2024 avec une promesse simple : un beau travail dans un lieu calme, honnête et accueillant. Nous écoutons d’abord, puis nous créons.",
+			"intro_prices": "prix de lancement",
+			"kicker": "Artistes du studio",
+			"role": {
+				"technician": "Technicienne"
+			}
+		},
+		"video": {
+			"pause": "Mettre la vidéo en pause",
+			"play": "Lire la vidéo",
+			"replay": "Revoir la vidéo"
+		},
+		"work": {
+			"alt": {
+				"cherry_gloss": "Manucure brillante cerise foncée",
+				"chrome_manicure": "Détail d'une manucure chrome rose",
+				"lash_lift_process": "Rehaussement de cils en cours, cils posés sur un patch en silicone",
+				"lash_lift_result": "Cils recourbés et rehaussés après un rehaussement de cils",
+				"p5": "Détails d'une pédicure esthétique",
+				"pink_shimmer": "Manucure gel rose pailletée posée sur une maille mohair",
+				"tortoise": "Manucure gel marron et écaille de tortue",
+				"white_shimmer": "Manucure gel blanche pailletée"
+			},
+			"clip": {
+				"cat_eye": "Cat eye",
+				"cat_eye_label": "Vernis gel cat eye qui scintille sous un aimant",
+				"chrome": "Chrome",
+				"chrome_label": "Poudre chromée appliquée sur un ongle en gel lavande",
+				"foam": "Mousse",
+				"shimmer_label": "Manucure rose pâle nacrée rincée dans une mousse douce",
+				"soft_pink": "Rose doux",
+				"soft_pink_label": "Une manucure gel rose doux terminée"
+			},
+			"clips_label": "Vidéos du studio",
+			"enlarge": "Agrandir l’image",
+			"gallery_label": "Galerie des résultats de soins",
+			"heading": "Réalisations récentes",
+			"instagram_note": "Nouvelles créations et moments au studio. Plus chaque semaine sur Instagram.",
+			"kicker": "Depuis notre atelier",
+			"lightbox_label": "Visionneuse d’images de la galerie",
+			"more_on_instagram": "Plus sur Instagram"
+		}
+	}
+}
