@@ -662,7 +662,7 @@ Status (2026-10-29): step 1 merged in [#270](https://github.com/lieranderl/qwik-
 3. Remove `google_secret_manager_secret.supabase_key` and its runtime IAM.
 4. Delete or tag-off older revisions that reference it, so nobody rolls back to a revision that can no longer start.
 
-Status (2026-10-30): started early, by decision. The Go site has served production since `v5.0.0` (26 Oct) without a rollback, so the 30-day window is waived. Secret Manager deletion protection is checked by OpenTofu from state, so this takes two applies:
+Status (2026-10-30): done. It started early, by decision. The Go site has served production since `v5.0.0` (26 Oct) without a rollback, so the 30-day window is waived. Secret Manager deletion protection is checked by OpenTofu from state, so this takes two applies:
 
 1. **First apply (`feat/remove-supabase-secret`):**
    - Remove the runtime's `secretAccessor` grant on both secrets.
@@ -674,6 +674,10 @@ Status (2026-10-30): started early, by decision. The Go site has served producti
   - Traffic goes only to `v5.0.2` revisions: production `…-40848710577-1`, staging `…-40845812088-1` and later.
   - 78 older production revisions and 151 older staging revisions still reference a secret. After the first apply none of them can start.
   - Rollback targets are now `…-40848710577-1` or later.
+- **Applies, both 2026-10-30:**
+  - The first, [#274](https://github.com/lieranderl/qwik-aestheticlab/pull/274) (run 41118876915), added 0, changed 5 and destroyed 2. Both secrets were left with no IAM bindings, and traffic didn't change.
+  - The second, [#276](https://github.com/lieranderl/qwik-aestheticlab/pull/276) (run 41123724822), added 0, changed 1 and destroyed 2. No `SUPABASE*` secret is left in the project. Production still serves `…-40848710577-1` and staging `…-41122698559-1`, and both answer 200.
+  - Both plans waited for the staging deploy before them, and nothing merged between plan and apply.
 - **Step 4:** the old revisions are left in place. Cloud Run keeps up to 1,000 per service, and a rollback to one would serve errors, because its new instances can't start. Deleting them can't be undone, so it's a separate decision.
 
 ### Phase 10: Remove Qwik
@@ -691,7 +695,7 @@ Status (2026-10-30): started early, by decision. The Go site has served producti
    2. Rename the repository.
    3. Apply with only the new name.
 
-Status (2026-10-30): split into three PRs.
+Status (2026-10-30): split into three PRs. 10a merged in [#275](https://github.com/lieranderl/qwik-aestheticlab/pull/275) as `b3462ac` and was deployed to staging. All 114 browser specs pass in CI across the three browsers.
 
 - **10a (`feat/remove-qwik`):** steps 1 and 3, and the parts of step 4 that would otherwise be wrong.
 - **10b:** the rest of steps 4 and 5, the guides and skills.
