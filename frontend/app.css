@@ -1,8 +1,6 @@
-/* Aesthetic Lab's stylesheet for the Go site (cmd/web), built by
-   frontend/build.mjs with the Tailwind CLI. The theme, motion tokens and
-   utilities are src/global.css's, unchanged; only the font URLs (served from
-   /static/fonts/) and source scanning differ, and Lenis's stylesheet is gone
-   (native smooth scrolling, plans/go-datastar-scale-to-zero.md). */
+/* Aesthetic Lab's stylesheet, built by frontend/build.mjs with the Tailwind
+   CLI: the theme, motion tokens and utilities. Fonts are served from
+   /static/fonts/, and scrolling is the browser's own smooth scrolling. */
 @import "tailwindcss" source(none);
 /* @font-face rules for Onest, written by frontend/build.mjs from
    @fontsource-variable/onest with hashed /static/fonts/ URLs. */
@@ -144,10 +142,8 @@
 
 
 /* Light only: the Aesthetic theme below is the one theme, for everyone.
-   src/global.css also loads DaisyUI's built-in light and dark themes, and
-   since the Qwik site sets no data-theme, dark-mode visitors got DaisyUI's
-   dark base colours under the sage palette. That was a bug, fixed here
-   (plans/go-datastar-scale-to-zero.md, Decisions). */
+   DaisyUI's built-in themes stay off, so dark-mode visitors don't get dark
+   base colours under the sage palette. */
 @plugin "daisyui" {
   themes: false;
   logs: false;
@@ -206,7 +202,7 @@
   }
 }
 
-/* Go site motion (src/components/ui/fade-up.tsx, parallax.tsx), without a
+/* Go site motion, without a
    script per element: Datastar adds .in-view once an element scrolls into
    view; parallax is CSS scroll-driven animation. Without JavaScript, or
    with reduced motion, everything simply shows. */
@@ -232,7 +228,7 @@
 }
 
 /* A framed photo lags behind the scroll at 15% of its speed, at most 60px
-   either way of the frame's centre (src/shared/scroll-motion.ts): the drift
+   either way of the frame's centre: the drift
    runs over the 800px of scrolling around the moment the frame is centred
    on screen. The photo is drawn 120px taller than its frame, so its edges
    never show. */

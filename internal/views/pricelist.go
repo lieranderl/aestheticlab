@@ -99,7 +99,7 @@ func categoryImageName(cat content.Category) string {
 }
 
 // categoryDescription is a category's one-line description, chosen by its
-// English name (src/shared/service-utils.ts getCategoryDescription).
+// English name.
 func categoryDescription(ctx context.Context, g *content.ServiceGroup) string {
 	name := ""
 	if g != nil {

@@ -87,18 +87,17 @@ tofu -chdir=infra validate
 
 ## Caching
 
-The localized route shell is configured in `src/routes/[...lang]/layout.tsx`:
+`internal/server` sets every response's `Cache-Control`:
 
-```tsx
-cacheControl({
-  staleWhileRevalidate: 60 * 10,
-  maxAge: 60,
-});
-```
+| Response | Cache-Control |
+| --- | --- |
+| Pages (HTML) | `public, max-age=60, stale-while-revalidate=600`: short, so stale HTML never outlives the assets it references for long |
+| Hashed files under `/static/` | `public, max-age=31536000, immutable` |
+| Unhashed files (link-preview images, `robots.txt`, `manifest.json`, …) | `public, max-age=3600` |
+| Old Qwik `/assets/` redirects | `public, max-age=86400` |
+| Datastar fragments, health checks, errors | `no-store` |
 
-- Dynamic HTML is fresh for 60 seconds, then eligible for stale-while-revalidate for 10 minutes. The window stays short because a new revision does not serve the previous revision's hashed chunks.
-- Hashed Vite assets use long-lived immutable caching.
-- Translation changes require a rebuild because Qwik Speak inlines translations.
+Text and template changes take effect only after a deploy, since the binary embeds them; content changes in Firestore reach visitors within the 15-minute content cache.
 
 ## Release
 

@@ -1,8 +1,6 @@
-// Consent Mode v2 and Google Analytics for the Go site, as
-// src/shared/cookie-consent.ts does them for the Qwik site. A classic
-// deferred script, loaded before Datastar, so the pages' expressions can call
-// window.aesthetic: CSP allows no inline script, so this replaces Qwik's
-// inline bootstrap.
+// Consent Mode v2 and Google Analytics. A classic deferred script, loaded
+// before Datastar, so the pages' expressions can call window.aesthetic: CSP
+// allows no inline script.
 //
 // Analytics storage stays denied until the visitor accepts; until then gtag
 // sends only consent-aware pings (Consent Mode advanced).
@@ -105,7 +103,7 @@
 	document.head.appendChild(script);
 
 	/**
-	 * A short silent clip (src/components/ui/in-view-video.tsx): plays once
+	 * A short silent clip: plays once
 	 * when 40% of it is in view, then rests on its last frame; pauses while
 	 * off screen and resumes on return. Never plays by itself with reduced
 	 * motion.
@@ -292,8 +290,7 @@
 
 	/**
 	 * Scroll-linked motion where CSS scroll-driven animations are missing
-	 * (Firefox): the same curves app.css draws with animation-timeline, as
-	 * src/shared/scroll-motion.ts wrote them for the Qwik site. Written in
+	 * (Firefox): the same curves app.css draws with animation-timeline. Written in
 	 * requestAnimationFrame, and only when a value changes. Nothing moves
 	 * with reduced motion.
 	 */

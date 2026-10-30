@@ -42,7 +42,7 @@ func fileURL(name string) string {
 	case "fonts/onest-vietnamese-wght-normal.woff2":
 		return "/static/dist/fonts/onest-vietnamese-wght-normal.d852d4d094.woff2"
 	case "site.js":
-		return "/static/dist/site.085e0767dc.js"
+		return "/static/dist/site.edccb21df5.js"
 	case "video/cateye-poster.jpg":
 		return "/static/dist/media/video/cateye-poster.6b3602984d.jpg"
 	case "video/cateye.mp4":

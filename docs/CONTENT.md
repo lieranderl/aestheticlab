@@ -1,6 +1,6 @@
 # Site Content
 
-The Go site (`cmd/web`) reads its treatments, prices, staff and contact details from Firestore. This page describes where they live, what each field means, and how to change them. The Qwik site still reads Supabase until the production cutover (`plans/go-datastar-scale-to-zero.md`, Phase 9).
+The Go site (`cmd/web`) reads its treatments, prices, staff and contact details from Firestore. This page describes where they live, what each field means, and how to change them.
 
 ## Databases
 
@@ -100,18 +100,3 @@ Commands that touch a real database use your own application default credentials
 | Export a database | `go run ./cmd/content export -project nail-lab-449417 -database site-staging -out FILE` |
 | Run the site against the emulator | `make firestore`, import a file with `FIRESTORE_EMULATOR_HOST=localhost:8087`, then run with `FIRESTORE_DATABASE`, `GOOGLE_CLOUD_PROJECT` and `FIRESTORE_EMULATOR_HOST` set |
 | Content tests against the emulator | `make firestore`, then `make test-content` |
-
-### Copying From Supabase
-
-The migration copy is a JSON export in the same format as `cmd/content export`. Run this read-only query in the Supabase SQL editor, and save the `doc` value as a file outside the repository:
-
-```sql
-select json_build_object(
-  'service_groups', (select json_agg(to_jsonb(g) - 'created_at' order by g.id) from gettimely.service_groups g),
-  'services', (select json_agg(to_jsonb(s) - 'created_at' order by s.id) from gettimely.services s),
-  'staff', (select json_agg(to_jsonb(st) - 'created_at' - 'email' order by st.id) from gettimely.staff st),
-  'contact', (select to_jsonb(c) - 'created_at' from gettimely.contacts c where id = 1)
-)::text as doc;
-```
-
-Import it into `site-staging` first, check staging, then import it into `site-production`. Running the import again is harmless.

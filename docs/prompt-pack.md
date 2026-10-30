@@ -25,7 +25,7 @@ Out of scope:
 
 Constraints:
 - Follow AGENTS.md exactly.
-- Preserve Qwik, DaisyUI, i18n, loader, and deployment boundaries.
+- Preserve Go, Datastar, DaisyUI, i18n, content, and deployment boundaries.
 - Avoid duplicate policy or unnecessary new docs.
 
 Deliverable:
@@ -97,7 +97,7 @@ Check:
 
 Verification:
 - run the smallest relevant checks from AGENTS.md
-- run bun run verify for app, dependency, build, or deployment changes
+- run make ci for site, dependency, build, or deployment changes
 - report only what fresh command output proves
 
 Output:
@@ -121,12 +121,12 @@ Scope:
 Constraints:
 - preserve current architecture
 - no unrelated refactors
-- follow Qwik, DaisyUI, i18n, and loader rules from AGENTS.md
+- follow the Go, Datastar, DaisyUI, i18n, and content rules from AGENTS.md
 
 Deliverable:
 - fix the bug
 - explain root cause briefly
-- run the smallest relevant verification plus a Biome check
+- run the smallest relevant verification, then make ci
 ```
 
 ## UI Change Prompt
@@ -138,13 +138,13 @@ Goal:
 [describe the UI change]
 
 Scope:
-- components: [paths]
-- routes: [paths]
+- views: [internal/views paths]
+- handlers: [internal/server paths]
 
 Constraints:
 - DaisyUI 5 first
 - theme tokens only
-- Qwik only
+- Datastar for interaction, no inline styles or scripts
 - visible strings remain translatable
 - preserve mobile-first behavior
 - reuse existing component patterns when they fit
@@ -154,28 +154,28 @@ Deliverable:
 - summarize reused patterns, translation updates, accessibility, and verification
 ```
 
-## Loader / Supabase Change Prompt
+## Content Change Prompt
 
 ```text
-Read AGENTS.md and .github/DATA_LOADING.md first.
+Read AGENTS.md, .github/DATA_LOADING.md and docs/CONTENT.md first.
 
 Goal:
-[describe the data-loading change]
+[describe the content or data-model change]
 
 Scope:
-- route or layout files: [paths]
-- dependent UI files: [paths]
+- internal/content files: [paths]
+- views that render it: [paths]
 
 Constraints:
-- server data loading stays in route files
-- components receive props only
-- handle errors safely
-- locale field mapping stays in loaders
-- no runtime service-role or sb_secret_* keys
+- tests first, over documents, in internal/content
+- views take data as arguments and never fetch
+- localized fields keep the <name>_<lang> pattern with English fallback
+- reads stay bounded and fail soft (last good content, then the snapshot)
+- the runtime stays read-only with no keys
 
 Deliverable:
-- implement the change
-- summarize query changes, fallback behavior, types, and verification
+- implement the change and refresh the snapshot with make snapshot
+- summarize the field changes, fallback behavior, and verification
 ```
 
 ## Docs Alignment Prompt
@@ -207,7 +207,7 @@ Goal:
 Add [feature name].
 
 Scope:
-- in scope: [routes/components/docs/config]
+- in scope: [handlers/views/docs/config]
 - out of scope: [unrelated pages, infra, redesigns]
 
 Constraints:

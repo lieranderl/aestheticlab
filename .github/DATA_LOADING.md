@@ -1,271 +1,43 @@
-# Data Loading — Supabase Patterns
+# Data Loading
 
-This project loads all server-side data from Supabase via `routeLoader$` functions. This guide documents the exact patterns, conventions, and rules for data access.
+The site's treatments, prices, staff and contact details live in Firestore. `docs/CONTENT.md` describes the data model and how to edit it; this guide covers how the code reads it.
 
-## Architecture Overview
+## Flow
 
 ```text
-Browser Request
-  → Qwik City Route
-    → layout.tsx (routeLoader$ functions)
-      → supabase(event) creates per-request client
-        → Queries gettimely schema
-          → Returns typed, locale-mapped data
-            → Components receive data via props
+Firestore (site-staging | site-production)
+  → content.Firestore   reads every content document (Source)
+  → content.Store       per-instance cache, refresh, fallbacks
+  → content.Parse       validates and projects all five locales once per fetch
+  → (*Content).In(l)    the Localized view for one locale
+  → internal/views      renders it
 ```
 
-**Single source of truth:** All Supabase queries live in `src/routes/[...lang]/layout.tsx`. Components never query Supabase directly.
+`cmd/web` creates the store at startup and prefetches once the server listens. Handlers in `internal/server` call `store.Content(ctx).In(locale)` and pass the result to a view. Views never fetch.
 
-## Supabase Client
+## Cache and Fallbacks
 
-Defined in `src/shared/supabase-client.ts`:
-
-```tsx
-import type { RequestEventAction } from "@builder.io/qwik-city";
-import { type CookieMethodsServer, createServerClient } from "@supabase/ssr";
-
-export const supabase = (event: RequestEventAction) => {
-  return createServerClient(
-    event.env.get("SUPABASE_URL") ?? "",
-    event.env.get("SUPABASE_KEY") ?? "",
-    { cookies: { getAll: () => [], setAll: () => {} } },
-  );
-};
-```
-
-### Key Points
-
-- Uses `@supabase/ssr` for server-side usage within Qwik City.
-- Environment variables `SUPABASE_URL` and `SUPABASE_KEY` are required — accessed via `event.env.get()`, not `process.env`.
-- Cookie methods are no-ops because this project uses Supabase as a read-only data source (no auth sessions).
-- A new client is created per request — do not cache or share clients across requests.
-- Column lists come from `serviceColumns`, `serviceGroupColumns`, and `staffColumns` in `src/shared/supabase-data.ts`: base columns (the English fallback) plus only the request locale's `_<code>` columns. Fetching every translation sent all five languages per render (~114 KB for services) to show one.
-- Each query is bounded by `SUPABASE_REQUEST_TIMEOUT_MS` (3s) with PostgREST retries disabled; a timeout returns `{ error }`, so loaders fail soft instead of stalling SSR.
-
-## routeLoader$ Pattern
-
-Every loader follows this structure:
-
-```tsx
-export const useMyDataLoader = routeLoader$<ReturnType>(async (requestEv) => {
-  // 1. Create and validate the per-request client
-  const client = supabase(requestEv);
-  if (!client) return [];
-
-  // 2. Query only the base columns plus the request locale's translation
-  const { data, error } = await client
-    .schema("gettimely")
-    .from("table_name")
-    .select(serviceGroupColumns(requestEv.locale()))
-    .eq("active", true)
-    .order("priority", { ascending: true });
-
-  // 3. Handle errors gracefully
-  if (error) {
-    logServerEvent("ERROR", "supabase_fetch_failed", {
-      resource: "table_name",
-      error,
-    });
-    return []; // or null for single-record loaders
-  }
-
-  // 4. Validate, localize, and project compact serializable view models
-  return projectServiceGroups(data, requestEv.locale());
-});
-```
-
-## Existing Loaders
-
-| Loader | Table | Returns | Null-safe default |
-| --- | --- | --- | --- |
-| `useContactLoader` | `contacts` | `Contact \| null` | `null` |
-| `useServiceGroupsLoader` | `service_groups` | `ServiceGroup[]` | `[]` |
-| `useTechniciansLoader` | `staff` | `Staff[]` | `[]` |
-| `useServicesLoader` | `services` | `Service[]` | `[]` |
-
-## Schema
-
-All queries target the `gettimely` schema:
-
-```tsx
-client.schema("gettimely").from("table_name")
-```
-
-Do not query the default `public` schema unless explicitly needed for a new feature.
-
-## Locale Field Mapping
-
-Supabase tables store multilingual content via suffixed columns:
-
-| Base field | Russian | Dutch | French | Ukrainian |
-| --- | --- | --- | --- | --- |
-| `name` | `name_ru` | `name_nl` | `name_fr` | `name_uk` |
-| `description` | `description_ru` | `description_nl` | `description_fr` | `description_uk` |
-| `about` | `about_ru` | `about_nl` | `about_fr` | `about_uk` |
-
-The unsuffixed column is always English.
-
-### Mapping Pattern
-
-```tsx
-const shortlocal = requestEv.locale().split("-")[0]; // "en", "ru", "nl", "fr", "uk"
-
-const localizedName =
-  shortlocal === "ru" ? item.name_ru
-  : shortlocal === "nl" ? item.name_nl
-  : shortlocal === "fr" ? item.name_fr
-  : shortlocal === "uk" ? item.name_uk
-  : item.name; // English fallback
-```
-
-**Rule:** Locale selection happens in the loader boundary through the pure helpers in `src/shared/locale-content.ts` and `src/shared/supabase-data.ts`. Components receive compact, already-localized view models and never inspect locale suffixes.
-
-## Error Handling
-
-Every loader must follow these rules:
-
-1. **Catch Supabase errors** — check the `error` field from the query response.
-2. **Log errors** — use `logServerEvent` with a stable event name and resource field.
-3. **Return safe defaults** — `[]` for list loaders, `null` for single-record loaders.
-4. **Never throw** — a thrown error inside `routeLoader$` breaks the entire page render.
-5. **Handle missing data** — check `if (!data)` before mapping.
-
-```tsx
-// ✅ Correct
-if (error) {
-  logServerEvent("ERROR", "supabase_fetch_failed", {
-    resource: "services",
-    error,
-  });
-  return [];
-}
-
-// ❌ Wrong — will crash the page
-if (error) throw new Error("Failed to fetch services");
-```
-
-## Caching
-
-HTTP caching is configured in the `onGet` handler in `layout.tsx`:
-
-```tsx
-export const onGet: RequestHandler = async ({ cacheControl }) => {
-  cacheControl({
-    staleWhileRevalidate: 60 * 10, // 10 minutes
-    maxAge: 60, // 1 minute
-  });
-};
-```
-
-This means:
-
-- Fresh data is served for 60 seconds.
-- After that, stale data is served while revalidation happens in the background.
-- The stale window is 10 minutes. Keep it short: each Cloud Run revision only ships its own hashed `/build/` chunks, so long-lived stale HTML can reference chunks that no longer exist after a deploy.
-
-Do not add per-loader caching. The HTTP cache layer handles it globally.
-
-## Consuming Loaders in Components
-
-Loaders are consumed in route page files, then passed as props to section components:
-
-```tsx
-// routes/[...lang]/index.tsx
-export default component$(() => {
-  const services = useServicesLoader();
-  const categories = useServiceGroupsLoader();
-  const technicians = useTechniciansLoader();
-  const contact = useContactLoader();
-
-  return (
-    <div>
-      <ServiceGrid
-        services={services.value}
-        serviceCategories={categories.value}
-        location={contact.value?.location.name || ""}
-      />
-      <TeamSection technicians={technicians.value} />
-      <ContactSection contact={contact.value} />
-    </div>
-  );
-});
-```
-
-### Rules
-
-- Access loader data via `.value` property.
-- Pass data down as props — components should not call `useMyLoader()` themselves (unless they are in the same route file scope).
-- Handle nullable data in components: `contact.value?.location.name || ""`.
-- Loaders from `layout.tsx` are available to all child routes (both `index.tsx` and `pricelist/index.tsx` use them).
-
-## Data Types
-
-`src/types.ts` defines the compact view models that are safe to serialize to components. Raw Supabase rows are untrusted and remain private to the projection boundary:
-
-```tsx
-export interface Staff {
-  id: number;
-  name: string;
-  photo_url: string;
-  about: string;
-  role: string;
-}
-
-export interface Contact {
-  email: string;
-  open_hours: { start_week_day: string; end_week_day: string; from: string; to: string };
-  location: { name: string; address: string; link: string };
-  parking: { name: string; link: string }[];
-}
-
-export interface ServiceGroup {
-  id: string;
-  name: string;
-  name_en: string;
-  priority: number;
-}
-
-export interface Service {
-  id: string;
-  group_id: ServiceGroup["id"];
-  name: string;
-  description: string;
-  duration: number;
-  price: number;
-}
-```
-
-**Rule:** Never cast raw Supabase results to these interfaces. Select explicit columns, validate/project with `src/shared/supabase-data.ts`, and return only fields consumed by the UI. When a table changes, update the projection tests, explicit select, and view model only when the UI contract actually changes.
-
-## Adding a New Loader
-
-1. Define or update the compact interface in `src/types.ts`.
-2. Add the `routeLoader$` in `src/routes/[...lang]/layout.tsx`.
-3. Export the loader so child routes can import it.
-4. Follow the established pattern: create validated client → query explicit columns → handle/log error → runtime-validate → localize/project → return compact data.
-5. Consume it in the route page file and pass data to components via props.
-6. Never put `routeLoader$` inside a component file — they belong in route or layout files only.
-
-## Environment Variables
-
-| Variable | Purpose | Required |
+| Setting | Value | Meaning |
 | --- | --- | --- |
-| `SUPABASE_URL` | Supabase project URL | Yes |
-| `SUPABASE_KEY` | Environment-specific Supabase publishable/anon key; privileged keys are prohibited | Yes |
+| TTL | 15 min | Content edits reach visitors within about this long |
+| Stale wait | 300 ms | A request with stale content waits this long for the refresh, then renders the stale content |
+| Cold wait | 1.5 s | A request on a cold instance waits this long, then renders the snapshot |
+| Fetch timeout | 5 s | A refresh outlives its request; a stuck refresh is replaced by the next request |
 
-These are accessed at runtime via `event.env.get()` inside `routeLoader$` handlers. They are not baked into the client bundle.
-Staging and production share one read-only Supabase project but use separate Secret Manager secrets and independently pinned versions. Runtime readiness rejects legacy `service_role` JWTs and `sb_secret_*` keys.
+- One refresh runs at a time, and concurrent requests join it.
+- On error the store keeps the last good content, else the embedded `internal/content/snapshot.json` (logged as `content_snapshot_served`).
+- Content without an active group, an active service or a complete contact is rejected, so a half-edited database never replaces good content.
+- Without `FIRESTORE_DATABASE` the site serves the snapshot and `/dependencyz` answers 503.
 
-For local development, set them in your shell environment or a `.env` file (Vite loads `.env` files automatically).
+## Changing the Data Model
 
-## Common Mistakes
+1. Change the documents in the Firestore console (staging first), and describe the field in `docs/CONTENT.md`.
+2. Write the test first in `internal/content` (table-driven, over documents), then parse the field in `content.go` or `fields.go` and expose it on `Localized`.
+3. Localized fields follow the `<name>_<lang>` pattern with English fallback; add all five.
+4. Render it in `internal/views`, then refresh the snapshot with `make snapshot` and commit it.
 
-| Mistake | Correct Approach |
-| --- | --- |
-| Querying Supabase inside a component | Move the query to a `routeLoader$` in a route/layout file |
-| Using `process.env.SUPABASE_URL` | Use `event.env.get("SUPABASE_URL")` |
-| Throwing errors in loaders | Catch, log, and return safe defaults |
-| Mapping locale fields in components | Map in the loader, pass localized data via props |
-| Importing the Supabase client in browser code | `supabase()` is server-only — only call it inside `routeLoader$` or `server$` |
-| Forgetting `schema("gettimely")` | All data tables live in the `gettimely` schema |
-| Caching Supabase client across requests | Create a new client per request via `supabase(event)` |
+## Rules
+
+- The runtime has read-only, database-conditioned IAM and no keys. Never add a write path to the site.
+- Keep Firestore reads bounded: one fetch per refresh. The production alert fires above 2,000 reads an hour.
+- Tests use stand-in sources; `make firestore` and `make test-content` run the emulator tests.

@@ -8,7 +8,7 @@ import (
 )
 
 // Booking is a Book button: what Timely's widget opens on and what
-// analytics records (src/components/ui/booking-modal.tsx). Every button
+// analytics records. Every button
 // opens the page's one booking dialog.
 type Booking struct {
 	// ID names the button in analytics (booking_id).
