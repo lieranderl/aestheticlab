@@ -24,7 +24,7 @@ import { basename, dirname, extname, join, relative } from "node:path";
 import { brotliCompressSync, constants, gzipSync } from "node:zlib";
 
 const distDir = "static/dist";
-const mediaDir = "src/media";
+const mediaDir = "frontend/media";
 const manifestFile = "internal/assets/manifest_gen.go";
 
 // What Qwik City asks vite-imagetools for today (format webp, quality 75,
@@ -193,12 +193,12 @@ async function build() {
 		);
 	};
 
-	// Fonts: Onest from @fontsource-variable/onest, the rest from public/fonts.
+	// Fonts: Onest from @fontsource-variable/onest, the rest from frontend/public/fonts.
 	const fontURLs = new Map();
 	const onestDir = "node_modules/@fontsource-variable/onest";
 	const fontSources = [
 		...walk(join(onestDir, "files")).filter((f) => f.endsWith(".woff2")),
-		...walk("public/fonts"),
+		...walk("frontend/public/fonts"),
 	];
 	for (const src of fontSources) {
 		const url = await copy(src, `fonts/${basename(src)}`);
@@ -247,8 +247,8 @@ async function build() {
 		"sitemap.xml",
 	];
 	for (const [src, rel] of [
-		...walk("public/og").map((src) => [src, `og/${basename(src)}`]),
-		...rootFiles.map((name) => [join("public", name), `root/${name}`]),
+		...walk("frontend/public/og").map((src) => [src, `og/${basename(src)}`]),
+		...rootFiles.map((name) => [join("frontend/public", name), `root/${name}`]),
 	]) {
 		const destination = join(distDir, rel);
 		mkdirSync(dirname(destination), { recursive: true });

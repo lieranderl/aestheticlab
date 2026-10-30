@@ -14,10 +14,6 @@ RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache \
 	bun install --frozen-lockfile
 COPY frontend ./frontend
 COPY internal ./internal
-COPY src/media ./src/media
-COPY public/fonts ./public/fonts
-COPY public/og ./public/og
-COPY public/favicon.svg public/icon-192.svg public/icon-512.svg public/manifest.json public/robots.txt public/sitemap.xml ./public/
 RUN bun run assets
 
 FROM --platform=$BUILDPLATFORM golang:1.27.3-bookworm@sha256:972b4110ba0f47539a975c31e52c64765e1ff19f2d74469ae4a595c6676e80a5 AS build

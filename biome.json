@@ -45,8 +45,7 @@
 				"useIsNan": "error",
 				"useValidForDirection": "error",
 				"useYield": "error",
-				"noUnknownProperty": "warn",
-				"noQwikUseVisibleTask": "warn"
+				"noUnknownProperty": "warn"
 			},
 			"style": {
 				"noNamespace": "error",
@@ -110,9 +109,6 @@
 			"includes": ["frontend/*.{js,mjs}"],
 			"linter": {
 				"rules": {
-					"correctness": {
-						"useQwikValidLexicalScope": "off"
-					},
 					"performance": {
 						"noDynamicNamespaceImportAccess": "off"
 					}
@@ -148,12 +144,10 @@
 	],
 	"files": {
 		"includes": [
-			"src/**/*.{js,cjs,cts,mjs,ts,mts,jsx,tsx,json,yml,yaml,md,html,css,sass,scss,less,vue,svelte}",
-			"e2e/**/*.{js,ts,tsx,json}",
-			"adapters/**/*.{js,cjs,cts,mjs,ts,mts,jsx,tsx}",
+			"e2e/**/*.{js,ts,json}",
+			"scripts/**/*.ts",
 			"frontend/*.{js,mjs}",
-			"*.{js,ts,tsx,json,md}",
-			"!src/global.css",
+			"*.{js,ts,json,md}",
 			"!cmd",
 			"!internal",
 			"!static"

@@ -39,8 +39,7 @@ type priceList struct {
 	Cover string
 }
 
-// pricelist builds the pricelist's categories from the content, as
-// src/routes/[...lang]/pricelist/index.tsx does.
+// pricelist builds the pricelist's categories from the content.
 func pricelist(ctx context.Context, loc *content.Localized) []priceCategory {
 	grouped := loc.Categories()
 	laser := content.LaserSubcategories(grouped)

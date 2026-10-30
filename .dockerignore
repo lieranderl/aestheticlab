@@ -10,7 +10,6 @@ LICENSE
 Makefile
 helm-charts
 .env*
-!.env.example
 gha-creds-*.json
 .editorconfig
 .idea

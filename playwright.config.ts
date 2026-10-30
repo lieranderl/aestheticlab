@@ -1,46 +1,21 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const mockSupabaseUrl = "http://127.0.0.1:43121";
-const webServers = [
-	...(process.env.CI
-		? [
-				{
-					command: "bun e2e/mock-supabase.ts",
-					name: "Mock Supabase",
-					reuseExistingServer: false,
-					url: `${mockSupabaseUrl}/health`,
-				},
-			]
-		: []),
-	{
-		command: "bun run dev",
-		env: process.env.CI
-			? {
-					SUPABASE_KEY: "sb_publishable_ci_placeholder",
-					SUPABASE_URL: mockSupabaseUrl,
-				}
-			: undefined,
-		reuseExistingServer: !process.env.CI,
-		url: "http://localhost:5173",
-	},
-];
-
+// The site's browser specs, against the Go binary behind a local TLS proxy
+// (e2e/serve-go.ts) with no content database, so pages render the embedded
+// snapshot.
 export default defineConfig({
 	testDir: "./e2e",
-	// playwright.handoff.config.ts runs these against both sites at once.
-	testIgnore: "handoff/**",
 	fullyParallel: false,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
 	workers: 1,
-	outputDir: "test-results/qwik",
-	reporter: [
-		["html", { outputFolder: "playwright-report/qwik", open: "never" }],
-	],
-	// CI runners (WebKit on Linux in particular) render the dev server more slowly.
+	outputDir: "test-results",
+	reporter: [["html", { outputFolder: "playwright-report", open: "never" }]],
+	// CI runners (WebKit on Linux in particular) render more slowly.
 	expect: { timeout: process.env.CI ? 10_000 : 5_000 },
 	use: {
-		baseURL: "http://localhost:5173",
+		baseURL: "https://localhost:43123",
+		ignoreHTTPSErrors: true,
 		trace: "on-first-retry",
 	},
 	projects: [
@@ -57,5 +32,12 @@ export default defineConfig({
 			use: { ...devices["Desktop Safari"] },
 		},
 	],
-	webServer: webServers,
+	webServer: {
+		command: "make assets go-build && bun e2e/serve-go.ts",
+		url: "https://localhost:43123/healthz",
+		ignoreHTTPSErrors: true,
+		reuseExistingServer: false,
+		timeout: 180_000,
+		gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
+	},
 });

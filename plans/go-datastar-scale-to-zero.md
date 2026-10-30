@@ -691,6 +691,27 @@ Status (2026-10-30): started early, by decision. The Go site has served producti
    2. Rename the repository.
    3. Apply with only the new name.
 
+Status (2026-10-30): split into three PRs.
+
+- **10a (`feat/remove-qwik`):** steps 1 and 3, and the parts of step 4 that would otherwise be wrong.
+- **10b:** the rest of steps 4 and 5, the guides and skills.
+- **10c:** step 6, the rename.
+
+What 10a found and changed:
+
+- **The Go build still read Qwik's folders:**
+  - `frontend/build.mjs`, `frontend/icons.mjs` and `scripts/share-images.ts` read `src/media` and `public/`. They move to `frontend/media` and `frontend/public`. The images are hashed by content, so `manifest_gen.go` doesn't change.
+  - `cmd/i18n-convert` read `i18n/*/app.json` and scanned `src/` for the keys in use. The 227 keys in use now live in `internal/i18n/locales/<locale>.json`, and the English file lists the texts. A key in a translation but not in English fails the conversion. `messages_gen.go` changes only in its header.
+- **Kept tests:** the specs for `scripts/smoke-deployment.sh` and `scripts/legacy-image-baseline.sh` move to `scripts/*.test.ts` and run under `bun test` in `make frontend-test`.
+- **Browser specs:** `playwright.go.config.ts` becomes `playwright.config.ts`. The JavaScript-error gate is always on, and the Qwik-only skips are gone.
+- **CI:** `verify` and `go` stay as job names, since both are required checks in the `staging` ruleset.
+  - `verify` now runs the browser specs and the dependency audit.
+  - `go` runs `make ci` and the Firestore content test.
+  - The Qwik build, Vitest, the Qwik e2e run and the handoff spec are gone.
+- **Hooks:** `pre-push` runs `make ci`; `pre-commit` runs only lint-staged.
+- **Dependencies:** what's left is Biome, Playwright, Tailwind and DaisyUI, Heroicons, Simple Icons, sharp, Onest, husky and lint-staged, plus the `sharp` override. `bun.lock` loses about 570 lines.
+- **Kept for now (step 2):** the `/build/*.js` shim, the service-worker kill switch, the `/assets/` redirects and the canary's skew gate.
+
 ## Phase-Wise Gating
 
 - Phase 0 (met): baseline numbers, instance counts and the Firestore database list recorded here; targets and read model finalized.

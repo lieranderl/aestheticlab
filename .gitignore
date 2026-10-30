@@ -70,7 +70,6 @@ lerna-debug.log*
 !.yarn/releases
 .env
 .env.*
-!.env.example
 
 cloud-init
 terraform.tfvars

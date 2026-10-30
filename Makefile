@@ -39,20 +39,18 @@ help: ## Show available targets and usage
 		awk 'BEGIN {FS = ":.*?##"}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: dev
-dev: ## Run the development server
-	bun run dev
+dev: go-dev ## Run the site with Air (same as go-dev)
 
 .PHONY: build
-build: ## Build the project for production
-	bun run build
+build: assets go-build ## Build the assets, then the site binary at bin/web
 
 .PHONY: lint
-lint: ## Run linting and formatting (biome)
+lint: ## Fix formatting and lint in the JS, CSS, JSON and Markdown files (Biome)
 	bun run biome
 
 .PHONY: clean
-clean: ## Remove build artifacts and node_modules
-	rm -rf dist server node_modules
+clean: ## Remove build output and node_modules, then reinstall
+	rm -rf bin static/dist node_modules
 	bun install
 
 .PHONY: docker-build-push
@@ -83,9 +81,6 @@ gcloud-promote: ## Promote a verified Cloud Run revision (requires REVISION)
 		--project=$(GCP_PROJECT)
 
 # Go site (cmd/web) ------------------------------------------------------------
-# The Go + templ + Datastar rewrite (plans/go-datastar-scale-to-zero.md) lives
-# beside the Qwik site until Phase 10. Until then dev, lint and build stay
-# Qwik's, and the Go equivalents are go-dev, go-lint and go-build.
 GO ?= go
 AIR ?= air
 GOLANGCI_LINT ?= $(GO) tool golangci-lint
@@ -135,14 +130,14 @@ assets-check: assets ## Go: fail when the manifest or icon code differs from wha
 	@git diff --quiet -- $(ASSETS_GENERATED) && test -z "$$(git ls-files --others --exclude-standard -- $(ASSETS_GENERATED))" || \
 		(echo "Out of date (run make assets, then git add):" && git status --short -- $(ASSETS_GENERATED) && exit 1)
 
-frontend-test: ## Go: unit tests for the asset and icon generators
+frontend-test: ## Go: unit tests for the asset and icon generators and the deploy scripts
 	bun run test.frontend
 
-# The Go site's texts come from the Qwik site's locale files until Phase 10
-# (plans/go-datastar-scale-to-zero.md): change those, then make i18n.
+# The site's texts live in internal/i18n/locales/*.json: change those, then
+# make i18n.
 I18N_GENERATED := internal/i18n/messages_gen.go
 
-i18n: ## Go: write the Go text tables from i18n/*/app.json
+i18n: ## Go: write the Go text tables from internal/i18n/locales/*.json
 	$(GO) run ./cmd/i18n-convert
 
 i18n-check: i18n ## Go: fail when the Go text tables differ from what git has

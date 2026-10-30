@@ -1,6 +1,6 @@
 /**
  * Renders the 1200 × 630 link-preview image for each locale into
- * `public/og/<locale>.jpg`. Run after changing the slogan or the photo:
+ * `frontend/public/og/<locale>.jpg`. Run after changing the slogan or the photo:
  *
  *   bun run share-images
  */
@@ -25,13 +25,13 @@ const LOCALE_COPY: Record<string, { services: string; city: string }> = {
 	"uk-BE": { services: "Нігті · Брови · Вії · Лазер", city: "Левен" },
 };
 
-const bird = readFileSync(join(root, "src/media/Bird.svg"), "utf8")
+const bird = readFileSync(join(root, "frontend/media/Bird.svg"), "utf8")
 	.replace(/<title>.*?<\/title>/s, "")
 	.replace("<svg ", '<svg class="bird" aria-hidden="true" ');
 
 function slogan(locale: string): string {
 	const app = JSON.parse(
-		readFileSync(join(root, `i18n/${locale}/app.json`), "utf8"),
+		readFileSync(join(root, `internal/i18n/locales/${locale}.json`), "utf8"),
 	);
 	return app.app.hero.slogan;
 }
@@ -43,9 +43,9 @@ function page(locale: string): string {
 <head>
 <meta charset="utf-8">
 <style>
-@font-face{font-family:qestero;src:url("${fileUrl("public/fonts/QESTERO-Regular.ttf")}")}
-@font-face{font-family:Cormorant;src:url("${fileUrl("public/fonts/cormorant-garamond-500.woff2")}")}
-@font-face{font-family:Cormorant;src:url("${fileUrl("public/fonts/cormorant-garamond-500-cyrillic.woff2")}");unicode-range:U+0400-04FF}
+@font-face{font-family:qestero;src:url("${fileUrl("frontend/public/fonts/QESTERO-Regular.ttf")}")}
+@font-face{font-family:Cormorant;src:url("${fileUrl("frontend/public/fonts/cormorant-garamond-500.woff2")}")}
+@font-face{font-family:Cormorant;src:url("${fileUrl("frontend/public/fonts/cormorant-garamond-500-cyrillic.woff2")}");unicode-range:U+0400-04FF}
 @font-face{font-family:Onest;font-weight:100 900;src:url("${fileUrl("node_modules/@fontsource-variable/onest/files/onest-latin-wght-normal.woff2")}")}
 @font-face{font-family:Onest;font-weight:100 900;src:url("${fileUrl("node_modules/@fontsource-variable/onest/files/onest-cyrillic-wght-normal.woff2")}");unicode-range:U+0400-04FF}
 *{box-sizing:border-box;margin:0}
@@ -60,7 +60,7 @@ body{width:1200px;height:630px;display:grid;grid-template-columns:640px 1fr;back
 </style>
 </head>
 <body>
-<img class="photo" src="${fileUrl("src/media/hero/taupe-manicure.jpg")}" alt="">
+<img class="photo" src="${fileUrl("frontend/media/hero/taupe-manicure.jpg")}" alt="">
 <div class="panel">
 ${bird}
 <div><p class="name">Aesthetic Lab</p><p class="slogan">${slogan(locale)}</p></div>
@@ -82,7 +82,7 @@ try {
 		writeFileSync(html, page(locale));
 		await tab.goto(pathToFileURL(html).href, { waitUntil: "load" });
 		await tab.evaluate(() => document.fonts.ready);
-		const out = join(root, `public/og/${locale}.jpg`);
+		const out = join(root, `frontend/public/og/${locale}.jpg`);
 		await tab.screenshot({ path: out, type: "jpeg", quality: 86 });
 		console.log(`wrote ${out}`);
 	}
