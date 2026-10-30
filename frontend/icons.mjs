@@ -3,9 +3,9 @@
 // on the server.
 //
 // Names are "outline/<heroicon>" (24px outline), "mini/<heroicon>" (20px
-// solid) and "brand/<simple-icons slug>", the sets the Qwik site renders
-// through @qwikest/icons, and "logo/bird", the studio's mark (src/media/Bird.svg). Templates are scanned for those string literals;
-// the icons the Qwik site uses today are always included.
+// solid), "brand/<simple-icons slug>" and "logo/bird", the studio's mark
+// (frontend/media/Bird.svg). Templates are scanned for those string
+// literals; the icons in qwikIcons are always included.
 //
 // Usage: bun run icons
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -15,7 +15,8 @@ import * as simpleIcons from "simple-icons";
 const viewsDir = "internal/views";
 const outFile = join(viewsDir, "icons_gen.go");
 
-// The Qwik site's icons (HiArrowLongRightOutline, HiPauseMini, SiInstagram, …).
+// Always included, whether or not a template names them literally: the set
+// the Qwik site rendered, which the templates kept.
 export const qwikIcons = [
 	"outline/arrow-long-right",
 	"outline/arrow-up",
@@ -28,7 +29,7 @@ export const qwikIcons = [
 ];
 
 // The studio's marks, by slug: drawn in currentColor like the icons.
-const logos = { bird: "src/media/Bird.svg" };
+const logos = { bird: "frontend/media/Bird.svg" };
 
 const heroiconsDir = { outline: "24/outline", mini: "20/solid" };
 

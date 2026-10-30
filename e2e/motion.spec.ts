@@ -1,8 +1,5 @@
 import { expect, test } from "./fixtures";
 
-// biome-ignore lint/suspicious/noSkippedTests: these regressions target only the Go frontend.
-test.skip(({ baseURL }) => !baseURL?.includes(":43123"), "Go frontend");
-
 test("lightbox loads on demand and preserves each photo's dimensions", async ({
 	page,
 }) => {

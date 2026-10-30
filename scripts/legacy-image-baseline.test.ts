@@ -1,7 +1,7 @@
+import { expect, test } from "bun:test";
 import { execFile } from "node:child_process";
 import { createServer } from "node:http";
 import { promisify } from "node:util";
-import { expect, test } from "vitest";
 
 const exec = promisify(execFile);
 const legacyPath = "/assets/B0kxtIDJ-lazer1.webp";

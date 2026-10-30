@@ -1,7 +1,7 @@
+import { test } from "bun:test";
 import { execFile } from "node:child_process";
 import { createServer } from "node:http";
 import { promisify } from "node:util";
-import { test } from "vitest";
 
 test("keeps the page's revision affinity cookie when validating its image assets", async () => {
 	const server = createServer((request, response) => {

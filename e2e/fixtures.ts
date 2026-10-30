@@ -1,16 +1,11 @@
 import { test as base, expect } from "@playwright/test";
 
 // Exercise our consent and booking controls without waiting for Google or
-// Timely. Both stacks use the same isolated third-party boundary.
+// Timely, behind the same isolated third-party boundary as production.
 export const test = base.extend<{
 	externalServices: undefined;
 	browserErrors: undefined;
-	checkJavaScriptErrors: boolean;
 }>({
-	// The Go migration adds a JavaScript-error gate. Qwik's dev server can
-	// report lazy-import errors during repeated full-page navigation;
-	// both stacks still check every CSP violation and functional assertion.
-	checkJavaScriptErrors: [false, { option: true }],
 	externalServices: [
 		async ({ context }, use) => {
 			await context.route(
@@ -32,11 +27,9 @@ export const test = base.extend<{
 		{ auto: true },
 	],
 	browserErrors: [
-		async ({ page, checkJavaScriptErrors }, use) => {
+		async ({ page }, use) => {
 			const errors: string[] = [];
-			if (checkJavaScriptErrors) {
-				page.on("pageerror", (error) => errors.push(error.message));
-			}
+			page.on("pageerror", (error) => errors.push(error.message));
 			page.on("console", (message) => {
 				if (/content.security.policy|violates.*policy/i.test(message.text())) {
 					errors.push(message.text());
