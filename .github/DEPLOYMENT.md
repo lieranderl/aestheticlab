@@ -102,13 +102,12 @@ Text and template changes take effect only after a deploy, since the binary embe
 ## Release
 
 1. Merge a verified change to `staging` and confirm the staging deployment and smoke test passed.
-2. Set `package.json` to the release version in the release change and run `bun run verify`.
-3. Create an annotated semantic-version tag for that exact commit and push it.
-4. Publish the GitHub release from the tag; the release-published workflow resolves the existing digest.
-5. Approve the protected production environment after reviewing artifact identity and deployment metadata.
-6. Confirm production smoke tests, traffic migration, uptime, errors, latency, and revision health.
+2. Set `package.json` to the release version in the release change and run `make ci`.
+3. After the release change's staging deployment passes, publish the release from `staging`: `gh release create v<x.y.z> --target staging --title "v<x.y.z>" --notes "…"`. The release-published workflow resolves the digest staging verified for that commit.
+4. Approve the protected production environment after reviewing artifact identity and deployment metadata.
+5. Confirm production smoke tests, traffic migration, errors, latency, and revision health.
 
-Use `gh release create v<x.y.z> --verify-tag --title "v<x.y.z>" --generate-notes` after the tag is available remotely.
+If a production deployment fails, re-run the **whole** release run (`gh run rerun <run-id>`), never only the failed jobs (`--failed`). `production_prepare` deploys the candidate and tags its URL, and a failed `production` job removes that tag as it rolls back, so a re-run of only `production` and the watchdog smoke-tests a URL that no longer exists and fails with 404s. A full re-run deploys and tags a fresh candidate; it needs the production approval again. (v5.0.3, 2026-10-30.)
 
 ## Rollback
 
@@ -141,7 +140,8 @@ gcloud run services update-traffic SERVICE \
 | Symptom | Check |
 | --- | --- |
 | Release cannot resolve an image | Tag commit must match a successful staging artifact/deployment record |
-| New revision fails before traffic | Container logs, probes, secret access, runtime service-account IAM |
+| New revision fails before traffic | Container logs, probes, runtime service-account IAM |
 | Content missing or stale | `FIRESTORE_DATABASE` in the revision, the runtime's Firestore read grant, `content_refresh_failed` and `content_snapshot_served` logs; edits reach visitors within about 15 minutes |
-| Stale content after update | Dynamic response may remain fresh for 300 seconds |
+| Stale page after a deploy | Pages are fresh for 60 seconds, then served stale for up to 10 minutes while revalidating |
+| Production deploy fails before the canary with `no artifact matches` or `503 Egress is over the account limit` | GitHub artifact storage refused a download, so the watchdog never signalled it was ready and the job rolled back. Production keeps the previous revision. Re-run the whole release run once downloads work again (see Release). |
 | IaC proposes unexpected replacement | Provider/version drift, imported resource identity, environment state selection |
