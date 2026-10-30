@@ -4,14 +4,12 @@ locals {
       name               = var.staging_service_name
       min_instances      = var.staging_min_instances
       max_instances      = var.staging_max_instances
-      supabase_secret_id = var.staging_supabase_secret_id
       firestore_database = "site-staging"
     }
     production = {
       name               = var.production_service_name
       min_instances      = var.production_min_instances
       max_instances      = var.production_max_instances
-      supabase_secret_id = var.production_supabase_secret_id
       firestore_database = "site-production"
     }
   }
@@ -70,13 +68,6 @@ locals {
   ])
 }
 
-check "environment_isolation" {
-  assert {
-    condition     = var.staging_supabase_secret_id != var.production_supabase_secret_id
-    error_message = "Staging and production must use different Secret Manager secrets, even when they share one Supabase project."
-  }
-}
-
 check "site_databases" {
   assert {
     condition = alltrue([
@@ -129,21 +120,6 @@ resource "google_artifact_registry_repository" "containers" {
       tag_state  = "ANY"
       older_than = "${var.artifact_delete_older_than_days * 24 * 60 * 60}s"
     }
-  }
-
-  depends_on = [google_project_service.required]
-}
-
-# No revision template reads the Supabase key since Phase 9b, and no runtime
-# can read it since Phase 9c. Protection is off so the next apply, which
-# removes this resource, can delete both secrets.
-resource "google_secret_manager_secret" "supabase_key" {
-  for_each = local.services
-
-  secret_id           = each.value.supabase_secret_id
-  deletion_protection = false
-  replication {
-    auto {}
   }
 
   depends_on = [google_project_service.required]
