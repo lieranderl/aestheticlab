@@ -7,7 +7,7 @@
 - Dedicated GitHub WIF pool and per-environment providers restricted by repository, immutable owner ID, exact environment subject, and staging-branch/semantic-tag ref
 - Separate staging/production GitHub deployers, runtime identities, and Secret Manager secrets
 - Separate read-only planner and protected privileged apply identity for saved-plan OpenTofu automation
-- Secret-level publishable/anon Supabase access, kept only so older revisions can start as rollback targets until Phase 9c; no current template reads it
+- The two Supabase secret containers, with no runtime access and no deletion protection, until Phase 9c's second apply removes them
 - The Go site's Firestore databases `site-staging` and `site-production` (delete-protected), each readable only by its environment's runtime through a conditioned `roles/datastore.viewer`; the project's other databases are not managed here
 - Cloud Run v2 services, probes, scaling, and public invocation
 - Production 5xx, p95 latency, instance saturation, runtime-failure, content-failure, slow-cold-start, Firestore-read, and unexpected-mutation alerts; no uptime checks, so both services scale to zero

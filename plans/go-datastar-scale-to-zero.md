@@ -662,6 +662,20 @@ Status (2026-10-29): step 1 merged in [#270](https://github.com/lieranderl/qwik-
 3. Remove `google_secret_manager_secret.supabase_key` and its runtime IAM.
 4. Delete or tag-off older revisions that reference it, so nobody rolls back to a revision that can no longer start.
 
+Status (2026-10-30): started early, by decision. The Go site has served production since `v5.0.0` (26 Oct) without a rollback, so the 30-day window is waived. Secret Manager deletion protection is checked by OpenTofu from state, so this takes two applies:
+
+1. **First apply (`feat/remove-supabase-secret`):**
+   - Remove the runtime's `secretAccessor` grant on both secrets.
+   - Turn the secrets' deletion protection off.
+   - Drop Qwik's `supabase_*` log messages from the content-failure metric, since no Qwik revision can start any more.
+2. **Second apply:** remove both `supabase_key` secrets, the `*_supabase_secret_id` variables and their `check`.
+
+- **Step 2, checked 2026-10-30:** only the two runtime accounts can read the secrets, and no other service in the project references them.
+  - Traffic goes only to `v5.0.2` revisions: production `…-40848710577-1`, staging `…-40845812088-1` and later.
+  - 78 older production revisions and 151 older staging revisions still reference a secret. After the first apply none of them can start.
+  - Rollback targets are now `…-40848710577-1` or later.
+- **Step 4:** the old revisions are left in place. Cloud Run keeps up to 1,000 per service, and a rollback to one would serve errors, because its new instances can't start. Deleting them can't be undone, so it's a separate decision.
+
 ### Phase 10: Remove Qwik
 
 1. Delete `src/`, `adapters/`, `vite.config.ts`, `qwik.env.d.ts`, `tsconfig.json`, `i18n/`, `playwright.config.ts`, `e2e/mock-supabase.ts`, the open-tab spec and its proxy, the Qwik CI jobs, and the Qwik, Vite, Vitest, Lenis and Supabase JS dependencies and overrides. Move `e2e/go/playwright.config.ts` to the root.
