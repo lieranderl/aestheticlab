@@ -27,12 +27,12 @@ Repository/environment configuration:
 | Each environment | `GCP_WORKLOAD_ID_PROVIDER`, `GCP_SERVICE_ACCOUNT` |
 
 Store configuration at the narrowest applicable scope. WIF resource names and service-account emails are identifiers, not secrets; no private key is stored in GitHub.
-Store only non-sensitive Monitoring channel resource names in the repository variable `MONITORING_NOTIFICATION_CHANNEL_IDS` as a JSON list. Keep recipient addresses inside GCP notification channels so they never enter GitHub, OpenTofu plans, or state. Supabase runtime keys remain only in GCP Secret Manager and are never copied into GitHub Actions.
+Store only non-sensitive Monitoring channel resource names in the repository variable `MONITORING_NOTIFICATION_CHANNEL_IDS` as a JSON list. Keep recipient addresses inside GCP notification channels so they never enter GitHub, OpenTofu plans, or state.
 
 ## Container
 
 - `Dockerfile` builds the Go site (`cmd/web`, Phase 8 of `plans/go-datastar-scale-to-zero.md`): a Bun stage builds the hashed static assets, a Go stage embeds them into one static binary, and the runtime is `gcr.io/distroless/static-debian12:nonroot` with only that binary.
-- The runtime is non-root, exposes port `3000`, and starts `/web`. Since Phase 9c the oldest rollback target is the `v5.0.2` revision: older Go and Qwik revisions reference the Supabase secret, which the runtime can no longer read, so they can't start.
+- The runtime is non-root, exposes port `3000`, and starts `/web`. Since Phase 9c the oldest rollback target is the `v5.0.2` revision: older Go and Qwik revisions reference the deleted Supabase secrets, so they can't start.
 - PR CI builds, runs, and scans the production container. Delivery generates an SBOM and provenance attestation, scans the exact published digest, and gates deployment on the result; production verifies provenance and re-scans before deployment.
 - Images are stored in the regional Google Artifact Registry repository managed by OpenTofu.
 
@@ -54,7 +54,7 @@ curl --fail http://localhost:3000/healthz
 
 ## Cloud Run
 
-- Staging and production are separate services with dedicated runtime service accounts and Firestore databases. Since Phase 9b no template sets `SUPABASE_URL` or `SUPABASE_KEY`, and since Phase 9c the runtimes can't read the Supabase secrets, which are being removed. Roll back only to the `v5.0.2` revision or a later one.
+- Staging and production are separate services with dedicated runtime service accounts and Firestore databases. The runtimes hold no secrets: the Supabase secrets were deleted in Phase 9c. Roll back only to the `v5.0.2` revision or a later one.
 - Runtime identities receive access only to the named Secret Manager secret, never project-wide secret roles.
 - Deployments create a revision with no traffic, validate the content dependency (`/dependencyz`) and localized pages through a temporary tagged URL, remove the tag after validation, then migrate traffic. The startup probe is Cloud Run's default TCP check on port 3000, which routes a cold start as soon as the server listens; the liveness probe uses the process-only `/healthz` endpoint.
 - Startup/liveness probes, scaling, concurrency, resource limits, labels, and environment variables are declared in `infra/`.
