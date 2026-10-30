@@ -12,7 +12,7 @@
 ![Firestore](https://img.shields.io/badge/Firestore-%23FFCA28.svg?style=flat&logo=firebase&logoColor=black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-The website of [Aesthetic Lab](https://aestheticlab.be/), a beauty studio in Leuven, Belgium. It presents the studio's treatments, prices and team, and lets visitors book an appointment online.
+The website of [Aesthetic Lab](https://aestheticlab.be/). It presents the studio's treatments, prices and team, and lets visitors book an appointment online.
 
 The site is available in English, Dutch, French, Russian and Ukrainian. It is built with Go, Datastar and DaisyUI, runs on Google Cloud Run, and keeps its content in Firestore.
 
