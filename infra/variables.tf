@@ -166,7 +166,7 @@ variable "server_error_alert_threshold" {
 }
 
 variable "content_failure_alert_threshold" {
-  description = "Production content failures (failed content refreshes, snapshot fallbacks, Qwik Supabase loader failures) tolerated within 5 minutes before alerting."
+  description = "Production content failures (failed content refreshes and snapshot fallbacks) tolerated within 5 minutes before alerting."
   type        = number
   default     = 10
 }

@@ -134,14 +134,14 @@ resource "google_artifact_registry_repository" "containers" {
   depends_on = [google_project_service.required]
 }
 
-# No revision template reads the Supabase key since Phase 9b. The secret and
-# the runtime's access to it stay until Phase 9c, so older Go and Qwik
-# revisions can still start as rollback targets.
+# No revision template reads the Supabase key since Phase 9b, and no runtime
+# can read it since Phase 9c. Protection is off so the next apply, which
+# removes this resource, can delete both secrets.
 resource "google_secret_manager_secret" "supabase_key" {
   for_each = local.services
 
   secret_id           = each.value.supabase_secret_id
-  deletion_protection = var.deletion_protection
+  deletion_protection = false
   replication {
     auto {}
   }
@@ -250,14 +250,6 @@ resource "google_project_iam_member" "runtime_firestore_reader" {
     description = "Read the ${google_firestore_database.site[each.key].name} database only."
     expression  = "resource.name == \"projects/${var.project_id}/databases/${google_firestore_database.site[each.key].name}\""
   }
-}
-
-resource "google_secret_manager_secret_iam_member" "runtime_access" {
-  for_each = local.services
-
-  secret_id = google_secret_manager_secret.supabase_key[each.key].id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.runtime[each.key].email}"
 }
 
 resource "google_service_account_iam_member" "github_wif" {
@@ -432,7 +424,6 @@ resource "google_cloud_run_v2_service" "web" {
   depends_on = [
     google_project_service.required,
     google_project_iam_member.runtime_firestore_reader,
-    google_secret_manager_secret_iam_member.runtime_access,
     google_service_account_iam_member.iac_act_as,
   ]
 }
@@ -576,8 +567,8 @@ resource "google_monitoring_alert_policy" "runtime_failure" {
 
 resource "google_logging_metric" "content_failures" {
   name        = "aestheticlab_production_content_failures"
-  description = "Production content failures: Go content refresh failures and snapshot fallbacks, and Qwik Supabase loader failures until Qwik is removed."
-  filter      = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.production_service_name}\" AND (jsonPayload.message=\"content_refresh_failed\" OR jsonPayload.message=\"content_snapshot_served\" OR jsonPayload.message=\"supabase_fetch_failed\" OR jsonPayload.message=\"supabase_configuration_rejected\")"
+  description = "Production content failures: Go content refresh failures and snapshot fallbacks."
+  filter      = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.production_service_name}\" AND (jsonPayload.message=\"content_refresh_failed\" OR jsonPayload.message=\"content_snapshot_served\")"
 
   metric_descriptor {
     metric_kind = "DELTA"
@@ -600,8 +591,8 @@ resource "google_monitoring_alert_policy" "content_failure" {
 
   conditions {
     # A cold instance that can't reach Firestore logs a failed refresh and then
-    # serves the snapshot, and a Qwik render logs up to four loader failures,
-    # so alert on a sustained count rather than single events.
+    # serves the snapshot, so alert on a sustained count rather than single
+    # events.
     display_name = "Content failures exceed threshold in 5 minutes"
     condition_threshold {
       filter          = "resource.type = \"cloud_run_revision\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.content_failures.name}\""
