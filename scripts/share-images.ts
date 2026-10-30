@@ -31,7 +31,7 @@ const bird = readFileSync(join(root, "frontend/media/Bird.svg"), "utf8")
 
 function slogan(locale: string): string {
 	const app = JSON.parse(
-		readFileSync(join(root, `i18n/${locale}/app.json`), "utf8"),
+		readFileSync(join(root, `internal/i18n/locales/${locale}.json`), "utf8"),
 	);
 	return app.app.hero.slogan;
 }

@@ -42,7 +42,7 @@ help: ## Show available targets and usage
 dev: go-dev ## Run the site with Air (same as go-dev)
 
 .PHONY: build
-build: go-build ## Build the site binary at bin/web (same as go-build)
+build: assets go-build ## Build the assets, then the site binary at bin/web
 
 .PHONY: lint
 lint: ## Fix formatting and lint in the JS, CSS, JSON and Markdown files (Biome)
