@@ -41,18 +41,6 @@ variable "production_service_name" {
   default = "aestheticlab-web"
 }
 
-variable "staging_supabase_secret_id" {
-  description = "Secret Manager secret ID containing the staging publishable/anon key."
-  type        = string
-  default     = "SUPABASE_KEY_STAGING"
-}
-
-variable "production_supabase_secret_id" {
-  description = "Secret Manager secret ID containing the production publishable/anon key."
-  type        = string
-  default     = "SUPABASE_KEY_PRODUCTION"
-}
-
 variable "production_uptime_host" {
   description = "Public production hostname, exported as the PROD_URL deployment variable."
   type        = string
