@@ -620,7 +620,7 @@ Status (2026-10-26): step 2 merged in [#264](https://github.com/lieranderl/aesth
   - Container startup p95 was 280–597 ms per 6-hour window, under the 700 ms target.
   - There were no 5xx out of about 15.9k requests in 72 h.
   - `site-production` reads were 2.4k–5.8k a day, well under the 40k budget and the 2,000-an-hour alert.
-  - Still to do: the week with no alert regressions ends about 2 Nov.
+  - **Closed 2026-10-31, two days early, by decision:** there was one alert in the five days after `v5.0.0`. "Production slow cold starts" fired from 11:24 to 13:31 UTC on 29 Oct, the day of the `v5.0.2` release. That day's startup p95 was 709 ms, against 488–596 ms on every other day from 26 to 31 Oct. No other policy fired. Phase 9a is done.
 
 #### 9b: Drop the Supabase Binding
 
@@ -695,7 +695,7 @@ Status (2026-10-30): done. It started early, by decision. The Go site has served
    2. Rename the repository.
    3. Apply with only the new name.
 
-Status (2026-10-30): split into three PRs. 10a merged in [#275](https://github.com/lieranderl/aestheticlab/pull/275) as `b3462ac` and was deployed to staging. All 114 browser specs pass in CI across the three browsers.
+Status (2026-10-31): done. It was split into three PRs. 10a merged in [#275](https://github.com/lieranderl/aestheticlab/pull/275) as `b3462ac` and was deployed to staging. All 114 browser specs pass in CI across the three browsers.
 
 - **10a (`feat/remove-qwik`):** steps 1 and 3, and the parts of step 4 that would otherwise be wrong.
 - **10b:** the rest of steps 4 and 5, the guides and skills.
@@ -715,7 +715,12 @@ What 10a found and changed:
 - **Hooks:** `pre-push` runs `make ci`; `pre-commit` runs only lint-staged.
 - **Dependencies:** what's left is Biome, Playwright, Tailwind and DaisyUI, Heroicons, Simple Icons, sharp, Onest, husky and lint-staged, plus the `sharp` override. `bun.lock` loses about 570 lines.
 - **10b (`docs/phase-10b`):** the five `.github/*.md` guides describe the Go site: coding standards, views, DaisyUI in use, content loading and texts. Also `REVIEW.md`, `docs/CONTENT.md` (the Supabase copy steps are gone), the prompt pack, the caching table in `.github/DEPLOYMENT.md`, and `aesthetic-lab-core`, which replaces the `qwik-aesthetic-core` skill. Go, CSS and JS comments no longer point at deleted `src/` files. `README.md` was shortened in [#277](https://github.com/lieranderl/aestheticlab/pull/277).
-- **Kept for now (step 2):** the `/build/*.js` shim, the service-worker kill switch, the `/assets/` redirects and the canary's skew gate.
+- **Step 2, decided 2026-10-31 instead of after 90 days:** production request logs from 26 to 31 Oct showed what still used the Qwik URLs.
+  - `/build/` got 0–3 requests a day, and `q-data.json` none.
+  - `/assets/` and `/fonts/` got 55–90 a day. Almost all came from crawlers: Meta's `meta-externalagent`, Applebot and `facebookexternalhit`.
+  - `/service-worker.js` got 4–13 distinct visitors a day. Qwik's worker handled no fetches, so a browser that keeps it is unaffected.
+  - All of it is removed (`feat/remove-qwik-leftovers`): `internal/server/compat.go` (now `root.go`, which keeps only the root files), the `q-data.json` check, `scripts/legacy-image-baseline.sh` and its test, the smoke test's `/assets/` images and its repaired-image list, and the canary gate's `/build/` and `/assets/` paths.
+  - Those URLs now get the branded 404 (`TestTheQwikSitesURLsAreNotFound`). The skew gate stays for `/static/`, between Go revisions.
 - **10c, step 1 (2026-10-31):** merged in [#283](https://github.com/lieranderl/aestheticlab/pull/283) as `d2862be`. Applied after its staging deploy, by run 41193488436: 4 added, 6 changed, 0 destroyed, and traffic didn't change. `var.github_repository` becomes the list `var.github_repositories`, set to both names.
   - Each provider condition checks `assertion.repository in [...]` and `assertion.sub in [...]`, and keeps the owner ID and ref checks.
   - There is one `workloadIdentityUser` binding per environment and repository. `moved` blocks keep the old name's bindings as they are, so the apply never revokes the identity running it.
@@ -732,7 +737,7 @@ What 10a found and changed:
 - **Fix:** merged in [#285](https://github.com/lieranderl/aestheticlab/pull/285) as `6f59a05`. The conditions match `assertion.repository_id` (`926072453`), as the income app's provider already did, plus the owner ID, the exact immutable subject and the ref. There is one binding per environment on that subject. `github_repository` is a string again, and the new `github_repository_id` holds the ID.
   - **Break-glass apply, 2026-10-31:** the workflow couldn't authenticate, so the bootstrap identity applied a saved plan of `6f59a05` locally, with the lock: 4 added, 4 changed, 8 destroyed. `infra/README.md` documents the immutable subject and this path.
   - **Checked:** staging deploy run 41197811362, for `6f59a05`, signed in and promoted `…-41197811362-1`. Infrastructure run 41198285608's plan job signed in, and a local plan of the same commit shows no changes. #284's failed deploy wasn't re-run, since the later deploy supersedes it.
-  - Next, `v5.0.4` (this bump) is released from a commit built after the rename. Images built before it were signed under the old name. That release is the Phase 10 gate, and it tests the production deployer's sign-in.
+  - **`v5.0.4`, 2026-10-31:** released from `10dbd4a` (#286), the first image built and signed under the new name. Release run 41199502322 passed `production_prepare`, the canary and the watchdog, so the production deployer signs in too. Production serves `aestheticlab-web-candidate-41199502322-1` (`sha256:6739bd1e…`), with min instances 0 and 512 MiB. That meets the Phase 10 gate.
 
 ## Phase-Wise Gating
 

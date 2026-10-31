@@ -236,8 +236,8 @@ async function build() {
 
 	// Public link-preview URLs are stable; overwrite changed bytes and use
 	// the server's short cache rather than the immutable hashed-file cache.
-	// The same holds for the files the Qwik site served at the root, which
-	// internal/server serves from root/ at their old URLs.
+	// The same holds for the files the site serves at the root, which
+	// internal/server serves from root/ (internal/server/root.go).
 	const rootFiles = [
 		"favicon.svg",
 		"icon-192.svg",

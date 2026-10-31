@@ -320,10 +320,10 @@ resource "google_cloud_run_v2_service" "web" {
     service_account                  = google_service_account.runtime[each.key].email
     max_instance_request_concurrency = var.container_concurrency
     execution_environment            = "EXECUTION_ENVIRONMENT_GEN2"
-    # Keep each browser on one revision during canary splits. Hashed /build/ and
-    # /assets/ files exist only in the revision that rendered the page; without
-    # affinity, a 90/10 split routes follow-up chunk requests to the other revision
-    # (404s, unstyled pages). Best effort: affinity breaks if the instance goes away.
+    # Keep each browser on one revision during canary splits. Hashed /static/ files
+    # exist only in the revision that rendered the page; without affinity, a 90/10
+    # split routes follow-up asset requests to the other revision (404s, unstyled
+    # pages). Best effort: affinity breaks if the instance goes away.
     session_affinity = true
 
     scaling {

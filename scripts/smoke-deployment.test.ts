@@ -5,7 +5,7 @@ import { promisify } from "node:util";
 
 test("keeps the page's revision affinity cookie when validating its image assets", async () => {
 	const server = createServer((request, response) => {
-		if (request.url?.startsWith("/assets/")) {
+		if (request.url?.startsWith("/static/")) {
 			if (!request.headers.cookie?.includes("revision=candidate")) {
 				response.writeHead(404).end("Asset absent on previous revision");
 				return;
@@ -17,7 +17,7 @@ test("keeps the page's revision affinity cookie when validating its image assets
 		} else {
 			response.setHeader("Set-Cookie", "revision=candidate; Path=/");
 			response.setHeader("X-Content-Type-Options", "nosniff");
-			response.end('Aesthetic Lab <img src="/assets/candidate.webp">');
+			response.end('Aesthetic Lab <img src="/static/dist/candidate.webp">');
 		}
 	});
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));

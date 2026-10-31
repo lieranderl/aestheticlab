@@ -15,7 +15,7 @@ How pages and sections are built in `internal/views`. Follow `CODING_STANDARDS.m
 | `icon.templ`, `icons_gen.go` | Inline SVG icons from `make assets` |
 | `*.go` beside them | View models built from `internal/content`, SEO, booking links |
 
-Routing and HTTP concerns (locales, headers, caching, old Qwik URLs) live in `internal/server`, not here.
+Routing and HTTP concerns (locales, headers, caching) live in `internal/server`, not here.
 
 ## Adding a Section
 
