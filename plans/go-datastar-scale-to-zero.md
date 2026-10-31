@@ -729,10 +729,10 @@ What 10a found and changed:
   - After the rename, `actions/oidc/customization/sub` reports `use_immutable_subject: true`. Tokens now carry `repo:lieranderl@19622412/aestheticlab@926072453:environment:…`. Neither name's subject matched, so the infrastructure workflow was locked out too, and the three-step rename couldn't work.
   - The live services were unaffected. Staging kept `…-41192720854-1` and production `…-41132402941-3`.
   - The old name's principal was also removed from the legacy `github-deployer` account that day.
-- **Fix (`fix/wif-immutable-subject`):** the conditions match `assertion.repository_id` (`926072453`), as the income app's provider already did, plus the owner ID, the exact immutable subject and the ref. There is one binding per environment on that subject. `github_repository` is a string again, and the new `github_repository_id` holds the ID.
-  - A local plan, with no lock, showed 4 to add, 4 to change and 8 to destroy: the 4 conditions, the new bindings, and both names' old bindings.
-  - The workflow can't authenticate, so this is a break-glass apply. Merge it, apply a saved plan locally with the bootstrap identity and the lock, then dispatch the infrastructure workflow and expect no changes. `infra/README.md` now documents the immutable subject and this path.
-  - Then re-run the failed staging deploy, and release `v5.0.4` from a commit built after the rename. That release is the Phase 10 gate.
+- **Fix:** merged in [#285](https://github.com/lieranderl/aestheticlab/pull/285) as `6f59a05`. The conditions match `assertion.repository_id` (`926072453`), as the income app's provider already did, plus the owner ID, the exact immutable subject and the ref. There is one binding per environment on that subject. `github_repository` is a string again, and the new `github_repository_id` holds the ID.
+  - **Break-glass apply, 2026-10-31:** the workflow couldn't authenticate, so the bootstrap identity applied a saved plan of `6f59a05` locally, with the lock: 4 added, 4 changed, 8 destroyed. `infra/README.md` documents the immutable subject and this path.
+  - **Checked:** staging deploy run 41197811362, for `6f59a05`, signed in and promoted `…-41197811362-1`. Infrastructure run 41198285608's plan job signed in, and a local plan of the same commit shows no changes. #284's failed deploy wasn't re-run, since the later deploy supersedes it.
+  - Next, `v5.0.4` (this bump) is released from a commit built after the rename. Images built before it were signed under the old name. That release is the Phase 10 gate, and it tests the production deployer's sign-in.
 
 ## Phase-Wise Gating
 
