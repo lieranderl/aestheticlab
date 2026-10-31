@@ -53,7 +53,7 @@ Import service accounts and IAM resources as needed, then reconcile the plan. Se
 
 After both environment-scoped deployers have completed a successful deployment:
 
-1. Remove the `qwik-aestheticlab` repository principal from the legacy shared `github-deployer` service account while retaining the other repositories' principals.
+1. Remove the `lieranderl/qwik-aestheticlab` repository principal (the repository's name before Phase 10c) from the legacy shared `github-deployer` service account while retaining the other repositories' principals.
 2. Do not remove shared-service-account project roles until its other repositories have migrated to dedicated identities.
 
 ## Deployment contract

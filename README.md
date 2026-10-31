@@ -1,10 +1,10 @@
 # Aesthetic Lab
 
-[![Release](https://img.shields.io/github/v/release/lieranderl/qwik-aestheticlab?style=flat&logo=github)](https://github.com/lieranderl/qwik-aestheticlab/releases)
-[![Deploy](https://github.com/lieranderl/qwik-aestheticlab/actions/workflows/deploy.yml/badge.svg?branch=staging)](https://github.com/lieranderl/qwik-aestheticlab/actions/workflows/deploy.yml)
-[![Go coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Flieranderl%2Fqwik-aestheticlab%2Frefs%2Fheads%2Fbadges%2Fcoverage.json&style=flat)](https://github.com/lieranderl/qwik-aestheticlab/actions/workflows/coverage.yml)
+[![Release](https://img.shields.io/github/v/release/lieranderl/aestheticlab?style=flat&logo=github)](https://github.com/lieranderl/aestheticlab/releases)
+[![Deploy](https://github.com/lieranderl/aestheticlab/actions/workflows/deploy.yml/badge.svg?branch=staging)](https://github.com/lieranderl/aestheticlab/actions/workflows/deploy.yml)
+[![Go coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Flieranderl%2Faestheticlab%2Frefs%2Fheads%2Fbadges%2Fcoverage.json&style=flat)](https://github.com/lieranderl/aestheticlab/actions/workflows/coverage.yml)
 ![Browser tests](https://img.shields.io/badge/browser_tests-Chromium_%7C_Firefox_%7C_WebKit-brightgreen?style=flat&logo=playwright&logoColor=white)
-![Go](https://img.shields.io/github/go-mod/go-version/lieranderl/qwik-aestheticlab?style=flat&logo=go&logoColor=white)
+![Go](https://img.shields.io/github/go-mod/go-version/lieranderl/aestheticlab?style=flat&logo=go&logoColor=white)
 ![DaisyUI](https://img.shields.io/badge/daisyUI-5A0EF8?style=flat&logo=daisyui&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-%2338B2AC.svg?style=flat&logo=tailwind-css&logoColor=white)
 ![Datastar](https://img.shields.io/badge/Datastar-%23C9A75F.svg?style=flat&logoColor=white)
