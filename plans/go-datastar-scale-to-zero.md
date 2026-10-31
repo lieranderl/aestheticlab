@@ -245,7 +245,7 @@ The 7-day startup distribution replaced the planned five spaced cold requests: i
 
 Status:
 
-- Merged in [#235](https://github.com/lieranderl/qwik-aestheticlab/pull/235) as `757bcdc`; applied by infrastructure run 40195855239 (0 added, 2 changed, 0 destroyed; only the probe fields). The [#237](https://github.com/lieranderl/qwik-aestheticlab/pull/237) staging deploy copied the template, so staging's serving revision `stage-aestheticlab-web-candidate-40199687517-1` probes every 1 s. Production picks it up with the next release.
+- Merged in [#235](https://github.com/lieranderl/aestheticlab/pull/235) as `757bcdc`; applied by infrastructure run 40195855239 (0 added, 2 changed, 0 destroyed; only the probe fields). The [#237](https://github.com/lieranderl/aestheticlab/pull/237) staging deploy copied the template, so staging's serving revision `stage-aestheticlab-web-candidate-40199687517-1` probes every 1 s. Production picks it up with the next release.
 - Measured 2026-10-25 14:25 UTC on staging after 18+ min idle, with a new instance confirmed in Cloud Run logs: cold first byte 1.68 s (was 5.58 s), Cloud Run request latency 1.53 s, warm 0.14–0.18 s. The instance went from start to ready in about 1.1 s (was about 5.1 s): `Starting new instance` 14:25:58.32 → Bun `server_started` +0.72 s → probe passed on attempt 2, +0.37 s.
 - Gate met. Qwik still misses the Go targets (startup p95 ≤ 700 ms, cold first byte ≤ 1.2 s) mainly because of Bun's 0.7 s boot.
 
@@ -539,7 +539,7 @@ Status (2026-10-26): done on `feat/go-compat`; `internal/server/compat.go` holds
 5. Before merging, deploy the Go image as a no-traffic tagged revision on staging for a preview URL.
 6. Merge, let the staging deploy run (it copies the Phase 8 template), and measure staging cold starts against the targets.
 
-Status (2026-10-26): the template change merged in [#257](https://github.com/lieranderl/qwik-aestheticlab/pull/257) as `d797f35`, with the `Dockerfile.web` fix left over from Phase 7. Steps 2–4 merged in [#258](https://github.com/lieranderl/qwik-aestheticlab/pull/258) as `ce412a9`. Staging has served the Go image since 08:58 UTC. Step 5's separate preview revision was not needed: the staging job deploys every candidate as a no-traffic tagged revision and smoke-tests it before promotion. On 2026-10-26 `go` became a required check in the `staging` ruleset, beside `lint`, `verify`, `secrets`, `container`, `infrastructure` and the CodeQL analyses. Phase 8 is done.
+Status (2026-10-26): the template change merged in [#257](https://github.com/lieranderl/aestheticlab/pull/257) as `d797f35`, with the `Dockerfile.web` fix left over from Phase 7. Steps 2–4 merged in [#258](https://github.com/lieranderl/aestheticlab/pull/258) as `ce412a9`. Staging has served the Go image since 08:58 UTC. Step 5's separate preview revision was not needed: the staging job deploys every candidate as a no-traffic tagged revision and smoke-tests it before promotion. On 2026-10-26 `go` became a required check in the `staging` ruleset, beside `lint`, `verify`, `secrets`, `container`, `infrastructure` and the CodeQL analyses. Phase 8 is done.
 
 - **Template (step 1):** the Cloud Run container gets `FIRESTORE_DATABASE` (from the `google_firestore_database.site` resource) and `GOOGLE_CLOUD_PROJECT`, as Phase 5 noted. The service now depends on the conditioned Firestore grant. `tofu fmt` and `validate` pass.
 - **Image (step 2):** `Dockerfile.web` replaces `Dockerfile`. The Qwik Dockerfile is gone; its revisions remain the rollback targets.
@@ -567,7 +567,7 @@ Status (2026-10-26): the template change merged in [#257](https://github.com/lie
     - request served at +1.10 s, in 2.6 ms.
   - **Probe-bound:** the server is ready at +0.37 s. The HTTP startup probe's first attempt comes before the port is open, and the next one is a full second later (`period_seconds = 1`, the minimum). About 0.7 s of each cold start is spent waiting for that second attempt.
   - **Warm:** first byte 43–48 ms for `/en-BE/`, with 1.5–3.2 ms in the handler.
-  - **Fix:** Cloud Run's default TCP startup probe (one attempt with a 240 s timeout), as Moviestracker uses. It merged in [#261](https://github.com/lieranderl/qwik-aestheticlab/pull/261) as `2226769`, was applied (0 to add, 2 to change), and was deployed to staging as `…-40319793861-2`. The liveness probe keeps `/healthz`.
+  - **Fix:** Cloud Run's default TCP startup probe (one attempt with a 240 s timeout), as Moviestracker uses. It merged in [#261](https://github.com/lieranderl/aestheticlab/pull/261) as `2226769`, was applied (0 to add, 2 to change), and was deployed to staging as `…-40319793861-2`. The liveness probe keeps `/healthz`.
   - **Remeasured 12:31 UTC, after 17 minutes idle, both targets met:**
     - first byte 0.57 s for `/en-BE/`; Cloud Run's request latency 0.39 s;
     - `startup_latencies` 229 ms.
@@ -595,7 +595,7 @@ Status (2026-10-26): the template change merged in [#257](https://github.com/lie
 3. Deploy and promote so the serving revisions pick up the new template: a merge to `staging`, then a patch release (`v5.0.1`) through the canary path.
 4. Measure only after that promotion. Confirm the serving revision shows min instances 0, `instance_count` reaches 0 overnight, cold-start metrics meet the targets, and Firestore reads match the model.
 
-Status (2026-10-26): step 2 merged in [#264](https://github.com/lieranderl/qwik-aestheticlab/pull/264) and is applied, ahead of `v5.0.0` rather than a week after it. `package.json` is bumped to `5.0.0` for step 1.
+Status (2026-10-26): step 2 merged in [#264](https://github.com/lieranderl/aestheticlab/pull/264) and is applied, ahead of `v5.0.0` rather than a week after it. `package.json` is bumped to `5.0.0` for step 1.
 
 - **Why it can go first:** `min_instances` is a revision setting, and production revisions change only with a release. After the apply, the serving Qwik revision keeps its one warm instance until `v5.0.0` promotes the Go revision, which then scales to zero. Qwik never runs scaled to zero. Step 3's `v5.0.1` isn't needed for this.
 - **Uptime checks were already broken:** `/healthz` answers 404 from outside on both stacks, because Cloud Run's front end doesn't pass that path through. The health check has been failing, and only `/dependencyz` reached the app. Removing both checks loses no working signal.
@@ -609,8 +609,8 @@ Status (2026-10-26): step 2 merged in [#264](https://github.com/lieranderl/qwik-
 - **Staging:** it already scaled to zero (min 0, no checks). It gets the memory change.
 - **Apply took three runs:**
   - OpenTofu deleted the old `supabase_failures` metric before repointing the alert that used it, and Cloud Monitoring refuses that. It did so in both #264 applies, even with the `moved` block.
-  - [#265](https://github.com/lieranderl/qwik-aestheticlab/pull/265) kept the old metric for one apply, which repointed the alert.
-  - [#266](https://github.com/lieranderl/qwik-aestheticlab/pull/266) then deleted it.
+  - [#265](https://github.com/lieranderl/aestheticlab/pull/265) kept the old metric for one apply, which repointed the alert.
+  - [#266](https://github.com/lieranderl/aestheticlab/pull/266) then deleted it.
   - When an alert's metric changes name, ship the repoint and the delete as separate applies.
 - **Service-level minimum:** after `v5.0.0`, production still had a service-level `scaling.minInstanceCount` of 1. That setting was made outside OpenTofu, and it applies across all revisions, overriding their minimum of 0. Staging had none. The service-level `scaling` block now sets it from `min_instances` and `max_instances`. Unlike the revision setting, it takes effect at apply.
 - **Content freeze held:** before the release, a fresh Supabase export hashed the same as the one imported into both databases that morning, so step 1 needs no re-import.
@@ -628,7 +628,7 @@ Status (2026-10-26): step 2 merged in [#264](https://github.com/lieranderl/qwik-
 2. Deploy and promote a Go revision built from it.
 3. From here on, rollback targets are this revision or a later one. Older Go revisions still reference the secret, which is fine while it exists. Qwik revisions keep working as an emergency rollback until 9c.
 
-Status (2026-10-29): step 1 merged in [#270](https://github.com/lieranderl/qwik-aestheticlab/pull/270) as `88dd788` and was applied at 08:49 UTC (run 40842629332: 0 added, 2 changed). Both service templates now set only `FIRESTORE_DATABASE` and `GOOGLE_CLOUD_PROJECT`. Phase 9b is done.
+Status (2026-10-29): step 1 merged in [#270](https://github.com/lieranderl/aestheticlab/pull/270) as `88dd788` and was applied at 08:49 UTC (run 40842629332: 0 added, 2 changed). Both service templates now set only `FIRESTORE_DATABASE` and `GOOGLE_CLOUD_PROJECT`. Phase 9b is done.
 
 - **The apply rolled staging's traffic back.**
   - The plan was saved at 08:30, while the #270 staging deploy was still running. That deploy promoted `…-40842587846-1` at 08:37.
@@ -675,8 +675,8 @@ Status (2026-10-30): done. It started early, by decision. The Go site has served
   - 78 older production revisions and 151 older staging revisions still reference a secret. After the first apply none of them can start.
   - Rollback targets are now `…-40848710577-1` or later.
 - **Applies, both 2026-10-30:**
-  - The first, [#274](https://github.com/lieranderl/qwik-aestheticlab/pull/274) (run 41118876915), added 0, changed 5 and destroyed 2. Both secrets were left with no IAM bindings, and traffic didn't change.
-  - The second, [#276](https://github.com/lieranderl/qwik-aestheticlab/pull/276) (run 41123724822), added 0, changed 1 and destroyed 2. No `SUPABASE*` secret is left in the project. Production still serves `…-40848710577-1` and staging `…-41122698559-1`, and both answer 200.
+  - The first, [#274](https://github.com/lieranderl/aestheticlab/pull/274) (run 41118876915), added 0, changed 5 and destroyed 2. Both secrets were left with no IAM bindings, and traffic didn't change.
+  - The second, [#276](https://github.com/lieranderl/aestheticlab/pull/276) (run 41123724822), added 0, changed 1 and destroyed 2. No `SUPABASE*` secret is left in the project. Production still serves `…-40848710577-1` and staging `…-41122698559-1`, and both answer 200.
   - Both plans waited for the staging deploy before them, and nothing merged between plan and apply.
 - **Step 4:** the old revisions are left in place. Cloud Run keeps up to 1,000 per service, and a rollback to one would serve errors, because its new instances can't start. Deleting them can't be undone, so it's a separate decision.
 
@@ -695,7 +695,7 @@ Status (2026-10-30): done. It started early, by decision. The Go site has served
    2. Rename the repository.
    3. Apply with only the new name.
 
-Status (2026-10-30): split into three PRs. 10a merged in [#275](https://github.com/lieranderl/qwik-aestheticlab/pull/275) as `b3462ac` and was deployed to staging. All 114 browser specs pass in CI across the three browsers.
+Status (2026-10-30): split into three PRs. 10a merged in [#275](https://github.com/lieranderl/aestheticlab/pull/275) as `b3462ac` and was deployed to staging. All 114 browser specs pass in CI across the three browsers.
 
 - **10a (`feat/remove-qwik`):** steps 1 and 3, and the parts of step 4 that would otherwise be wrong.
 - **10b:** the rest of steps 4 and 5, the guides and skills.
@@ -714,15 +714,18 @@ What 10a found and changed:
   - The Qwik build, Vitest, the Qwik e2e run and the handoff spec are gone.
 - **Hooks:** `pre-push` runs `make ci`; `pre-commit` runs only lint-staged.
 - **Dependencies:** what's left is Biome, Playwright, Tailwind and DaisyUI, Heroicons, Simple Icons, sharp, Onest, husky and lint-staged, plus the `sharp` override. `bun.lock` loses about 570 lines.
-- **10b (`docs/phase-10b`):** the five `.github/*.md` guides describe the Go site: coding standards, views, DaisyUI in use, content loading and texts. Also `REVIEW.md`, `docs/CONTENT.md` (the Supabase copy steps are gone), the prompt pack, the caching table in `.github/DEPLOYMENT.md`, and `aesthetic-lab-core`, which replaces the `qwik-aesthetic-core` skill. Go, CSS and JS comments no longer point at deleted `src/` files. `README.md` was shortened in [#277](https://github.com/lieranderl/qwik-aestheticlab/pull/277).
+- **10b (`docs/phase-10b`):** the five `.github/*.md` guides describe the Go site: coding standards, views, DaisyUI in use, content loading and texts. Also `REVIEW.md`, `docs/CONTENT.md` (the Supabase copy steps are gone), the prompt pack, the caching table in `.github/DEPLOYMENT.md`, and `aesthetic-lab-core`, which replaces the `qwik-aesthetic-core` skill. Go, CSS and JS comments no longer point at deleted `src/` files. `README.md` was shortened in [#277](https://github.com/lieranderl/aestheticlab/pull/277).
 - **Kept for now (step 2):** the `/build/*.js` shim, the service-worker kill switch, the `/assets/` redirects and the canary's skew gate.
-- **10c, step 1 (`feat/wif-both-repo-names`, 2026-10-31):** `var.github_repository` becomes the list `var.github_repositories`, set to both names.
+- **10c, step 1 (2026-10-31):** merged in [#283](https://github.com/lieranderl/aestheticlab/pull/283) as `d2862be`. Applied after its staging deploy, by run 41193488436: 4 added, 6 changed, 0 destroyed, and traffic didn't change. `var.github_repository` becomes the list `var.github_repositories`, set to both names.
   - Each provider condition checks `assertion.repository in [...]` and `assertion.sub in [...]`, and keeps the owner ID and ref checks.
   - There is one `workloadIdentityUser` binding per environment and repository. `moved` blocks keep the old name's bindings as they are, so the apply never revokes the identity running it.
   - A local plan against the real state, with no lock, showed 4 to add, 6 to change and 0 to destroy: the 4 new-name bindings, the 4 provider conditions, and the usual `revision` → null drift on both services.
   - Apply it only after the staging deploy from the merge finishes, so that deploy's traffic isn't rolled back (see 9b).
-- **10c, step 2:** rename the repository on GitHub. GitHub redirects the old URLs and keeps rulesets, environments, variables and releases.
-- **10c, step 3:** set `github_repositories` to the new name only, which removes the old name's 4 bindings. In the same PR, update the README badges, the `Dockerfile` source label and `infra/README.md`. Then apply, and check that a staging deploy and a release still authenticate.
+- **10c, step 2 (2026-10-31):** the repository is now `lieranderl/aestheticlab`, renamed with `gh repo rename`. GitHub redirects the old URLs. The `staging` ruleset and the four environments carried over. Links in this plan now use the new name.
+- **10c, step 3 (`feat/wif-new-repo-name`):** `github_repositories` lists only the new name, and step 1's `moved` blocks are dropped, since state already has the new addresses. The README badges, the `Dockerfile` source label and `infra/README.md` use the new name.
+  - A local plan, with no lock, showed 0 to add, 4 to change and 4 to destroy: the provider conditions and the old name's bindings. The revision drift is gone since the step 1 apply.
+  - The staging deploy from the merge signs in as the new name before the old name is removed, so it checks the new grants.
+  - Apply after that deploy finishes. Then check that a release still authenticates. That release is the Phase 10 gate.
 
 ## Phase-Wise Gating
 

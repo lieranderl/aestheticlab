@@ -27,9 +27,9 @@ locals {
     "sts.googleapis.com",
   ])
 
-  # Phase 10c renames the repository. While var.github_repositories lists both
-  # names, each provider and binding accepts either, so the infrastructure
-  # workflow keeps its access across the rename.
+  # To rename the repository, list both names and apply, rename, then drop the
+  # old name and apply again. Each step keeps the infrastructure workflow's
+  # access (Phase 10c).
   github_repository_list = join(", ", [for repository in var.github_repositories : "'${repository}'"])
   github_subject_lists = {
     for environment in ["staging", "production", "infrastructure", "infrastructure-plan"] :
@@ -268,28 +268,6 @@ resource "google_service_account_iam_member" "github_wif_iac_plan" {
   member             = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/subject/repo:${each.key}:environment:infrastructure-plan"
 
   depends_on = [google_iam_workload_identity_pool_provider.github]
-}
-
-# The bindings for the old name keep their objects, so the apply only adds
-# the new name's bindings and never revokes the identity running it.
-moved {
-  from = google_service_account_iam_member.github_wif["staging"]
-  to   = google_service_account_iam_member.github_wif["staging lieranderl/qwik-aestheticlab"]
-}
-
-moved {
-  from = google_service_account_iam_member.github_wif["production"]
-  to   = google_service_account_iam_member.github_wif["production lieranderl/qwik-aestheticlab"]
-}
-
-moved {
-  from = google_service_account_iam_member.github_wif_iac
-  to   = google_service_account_iam_member.github_wif_iac["lieranderl/qwik-aestheticlab"]
-}
-
-moved {
-  from = google_service_account_iam_member.github_wif_iac_plan
-  to   = google_service_account_iam_member.github_wif_iac_plan["lieranderl/qwik-aestheticlab"]
 }
 
 resource "google_artifact_registry_repository_iam_member" "staging_deployer_writer" {

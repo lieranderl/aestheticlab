@@ -48,9 +48,9 @@ variable "production_uptime_host" {
 }
 
 variable "github_repositories" {
-  description = "GitHub repositories (owner/name) allowed to federate into the dedicated pool. Two names only while the repository is renamed (Phase 10c)."
+  description = "GitHub repositories (owner/name) allowed to federate into the dedicated pool. List two names only while the repository is renamed."
   type        = list(string)
-  default     = ["lieranderl/qwik-aestheticlab", "lieranderl/aestheticlab"]
+  default     = ["lieranderl/aestheticlab"]
 
   validation {
     condition     = length(var.github_repositories) > 0 && alltrue([for repository in var.github_repositories : can(regex("^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$", repository))])
