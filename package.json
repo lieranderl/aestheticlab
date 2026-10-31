@@ -1,7 +1,7 @@
 {
 	"name": "aestheticlab",
 	"description": "AestheticLab",
-	"version": "5.0.3",
+	"version": "5.0.4",
 	"packageManager": "bun@1.4.2",
 	"engines": {
 		"node": "^20.3.0 || >=21.0.0"
