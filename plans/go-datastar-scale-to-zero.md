@@ -719,8 +719,9 @@ What 10a found and changed:
   - `/build/` got 0–3 requests a day, and `q-data.json` none.
   - `/assets/` and `/fonts/` got 55–90 a day. Almost all came from crawlers: Meta's `meta-externalagent`, Applebot and `facebookexternalhit`.
   - `/service-worker.js` got 4–13 distinct visitors a day. Qwik's worker handled no fetches, so a browser that keeps it is unaffected.
-  - All of it is removed (`feat/remove-qwik-leftovers`): `internal/server/compat.go` (now `root.go`, which keeps only the root files), the `q-data.json` check, `scripts/legacy-image-baseline.sh` and its test, the smoke test's `/assets/` images and its repaired-image list, and the canary gate's `/build/` and `/assets/` paths.
+  - All of it is removed, merged in [#287](https://github.com/lieranderl/aestheticlab/pull/287) as `86ddd23`: `internal/server/compat.go` (now `root.go`, which keeps only the root files), the `q-data.json` check, `scripts/legacy-image-baseline.sh` and its test, the smoke test's `/assets/` images and its repaired-image list, and the canary gate's `/build/` and `/assets/` paths.
   - Those URLs now get the branded 404 (`TestTheQwikSitesURLsAreNotFound`). The skew gate stays for `/static/`, between Go revisions.
+  - Staging deploy run 41202737006 promoted `…-41202737006-1`. `v5.0.5` (this bump) takes it to production.
 - **10c, step 1 (2026-10-31):** merged in [#283](https://github.com/lieranderl/aestheticlab/pull/283) as `d2862be`. Applied after its staging deploy, by run 41193488436: 4 added, 6 changed, 0 destroyed, and traffic didn't change. `var.github_repository` becomes the list `var.github_repositories`, set to both names.
   - Each provider condition checks `assertion.repository in [...]` and `assertion.sub in [...]`, and keeps the owner ID and ref checks.
   - There is one `workloadIdentityUser` binding per environment and repository. `moved` blocks keep the old name's bindings as they are, so the apply never revokes the identity running it.
