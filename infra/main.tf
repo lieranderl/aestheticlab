@@ -27,20 +27,17 @@ locals {
     "sts.googleapis.com",
   ])
 
-  # To rename the repository, list both names and apply, rename, then drop the
-  # old name and apply again. Each step keeps the infrastructure workflow's
-  # access (Phase 10c).
-  github_repository_list = join(", ", [for repository in var.github_repositories : "'${repository}'"])
-  github_subject_lists = {
-    for environment in ["staging", "production", "infrastructure", "infrastructure-plan"] :
-    environment => join(", ", [for repository in var.github_repositories : "'repo:${repository}:environment:${environment}'"])
-  }
+  # GitHub signs this repository's tokens with an immutable subject that
+  # carries the owner and repository IDs. It changes if the repository is
+  # renamed, so a rename needs a local apply (see infra/README.md).
+  github_subject_prefix    = "repo:${split("/", var.github_repository)[0]}@${var.github_repository_owner_id}/${split("/", var.github_repository)[1]}@${var.github_repository_id}"
+  github_repository_claims = "assertion.repository_id == '${var.github_repository_id}' && assertion.repository_owner_id == '${var.github_repository_owner_id}'"
 
   github_provider_conditions = {
-    staging             = "assertion.repository in [${local.github_repository_list}] && assertion.repository_owner_id == '${var.github_repository_owner_id}' && assertion.sub in [${local.github_subject_lists["staging"]}] && assertion.ref == 'refs/heads/staging'"
-    production          = "assertion.repository in [${local.github_repository_list}] && assertion.repository_owner_id == '${var.github_repository_owner_id}' && assertion.sub in [${local.github_subject_lists["production"]}] && assertion.ref.matches('^refs/tags/v[0-9]+[.][0-9]+[.][0-9]+$')"
-    infrastructure      = "assertion.repository in [${local.github_repository_list}] && assertion.repository_owner_id == '${var.github_repository_owner_id}' && assertion.sub in [${local.github_subject_lists["infrastructure"]}] && assertion.ref == 'refs/heads/staging'"
-    infrastructure-plan = "assertion.repository in [${local.github_repository_list}] && assertion.repository_owner_id == '${var.github_repository_owner_id}' && assertion.sub in [${local.github_subject_lists["infrastructure-plan"]}] && assertion.ref == 'refs/heads/staging'"
+    staging             = "${local.github_repository_claims} && assertion.sub == '${local.github_subject_prefix}:environment:staging' && assertion.ref == 'refs/heads/staging'"
+    production          = "${local.github_repository_claims} && assertion.sub == '${local.github_subject_prefix}:environment:production' && assertion.ref.matches('^refs/tags/v[0-9]+[.][0-9]+[.][0-9]+$')"
+    infrastructure      = "${local.github_repository_claims} && assertion.sub == '${local.github_subject_prefix}:environment:infrastructure' && assertion.ref == 'refs/heads/staging'"
+    infrastructure-plan = "${local.github_repository_claims} && assertion.sub == '${local.github_subject_prefix}:environment:infrastructure-plan' && assertion.ref == 'refs/heads/staging'"
   }
 
   github_provider_display_names = {
@@ -238,34 +235,27 @@ resource "google_project_iam_member" "runtime_firestore_reader" {
 }
 
 resource "google_service_account_iam_member" "github_wif" {
-  for_each = {
-    for pair in setproduct(keys(local.services), var.github_repositories) :
-    "${pair[0]} ${pair[1]}" => { environment = pair[0], repository = pair[1] }
-  }
+  for_each = local.services
 
-  service_account_id = google_service_account.deployer[each.value.environment].name
+  service_account_id = google_service_account.deployer[each.key].name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/subject/repo:${each.value.repository}:environment:${each.value.environment}"
+  member             = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/subject/${local.github_subject_prefix}:environment:${each.key}"
 
   depends_on = [google_iam_workload_identity_pool_provider.github]
 }
 
 resource "google_service_account_iam_member" "github_wif_iac" {
-  for_each = toset(var.github_repositories)
-
   service_account_id = google_service_account.iac.name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/subject/repo:${each.key}:environment:infrastructure"
+  member             = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/subject/${local.github_subject_prefix}:environment:infrastructure"
 
   depends_on = [google_iam_workload_identity_pool_provider.github]
 }
 
 resource "google_service_account_iam_member" "github_wif_iac_plan" {
-  for_each = toset(var.github_repositories)
-
   service_account_id = google_service_account.iac_plan.name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/subject/repo:${each.key}:environment:infrastructure-plan"
+  member             = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/subject/${local.github_subject_prefix}:environment:infrastructure-plan"
 
   depends_on = [google_iam_workload_identity_pool_provider.github]
 }

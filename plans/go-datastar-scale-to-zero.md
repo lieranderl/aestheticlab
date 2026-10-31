@@ -722,10 +722,17 @@ What 10a found and changed:
   - A local plan against the real state, with no lock, showed 4 to add, 6 to change and 0 to destroy: the 4 new-name bindings, the 4 provider conditions, and the usual `revision` → null drift on both services.
   - Apply it only after the staging deploy from the merge finishes, so that deploy's traffic isn't rolled back (see 9b).
 - **10c, step 2 (2026-10-31):** the repository is now `lieranderl/aestheticlab`, renamed with `gh repo rename`. GitHub redirects the old URLs. The `staging` ruleset and the four environments carried over. Links in this plan now use the new name.
-- **10c, step 3 (`feat/wif-new-repo-name`):** `github_repositories` lists only the new name, and step 1's `moved` blocks are dropped, since state already has the new addresses. The README badges, the `Dockerfile` source label and `infra/README.md` use the new name.
-  - A local plan, with no lock, showed 0 to add, 4 to change and 4 to destroy: the provider conditions and the old name's bindings. The revision drift is gone since the step 1 apply.
-  - The staging deploy from the merge signs in as the new name before the old name is removed, so it checks the new grants.
-  - Apply after that deploy finishes. Then check that a release still authenticates. That release is the Phase 10 gate.
+- **10c, step 3:** merged in [#284](https://github.com/lieranderl/aestheticlab/pull/284) as `f8a3538`, and never applied. `github_repositories` listed only the new name. The README badges, the `Dockerfile` source label and `infra/README.md` use the new name.
+- **The rename locked every provider out:**
+  - #284's staging deploy (run 41196860890) failed at `google-github-actions/auth`: the credential was "rejected by the attribute condition".
+  - Before the rename, GitHub's tokens used the old subject, `repo:lieranderl/qwik-aestheticlab:environment:…`. That's why step 1's applies authenticated.
+  - After the rename, `actions/oidc/customization/sub` reports `use_immutable_subject: true`. Tokens now carry `repo:lieranderl@19622412/aestheticlab@926072453:environment:…`. Neither name's subject matched, so the infrastructure workflow was locked out too, and the three-step rename couldn't work.
+  - The live services were unaffected. Staging kept `…-41192720854-1` and production `…-41132402941-3`.
+  - The old name's principal was also removed from the legacy `github-deployer` account that day.
+- **Fix (`fix/wif-immutable-subject`):** the conditions match `assertion.repository_id` (`926072453`), as the income app's provider already did, plus the owner ID, the exact immutable subject and the ref. There is one binding per environment on that subject. `github_repository` is a string again, and the new `github_repository_id` holds the ID.
+  - A local plan, with no lock, showed 4 to add, 4 to change and 8 to destroy: the 4 conditions, the new bindings, and both names' old bindings.
+  - The workflow can't authenticate, so this is a break-glass apply. Merge it, apply a saved plan locally with the bootstrap identity and the lock, then dispatch the infrastructure workflow and expect no changes. `infra/README.md` now documents the immutable subject and this path.
+  - Then re-run the failed staging deploy, and release `v5.0.4` from a commit built after the rename. That release is the Phase 10 gate.
 
 ## Phase-Wise Gating
 

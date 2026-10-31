@@ -47,15 +47,21 @@ variable "production_uptime_host" {
   default     = "aestheticlab.be"
 }
 
-variable "github_repositories" {
-  description = "GitHub repositories (owner/name) allowed to federate into the dedicated pool. List two names only while the repository is renamed."
-  type        = list(string)
-  default     = ["lieranderl/aestheticlab"]
+variable "github_repository" {
+  description = "GitHub repository (owner/name) allowed to federate into the dedicated pool."
+  type        = string
+  default     = "lieranderl/aestheticlab"
 
   validation {
-    condition     = length(var.github_repositories) > 0 && alltrue([for repository in var.github_repositories : can(regex("^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$", repository))])
-    error_message = "List at least one repository, each as owner/name."
+    condition     = can(regex("^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$", var.github_repository))
+    error_message = "Set the repository as owner/name."
   }
+}
+
+variable "github_repository_id" {
+  description = "Immutable numeric GitHub repository ID, used in the WIF provider condition and subject."
+  type        = string
+  default     = "926072453"
 }
 
 variable "github_repository_owner_id" {

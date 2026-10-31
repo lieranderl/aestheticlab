@@ -4,7 +4,7 @@
 
 - Artifact Registry Docker repository with deployment-safe retention
 - Dedicated staging/production Cloud Run runtime identities
-- Dedicated GitHub WIF pool and per-environment providers restricted by repository, immutable owner ID, exact environment subject, and staging-branch/semantic-tag ref
+- Dedicated GitHub WIF pool and per-environment providers restricted by immutable repository and owner IDs, the exact immutable environment subject, and staging-branch/semantic-tag ref
 - Separate staging/production GitHub deployers and runtime identities
 - Separate read-only planner and protected privileged apply identity for saved-plan OpenTofu automation
 - The Go site's Firestore databases `site-staging` and `site-production` (delete-protected), each readable only by its environment's runtime through a conditioned `roles/datastore.viewer`; the project's other databases are not managed here
@@ -26,6 +26,10 @@
 10. Configure required reviewers on `production` and `infrastructure`; restrict `infrastructure-plan` and `infrastructure` to `staging`; require PR/security checks on `staging` before enabling deployer variables.
 
 After bootstrap, `.github/workflows/infrastructure.yml` is the only apply path. A read-only `infrastructure-plan` identity creates an immutable saved plan without taking or mutating the state lock. The privileged identity is unavailable until the protected `infrastructure` environment approves applying that exact artifact.
+
+GitHub signs this repository's tokens with an immutable subject, `repo:OWNER@OWNER_ID/NAME@REPOSITORY_ID:environment:ENVIRONMENT`. It still contains the repository name, so a rename or transfer locks every provider out, the infrastructure workflow's included. Check the current prefix with `gh api repos/OWNER/NAME/actions/oidc/customization/sub`.
+
+Break-glass, only when the workflow cannot authenticate: merge the fix to `staging`, then have the bootstrap identity run `tofu plan -lock-timeout=60s -out=tfplan` on that commit, review it, and `tofu apply tfplan`. Afterwards, dispatch the infrastructure workflow and confirm its plan shows no changes.
 
 Infrastructure workflow variables:
 
@@ -53,7 +57,7 @@ Import service accounts and IAM resources as needed, then reconcile the plan. Se
 
 After both environment-scoped deployers have completed a successful deployment:
 
-1. Remove the `lieranderl/qwik-aestheticlab` repository principal (the repository's name before Phase 10c) from the legacy shared `github-deployer` service account while retaining the other repositories' principals.
+1. The `lieranderl/qwik-aestheticlab` principal (the repository's name before Phase 10c) was removed from the legacy shared `github-deployer` service account on 2026-10-31; the other repositories' principals remain.
 2. Do not remove shared-service-account project roles until its other repositories have migrated to dedicated identities.
 
 ## Deployment contract
