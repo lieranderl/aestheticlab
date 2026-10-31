@@ -370,8 +370,6 @@ jobs:
           trap 'exit 130' INT TERM
 
           require_watchdog initial
-          bash ./scripts/legacy-image-baseline.sh "$URL" "$CANDIDATE_URL" > /tmp/repaired-legacy-images
-          echo "Verified pre-existing image defects repaired by candidate: $(wc -l < /tmp/repaired-legacy-images)"
           canary_started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           gcloud run services update-traffic "$PROD_SERVICE" --region="$GCP_REGION" --project="$GCP_PROJECT" --to-revisions="$REVISION=10,$PREVIOUS=90" --quiet
           ./scripts/smoke-deployment.sh "$CANDIDATE_URL"
@@ -383,7 +381,7 @@ jobs:
           # Bake: drive the public URL so roughly 10% of requests reach the candidate.
           bake_deadline=$(( $(date +%s) + CANARY_BAKE_SECONDS ))
           while (( $(date +%s) < bake_deadline )); do
-            SMOKE_REPAIRED_LEGACY_IMAGES=/tmp/repaired-legacy-images ./scripts/smoke-deployment.sh "$URL"
+            ./scripts/smoke-deployment.sh "$URL"
             sleep 30
           done
           sleep 30 # allow request logs to reach Cloud Logging
@@ -399,12 +397,9 @@ jobs:
           # Version skew: a candidate page requesting its hashed assets from the previous
           # revision gets 404s the 5xx gate cannot see. Count only previous-revision 404s
           # for paths the candidate really serves as a hashed asset (200, cached immutable),
-          # so arbitrary probes cannot force a rollback. That covers both stacks during the
-          # Qwik-to-Go release: Qwik serves /build/ and /assets/, Go serves /static/, and
-          # Go's answers to Qwik paths (the /build/ reload shim, the /assets/ redirects) are
-          # never immutable 200s. Session affinity should keep this near zero; the
-          # allowance absorbs best-effort affinity breaks.
-          PREVIOUS_ASSET_404S=$(gcloud logging read "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"$PROD_SERVICE\" AND resource.labels.revision_name=\"$PREVIOUS\" AND httpRequest.status=404 AND (httpRequest.requestUrl:\"/build/\" OR httpRequest.requestUrl:\"/assets/\" OR httpRequest.requestUrl:\"/static/\") AND timestamp>=\"$canary_started_at\"" --project="$GCP_PROJECT" --limit=200 --format='value(httpRequest.requestUrl)')
+          # so arbitrary probes cannot force a rollback. Session affinity should keep this
+          # near zero; the allowance absorbs best-effort affinity breaks.
+          PREVIOUS_ASSET_404S=$(gcloud logging read "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"$PROD_SERVICE\" AND resource.labels.revision_name=\"$PREVIOUS\" AND httpRequest.status=404 AND httpRequest.requestUrl:\"/static/\" AND timestamp>=\"$canary_started_at\"" --project="$GCP_PROJECT" --limit=200 --format='value(httpRequest.requestUrl)')
           declare -A candidate_status=()
           checked_paths=0
           skew_count=0
@@ -413,12 +408,7 @@ jobs:
             [[ -n "$request_url" ]] || continue
             path="/${request_url#*://*/}"
             path="${path%%\?*}"
-            if [[ ! "$path" =~ ^/(build|assets|static)/[A-Za-z0-9._/-]+$ ]]; then
-              continue
-            fi
-            # These were already broken in the previous revision's own HTML,
-            # and preflight proved the candidate serves identical canonical bytes.
-            if grep -Fxq "$path" /tmp/repaired-legacy-images; then
+            if [[ ! "$path" =~ ^/static/[A-Za-z0-9._/-]+$ ]]; then
               continue
             fi
             if [[ -z "${candidate_status[$path]:-}" ]]; then

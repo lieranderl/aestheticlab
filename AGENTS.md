@@ -47,7 +47,7 @@
 ## Repository Boundaries
 
 - `cmd/web` is the site; `cmd/content` imports and exports Firestore content; `cmd/i18n-convert` writes the Go text tables.
-- `internal/server` owns routing, locales, headers, compression, static files and the old Qwik URLs (`compat.go`); `internal/views` owns templ pages and sections; `internal/content` owns the Firestore reader, cache and snapshot; `internal/i18n` owns texts and their locale files; `internal/assets` owns the asset manifest.
+- `internal/server` owns routing, locales, headers, compression, static files and root files (`root.go`); `internal/views` owns templ pages and sections; `internal/content` owns the Firestore reader, cache and snapshot; `internal/i18n` owns texts and their locale files; `internal/assets` owns the asset manifest.
 - `frontend/` owns the asset sources and build: `app.css`, `site.js`, vendored Datastar, `media/` and `public/`. The built files go to `static/dist/`, which the binary embeds.
 - `e2e/` holds the browser specs; `scripts/` the deploy smoke tests and the link-preview renderer.
 - `infra/` owns OpenTofu-managed GCP resources; `.github/workflows/` owns delivery automation; `.agents/skills/` holds the Go, Datastar, DaisyUI and TDD skills.
