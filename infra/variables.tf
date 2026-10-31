@@ -47,10 +47,15 @@ variable "production_uptime_host" {
   default     = "aestheticlab.be"
 }
 
-variable "github_repository" {
-  description = "GitHub repository allowed to federate into the dedicated pool."
-  type        = string
-  default     = "lieranderl/qwik-aestheticlab"
+variable "github_repositories" {
+  description = "GitHub repositories (owner/name) allowed to federate into the dedicated pool. Two names only while the repository is renamed (Phase 10c)."
+  type        = list(string)
+  default     = ["lieranderl/qwik-aestheticlab", "lieranderl/aestheticlab"]
+
+  validation {
+    condition     = length(var.github_repositories) > 0 && alltrue([for repository in var.github_repositories : can(regex("^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$", repository))])
+    error_message = "List at least one repository, each as owner/name."
+  }
 }
 
 variable "github_repository_owner_id" {

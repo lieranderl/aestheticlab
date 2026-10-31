@@ -716,6 +716,13 @@ What 10a found and changed:
 - **Dependencies:** what's left is Biome, Playwright, Tailwind and DaisyUI, Heroicons, Simple Icons, sharp, Onest, husky and lint-staged, plus the `sharp` override. `bun.lock` loses about 570 lines.
 - **10b (`docs/phase-10b`):** the five `.github/*.md` guides describe the Go site: coding standards, views, DaisyUI in use, content loading and texts. Also `REVIEW.md`, `docs/CONTENT.md` (the Supabase copy steps are gone), the prompt pack, the caching table in `.github/DEPLOYMENT.md`, and `aesthetic-lab-core`, which replaces the `qwik-aesthetic-core` skill. Go, CSS and JS comments no longer point at deleted `src/` files. `README.md` was shortened in [#277](https://github.com/lieranderl/qwik-aestheticlab/pull/277).
 - **Kept for now (step 2):** the `/build/*.js` shim, the service-worker kill switch, the `/assets/` redirects and the canary's skew gate.
+- **10c, step 1 (`feat/wif-both-repo-names`, 2026-10-31):** `var.github_repository` becomes the list `var.github_repositories`, set to both names.
+  - Each provider condition checks `assertion.repository in [...]` and `assertion.sub in [...]`, and keeps the owner ID and ref checks.
+  - There is one `workloadIdentityUser` binding per environment and repository. `moved` blocks keep the old name's bindings as they are, so the apply never revokes the identity running it.
+  - A local plan against the real state, with no lock, showed 4 to add, 6 to change and 0 to destroy: the 4 new-name bindings, the 4 provider conditions, and the usual `revision` → null drift on both services.
+  - Apply it only after the staging deploy from the merge finishes, so that deploy's traffic isn't rolled back (see 9b).
+- **10c, step 2:** rename the repository on GitHub. GitHub redirects the old URLs and keeps rulesets, environments, variables and releases.
+- **10c, step 3:** set `github_repositories` to the new name only, which removes the old name's 4 bindings. In the same PR, update the README badges, the `Dockerfile` source label and `infra/README.md`. Then apply, and check that a staging deploy and a release still authenticate.
 
 ## Phase-Wise Gating
 
