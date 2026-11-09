@@ -30,14 +30,14 @@
 		"@biomejs/biome": "^2.6.6",
 		"@fontsource-variable/onest": "^5.3.1",
 		"@playwright/test": "^1.65.0",
-		"@tailwindcss/cli": "4.3.4",
+		"@tailwindcss/cli": "4.3.5",
 		"daisyui": "^5.7.50",
 		"heroicons": "2.2.0",
 		"husky": "^9.1.7",
 		"lint-staged": "^17.6.0",
 		"sharp": "0.35.5",
 		"simple-icons": "16.36.0",
-		"tailwindcss": "^4.3.4"
+		"tailwindcss": "^4.3.5"
 	},
 	"overrides": {
 		"sharp": "0.35.5"
