@@ -27,7 +27,7 @@
 		"prepare": "husky || true"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.6.6",
+		"@biomejs/biome": "^2.6.7",
 		"@fontsource-variable/onest": "^5.3.1",
 		"@playwright/test": "^1.65.0",
 		"@tailwindcss/cli": "4.3.5",
