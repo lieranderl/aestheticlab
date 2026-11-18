@@ -130,8 +130,12 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+      # GHSA-fc5q-39xc-vjpf: picomatch ReDoS, no patched release yet (<= 4.0.7).
+      # Reached only through build tooling (lint-staged, @parcel/watcher) with
+      # repository-owned globs; nothing ships in the binary. Drop the ignore
+      # once a fixed picomatch is published.
       - name: Dependency audit
-        run: bun audit --audit-level=high
+        run: bun audit --audit-level=high --ignore GHSA-fc5q-39xc-vjpf
 
   go:
     runs-on: ubuntu-24.04
