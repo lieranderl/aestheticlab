@@ -305,6 +305,23 @@ func TestThePromptForbidsReasoningInTheReply(t *testing.T) {
 	}
 }
 
+// Found by the test set: the assistant said it had "selected 16:00" and
+// invented lash-lift aftercare.
+func TestThePromptKeepsTimesAndCareAdviceHonest(t *testing.T) {
+	m := &scripted{replies: []*genai.GenerateContentResponse{text("ok")}}
+	_, _ = newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
+	prompt := m.configs[0].SystemInstruction.Parts[0].Text
+	for _, want := range []string{
+		"where the visitor chooses the time: never say you booked, reserved or selected a time",
+		"mention the Book button only when you called offer_booking",
+		"aftercare advice only as the care notes or the FAQ state it",
+	} {
+		if !strings.Contains(prompt, want) {
+			t.Errorf("the prompt lacks %q", want)
+		}
+	}
+}
+
 // The chat shows plain text: Markdown bullets and bold become plain.
 func TestMarkdownInTheReplyBecomesPlainText(t *testing.T) {
 	md := "Prices:\n\n*   Manicure + gel: **€60**\n- Pedicure: €70\n* Brows: €25\nA*B stays."
@@ -330,18 +347,25 @@ func textAndCall(text, name string, args map[string]any) *genai.GenerateContentR
 	}}}
 }
 
+// The visitor sees one answer: the model's last, or the one it wrote with
+// a Book button when it then says nothing or only adds a closing line.
 func TestAnAnswerWrittenWithAToolCallIsKept(t *testing.T) {
-	const times = "Zara is free on Monday at 12:15 and 12:30."
+	const times = "Zara is free on Monday at 12:15, 12:30 and 12:45, and on Tuesday at 10:00. These times look free now; the booking page confirms them."
+	const rewritten = "Zara has free times on Monday at 12:15, 12:30 and 12:45, and on Tuesday at 10:00. The booking page confirms them when you tap Book."
 	book := map[string]any{"service_id": "4847871"}
 	empty := &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{Content: &genai.Content{Role: genai.RoleModel}, FinishReason: genai.FinishReasonStop}}}
 	for name, tc := range map[string]struct {
 		final *genai.GenerateContentResponse
 		want  string
 	}{
-		"empty final":     {empty, times},
-		"no content":      {&genai.GenerateContentResponse{Candidates: []*genai.Candidate{{FinishReason: genai.FinishReasonStop}}}, times},
-		"closing line":    {text("These times look free now."), times + "\n\nThese times look free now."},
-		"repeated answer": {text(times + "\nTap the button to book."), times + "\nTap the button to book."},
+		"empty final":       {empty, times},
+		"no content":        {&genai.GenerateContentResponse{Candidates: []*genai.Candidate{{FinishReason: genai.FinishReasonStop}}}, times},
+		"closing line":      {text("Tap Book to choose."), times + "\n\nTap Book to choose."},
+		"repeated answer":   {text(times + "\nTap the button to book."), times + "\nTap the button to book."},
+		"rewritten answer":  {text(rewritten), rewritten},
+		"answer said twice": {text(times), times},
+		"a second thought":  {text("I can also look up her other free days."), times + "\n\nI can also look up her other free days."},
+		"a disclaimer":      {text("These times look free now."), times + "\n\nThese times look free now."},
 	} {
 		m := &scripted{replies: []*genai.GenerateContentResponse{textAndCall(times, "offer_booking", book), tc.final}}
 		got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
@@ -351,6 +375,48 @@ func TestAnAnswerWrittenWithAToolCallIsKept(t *testing.T) {
 		if got.Text != tc.want || len(got.Offers) != 1 {
 			t.Errorf("%s: reply = %q (%d offers), want %q", name, got.Text, len(got.Offers), tc.want)
 		}
+	}
+}
+
+// Answers written with separate tool calls (one per treatment) are all
+// kept when the final round adds nothing.
+func TestAnswersFromSeveralToolRoundsAreAllKept(t *testing.T) {
+	empty := &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{Content: &genai.Content{Role: genai.RoleModel}, FinishReason: genai.FinishReasonStop}}}
+	m := &scripted{replies: []*genai.GenerateContentResponse{
+		textAndCall("Pedicure costs 70 euros.", "offer_booking", map[string]any{"service_id": "4847871"}),
+		textAndCall("Coating removal costs 10 euros.", "offer_booking", map[string]any{"service_id": "4884910"}),
+		empty,
+	}}
+	got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "Pedicure costs 70 euros.\n\nCoating removal costs 10 euros."; got.Text != want {
+		t.Errorf("reply = %q, want %q", got.Text, want)
+	}
+}
+
+// Text written with a find_free_slots call comes before the times are
+// known, so any times in it are guesses: never shown.
+func TestTextWrittenBeforeFreeTimesAreKnownIsDropped(t *testing.T) {
+	const guess = "Rubina is free on Monday at 10:00, 11:45 and 13:30."
+	find := map[string]any{"service_id": "4847871"}
+	m := &scripted{replies: []*genai.GenerateContentResponse{
+		textAndCall(guess, "find_free_slots", find),
+		text("Zara is free on Monday at 10:00."),
+	}}
+	got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Text != "Zara is free on Monday at 10:00." {
+		t.Errorf("reply = %q, want only the answer written after the lookup", got.Text)
+	}
+
+	empty := &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{Content: &genai.Content{Role: genai.RoleModel}, FinishReason: genai.FinishReasonStop}}}
+	m = &scripted{replies: []*genai.GenerateContentResponse{textAndCall(guess, "find_free_slots", find), empty}}
+	if got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?"); !errors.Is(err, assistant.ErrNoAnswer) {
+		t.Errorf("only a guess = %q, %v; want ErrNoAnswer", got.Text, err)
 	}
 }
 
