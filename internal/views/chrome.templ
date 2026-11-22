@@ -336,11 +336,14 @@ templ FadeUp(delay int, mask bool, class string) {
 }
 
 // ScrollToTop is the floating button that scrolls back to the top, or to
-// the element target names once it is well out of view.
+// the element target names once it is well out of view. Bottom right, or,
+// where the chat assistant runs, centred 12px above its 56px button.
 templ ScrollToTop(target, label string) {
 	<button
 		type="button"
-		class="btn btn-square btn-outline fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-30 size-13 min-h-13 translate-y-4 border-base-content/15 bg-base-100/55 text-base-content/70 opacity-0 shadow-none backdrop-blur-md transition-[opacity,translate,background-color,color] duration-300 ease-(--ease-smooth) pointer-events-none hover:border-neutral hover:bg-neutral hover:text-neutral-content motion-reduce:transition-none lg:right-6 lg:bottom-6 lg:size-12 lg:min-h-12"
+		class={ "btn btn-square btn-outline fixed z-30 size-13 min-h-13 translate-y-4 border-base-content/15 bg-base-100/55 text-base-content/70 opacity-0 shadow-none backdrop-blur-md transition-[opacity,translate,background-color,color] duration-300 ease-(--ease-smooth) pointer-events-none hover:border-neutral hover:bg-neutral hover:text-neutral-content motion-reduce:transition-none lg:size-12 lg:min-h-12",
+			templ.KV("right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] lg:right-6 lg:bottom-6", !chatEnabled(ctx)),
+			templ.KV("right-4.5 bottom-[calc(env(safe-area-inset-bottom)+9.75rem)] lg:right-7 lg:bottom-23", chatEnabled(ctx)) }
 		aria-label={ label }
 		aria-hidden="true"
 		tabindex="-1"

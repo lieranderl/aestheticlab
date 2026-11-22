@@ -58,6 +58,7 @@ func run(ctx context.Context, getenv func(string) string, logOut io.Writer) erro
 		return err
 	}
 
+	// #nosec G102 -- Cloud Run reaches the container on all interfaces.
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
 		log.Error("server_failed", "error", err.Error())

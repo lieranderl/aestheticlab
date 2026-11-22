@@ -28,9 +28,14 @@ var messages = []string{
 	"Your question",                              // app.chat.input_label
 	"Chat with our assistant",                    // app.chat.open
 	"Ask about treatments, prices or free times", // app.chat.placeholder
-	"Send",              // app.chat.send
-	"Thinking…",         // app.chat.thinking
-	"Ask Aesthetic Lab", // app.chat.title
+	"Send",                              // app.chat.send
+	"When is the next free time?",       // app.chat.suggest_free
+	"How does laser hair removal work?", // app.chat.suggest_laser
+	"What do your treatments cost?",     // app.chat.suggest_prices
+	"Tell me about the studio",          // app.chat.suggest_studio
+	"Suggested questions",               // app.chat.suggestions
+	"Thinking…",                         // app.chat.thinking
+	"Ask Aesthetic Lab",                 // app.chat.title
 	"You're sending messages too quickly. Please wait a minute and try again.",     // app.chat.too_fast
 	"Sorry, I can't answer right now. Please message us on Instagram or by email.", // app.chat.unavailable
 	"Close",               // app.common.close
@@ -276,9 +281,14 @@ var translations = map[Locale]map[string]string{
 		"Your question":                              "Je vraag",
 		"Chat with our assistant":                    "Chat met onze assistent",
 		"Ask about treatments, prices or free times": "Vraag naar behandelingen, prijzen of vrije tijden",
-		"Send":              "Versturen",
-		"Thinking…":         "Even denken…",
-		"Ask Aesthetic Lab": "Vraag het Aesthetic Lab",
+		"Send":                              "Versturen",
+		"When is the next free time?":       "Wanneer is er een vrij moment?",
+		"How does laser hair removal work?": "Hoe werkt laserontharing?",
+		"What do your treatments cost?":     "Wat kosten jullie behandelingen?",
+		"Tell me about the studio":          "Vertel me over de studio",
+		"Suggested questions":               "Voorgestelde vragen",
+		"Thinking…":                         "Even denken…",
+		"Ask Aesthetic Lab":                 "Vraag het Aesthetic Lab",
 		"You're sending messages too quickly. Please wait a minute and try again.":     "Je stuurt te snel berichten. Wacht een minuut en probeer het opnieuw.",
 		"Sorry, I can't answer right now. Please message us on Instagram or by email.": "Sorry, ik kan nu niet antwoorden. Stuur ons een bericht op Instagram of per e-mail.",
 		"Close":               "Sluiten",
@@ -521,9 +531,14 @@ var translations = map[Locale]map[string]string{
 		"Your question":                              "Votre question",
 		"Chat with our assistant":                    "Discuter avec notre assistant",
 		"Ask about treatments, prices or free times": "Soins, prix ou créneaux libres",
-		"Send":              "Envoyer",
-		"Thinking…":         "Réflexion…",
-		"Ask Aesthetic Lab": "Demandez à Aesthetic Lab",
+		"Send":                              "Envoyer",
+		"When is the next free time?":       "Quel est le prochain créneau libre ?",
+		"How does laser hair removal work?": "Comment fonctionne l’épilation laser ?",
+		"What do your treatments cost?":     "Combien coûtent vos soins ?",
+		"Tell me about the studio":          "Parlez-moi du studio",
+		"Suggested questions":               "Questions suggérées",
+		"Thinking…":                         "Réflexion…",
+		"Ask Aesthetic Lab":                 "Demandez à Aesthetic Lab",
 		"You're sending messages too quickly. Please wait a minute and try again.":     "Vous envoyez des messages trop vite. Patientez une minute puis réessayez.",
 		"Sorry, I can't answer right now. Please message us on Instagram or by email.": "Désolé, je ne peux pas répondre pour le moment. Écrivez-nous sur Instagram ou par e-mail.",
 		"Close":               "Fermer",
@@ -766,9 +781,14 @@ var translations = map[Locale]map[string]string{
 		"Your question":                              "Ваш вопрос",
 		"Chat with our assistant":                    "Чат с нашим ассистентом",
 		"Ask about treatments, prices or free times": "Процедуры, цены или свободное время",
-		"Send":              "Отправить",
-		"Thinking…":         "Думаю…",
-		"Ask Aesthetic Lab": "Спросите Aesthetic Lab",
+		"Send":                              "Отправить",
+		"When is the next free time?":       "Когда ближайшее свободное время?",
+		"How does laser hair removal work?": "Как проходит лазерная эпиляция?",
+		"What do your treatments cost?":     "Сколько стоят процедуры?",
+		"Tell me about the studio":          "Расскажите о студии",
+		"Suggested questions":               "Частые вопросы",
+		"Thinking…":                         "Думаю…",
+		"Ask Aesthetic Lab":                 "Спросите Aesthetic Lab",
 		"You're sending messages too quickly. Please wait a minute and try again.":     "Вы отправляете сообщения слишком часто. Подождите минуту и попробуйте снова.",
 		"Sorry, I can't answer right now. Please message us on Instagram or by email.": "Извините, сейчас не могу ответить. Напишите нам в Instagram или на почту.",
 		"Close":               "Закрыть",
@@ -1011,9 +1031,14 @@ var translations = map[Locale]map[string]string{
 		"Your question":                              "Ваше запитання",
 		"Chat with our assistant":                    "Чат з нашим асистентом",
 		"Ask about treatments, prices or free times": "Процедури, ціни або вільний час",
-		"Send":              "Надіслати",
-		"Thinking…":         "Думаю…",
-		"Ask Aesthetic Lab": "Запитайте Aesthetic Lab",
+		"Send":                              "Надіслати",
+		"When is the next free time?":       "Коли найближчий вільний час?",
+		"How does laser hair removal work?": "Як проходить лазерна епіляція?",
+		"What do your treatments cost?":     "Скільки коштують процедури?",
+		"Tell me about the studio":          "Розкажіть про студію",
+		"Suggested questions":               "Часті запитання",
+		"Thinking…":                         "Думаю…",
+		"Ask Aesthetic Lab":                 "Запитайте Aesthetic Lab",
 		"You're sending messages too quickly. Please wait a minute and try again.":     "Ви надсилаєте повідомлення занадто часто. Зачекайте хвилину й спробуйте знову.",
 		"Sorry, I can't answer right now. Please message us on Instagram or by email.": "Вибачте, зараз не можу відповісти. Напишіть нам в Instagram або на пошту.",
 		"Close":               "Закрити",

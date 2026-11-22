@@ -28,16 +28,16 @@
 		"prepare": "husky || true"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.6.7",
+		"@biomejs/biome": "^2.6.8",
 		"@fontsource-variable/onest": "^5.3.1",
-		"@playwright/test": "^1.65.0",
+		"@playwright/test": "^1.65.1",
 		"@tailwindcss/cli": "4.3.5",
-		"daisyui": "^5.8.0",
+		"daisyui": "^5.8.2",
 		"heroicons": "2.2.0",
 		"husky": "^9.1.7",
-		"lint-staged": "^17.6.0",
+		"lint-staged": "^17.6.2",
 		"sharp": "0.35.5",
-		"simple-icons": "16.37.0",
+		"simple-icons": "16.38.1",
 		"tailwindcss": "^4.3.5"
 	},
 	"overrides": {

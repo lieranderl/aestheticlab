@@ -319,7 +319,12 @@
 			"book_with": "{{service}} boeken bij {{name}}",
 			"unavailable": "Sorry, ik kan nu niet antwoorden. Stuur ons een bericht op Instagram of per e-mail.",
 			"too_fast": "Je stuurt te snel berichten. Wacht een minuut en probeer het opnieuw.",
-			"daily_limit": "Je hebt het berichtenlimiet van vandaag voor de assistent bereikt. Stuur ons een bericht op Instagram of per e-mail."
+			"daily_limit": "Je hebt het berichtenlimiet van vandaag voor de assistent bereikt. Stuur ons een bericht op Instagram of per e-mail.",
+			"suggestions": "Voorgestelde vragen",
+			"suggest_prices": "Wat kosten jullie behandelingen?",
+			"suggest_free": "Wanneer is er een vrij moment?",
+			"suggest_studio": "Vertel me over de studio",
+			"suggest_laser": "Hoe werkt laserontharing?"
 		}
 	}
 }
