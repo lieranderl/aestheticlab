@@ -16,6 +16,16 @@ func chatEnabled(ctx context.Context) bool { on, _ := ctx.Value(chatKey{}).(bool
 // the visible transcript the server reads back, and a reply is pending.
 const chatSignals = `{chatOpen: false, chatInput: '', chatHistory: [], chatBusy: false}`
 
+// chatSuggestions are the common questions the empty chat offers.
+func chatSuggestions(ctx context.Context) []string {
+	return []string{
+		tr(ctx, "What do your treatments cost?"),
+		tr(ctx, "When is the next free time?"),
+		tr(ctx, "Tell me about the studio"),
+		tr(ctx, "How does laser hair removal work?"),
+	}
+}
+
 // ChatOffer is a Book button under an assistant reply: a treatment, with
 // one member of staff or anyone.
 type ChatOffer struct {

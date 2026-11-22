@@ -9,7 +9,8 @@ package views
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-// chatWidget is the assistant's launcher and panel. The transcript lives in
+// chatWidget is the assistant's launcher and panel, bottom right, with the
+// back-to-top arrow above it (ScrollToTop). The transcript lives in
 // #chat-log; the server appends each message to it over SSE. Everything
 // starts hidden and Datastar reveals it: without JavaScript the chat cannot
 // send, so it must not cover the page.
@@ -37,20 +38,20 @@ func chatWidget() templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templruntime.NewAttributeExpression(chatSignals).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 12, Col: 28}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 13, Col: 28}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" data-attr:hidden=\"false\" data-init=\"$chatHistory = aesthetic.chatRestore(); $chatOpen = aesthetic.chatWasOpen()\" data-effect=\"aesthetic.chatSave($chatHistory, $chatOpen)\" class=\"fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] left-4 z-40 lg:bottom-6 lg:left-6\"><button id=\"chat-open\" type=\"button\" class=\"btn btn-circle btn-accent size-14 shadow-lg\" aria-label=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" data-attr:hidden=\"false\" data-init=\"$chatHistory = aesthetic.chatRestore(); $chatOpen = aesthetic.chatWasOpen()\" data-effect=\"aesthetic.chatSave($chatHistory, $chatOpen)\" class=\"fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-40 lg:right-6 lg:bottom-6\"><!-- daisyUI's aura in the studio's colours (aura-brand in app.css): a\n\t\tslowly turning ring that marks the AI assistant; the negative margin keeps\n\t\tthe button where it was. Still with reduced motion (the glow layers\n\t\tinherit the animation). --><div id=\"chat-aura\" class=\"aura aura-brand -m-0.5 rounded-full [--aura-radius:9999px] motion-reduce:animate-none\" data-attr:hidden=\"$chatOpen\"><button id=\"chat-open\" type=\"button\" class=\"btn btn-circle btn-accent size-14 shadow-lg\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Chat with our assistant")).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 22, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 32, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
@@ -63,7 +64,7 @@ func chatWidget() templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Chat with our assistant")).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 23, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 33, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 		if templ_7745c5c3_Err != nil {
@@ -77,14 +78,14 @@ func chatWidget() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</button><section id=\"chat-panel\" role=\"dialog\" aria-labelledby=\"chat-title\" class=\"card flex h-[min(36rem,calc(100dvh-8rem))] w-[min(24rem,calc(100vw-2rem))] flex-col border border-base-300 bg-base-100 shadow-xl\" hidden data-attr:hidden=\"!$chatOpen\" data-on:keydown__window=\"evt.key === 'Escape' && $chatOpen && ($chatOpen = false)\"><header class=\"flex items-center justify-between gap-3 border-b border-base-300 px-4 py-3\"><h2 id=\"chat-title\" class=\"font-cormorant text-2xl leading-none\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</button></div><section id=\"chat-panel\" role=\"dialog\" aria-labelledby=\"chat-title\" class=\"card flex h-[min(36rem,calc(100dvh-8rem))] w-[min(24rem,calc(100vw-2rem))] flex-col lg:h-[min(44rem,calc(100dvh-7.5rem))] lg:w-md border border-base-300 bg-base-100 shadow-xl\" hidden data-attr:hidden=\"!$chatOpen\" data-on:keydown__window=\"evt.key === 'Escape' && $chatOpen && ($chatOpen = false)\"><header class=\"flex items-center justify-between gap-3 border-b border-base-300 px-4 py-3\"><h2 id=\"chat-title\" class=\"font-cormorant text-2xl leading-none\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Ask Aesthetic Lab"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 41, Col: 99}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 52, Col: 99}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -97,7 +98,7 @@ func chatWidget() templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Close chat")).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 42, Col: 116}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 53, Col: 116}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 		if templ_7745c5c3_Err != nil {
@@ -118,7 +119,7 @@ func chatWidget() templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "AI assistant: it can make mistakes. Please don't share health details."))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 47, Col: 87}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 58, Col: 87}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -132,72 +133,121 @@ func chatWidget() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</div><div class=\"chat chat-start\" hidden data-attr:hidden=\"!$chatBusy\"><div class=\"chat-bubble bg-base-200 text-base-content\"><span class=\"loading loading-dots loading-sm\" aria-hidden=\"true\"></span> <span class=\"sr-only\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</div><div class=\"chat chat-start\" hidden data-attr:hidden=\"!$chatBusy\"><div class=\"chat-bubble bg-base-200 font-main text-sm\"><span class=\"skeleton skeleton-text bg-transparent\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Thinking…"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 58, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 68, Col: 83}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</span></div></div></div></div><form class=\"flex items-end gap-2 border-t border-base-300 p-3\" data-on:submit=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</span></div></div></div></div><!-- Common questions, one tap to ask, until the conversation starts. --><div id=\"chat-suggestions\" role=\"group\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var9 string
-		templ_7745c5c3_Var9, templ_7745c5c3_Err = templruntime.NewAttributeExpression("$chatInput.trim() && !$chatBusy && @post('" + href(ctx, "chat") + "')").Resolve(ctx)
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Suggested questions")).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 63, Col: 155}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 77, Col: 47}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\"><label for=\"chat-input\" class=\"sr-only\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" class=\"flex flex-wrap justify-end gap-2 px-3 pb-3\" hidden data-attr:hidden=\"$chatHistory.length > 0 || $chatBusy\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var10 string
-		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Your question"))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 64, Col: 70}
+		for _, q := range chatSuggestions(ctx) {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<button type=\"button\" class=\"btn btn-outline btn-sm h-auto min-h-8 rounded-full border-base-300 py-1.5 font-main text-xs font-normal normal-case\" data-on:click=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var10 string
+			templ_7745c5c3_Var10, templ_7745c5c3_Err = templruntime.NewAttributeExpression("$chatInput = " + jsString(q) + "; @post('" + href(ctx, "chat") + "')").Resolve(ctx)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 86, Col: 92}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var11 string
+			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(q)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 87, Col: 9}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</button>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</label> <input id=\"chat-input\" type=\"text\" maxlength=\"500\" autocomplete=\"off\" class=\"input input-bordered grow font-main text-base\" placeholder=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var11 string
-		templ_7745c5c3_Var11, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Ask about treatments, prices or free times")).Resolve(ctx)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 71, Col: 72}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\" data-bind:chat-input data-attr:disabled=\"$chatBusy\"> <button id=\"chat-send\" type=\"submit\" class=\"btn btn-primary btn-square\" aria-label=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div><form class=\"flex items-end gap-2 border-t border-base-300 p-3\" data-on:submit=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var12 string
-		templ_7745c5c3_Var12, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Send")).Resolve(ctx)
+		templ_7745c5c3_Var12, templ_7745c5c3_Err = templruntime.NewAttributeExpression("$chatInput.trim() && !$chatBusy && @post('" + href(ctx, "chat") + "')").Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 75, Col: 104}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 90, Col: 155}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\" data-attr:disabled=\"$chatBusy || !$chatInput.trim()\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\"><label for=\"chat-input\" class=\"sr-only\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var13 string
+		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Your question"))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 91, Col: 70}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</label><!-- Enter sends, Shift+Enter adds a line. Typed text stays 16px (phones\n\t\t\t\tzoom into smaller fields); only the hint is smaller, on two lines\n\t\t\t\twhere the field can't grow with its content. --><textarea id=\"chat-input\" rows=\"2\" maxlength=\"500\" autocomplete=\"off\" class=\"textarea textarea-bordered max-h-32 min-h-11 grow resize-none field-sizing-content font-main text-base leading-snug placeholder:text-sm\" placeholder=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var14 string
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Ask about treatments, prices or free times")).Resolve(ctx)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 101, Col: 72}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var14)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\" data-bind:chat-input data-attr:disabled=\"$chatBusy\" data-on:keydown=\"evt.key === 'Enter' && !evt.shiftKey && !evt.isComposing && (evt.preventDefault(), el.form.requestSubmit())\"></textarea> <button id=\"chat-send\" type=\"submit\" class=\"btn btn-primary btn-square\" aria-label=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var15 string
+		templ_7745c5c3_Var15, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Send")).Resolve(ctx)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 106, Col: 104}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var15)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\" data-attr:disabled=\"$chatBusy || !$chatInput.trim()\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -205,7 +255,7 @@ func chatWidget() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</button></form></section></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</button></form></section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -234,43 +284,43 @@ func ChatMessage(visitor bool, text string, offers []ChatOffer, n int) templ.Com
 		ctx = templ.InitializeContext(ctx)
 		ctx = templ.ClearChildren(ctx)
 		if visitor {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<div class=\"chat chat-end\"><div class=\"chat-bubble chat-bubble-primary whitespace-pre-line font-main text-sm\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<div class=\"chat chat-end\"><div class=\"chat-bubble chat-bubble-primary whitespace-pre-line font-main text-sm\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var14 string
-			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(text)
+			var templ_7745c5c3_Var17 string
+			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(text)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 89, Col: 92}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 120, Col: 92}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<div class=\"chat chat-start\"><div class=\"chat-bubble bg-base-200 whitespace-pre-line font-main text-sm text-base-content\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<div class=\"chat chat-start\"><div class=\"chat-bubble bg-base-200 whitespace-pre-line font-main text-sm text-base-content\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var15 string
-			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(text)
+			var templ_7745c5c3_Var18 string
+			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(text)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 93, Col: 102}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 124, Col: 102}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if len(offers) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"chat-footer mt-2 flex flex-col items-start gap-2 opacity-100\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<div class=\"chat-footer mt-2 flex flex-col items-start gap-2 opacity-100\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -280,12 +330,12 @@ func ChatMessage(visitor bool, text string, offers []ChatOffer, n int) templ.Com
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
