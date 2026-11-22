@@ -43,7 +43,7 @@ func chatWidget() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" data-attr:hidden=\"false\" data-init=\"$chatHistory = aesthetic.chatRestore(); $chatOpen = aesthetic.chatWasOpen()\" data-effect=\"aesthetic.chatSave($chatHistory, $chatOpen)\" class=\"fixed bottom-4 left-4 z-40 max-lg:bottom-24\"><button id=\"chat-open\" type=\"button\" class=\"btn btn-circle btn-accent size-14 shadow-lg\" aria-label=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" data-attr:hidden=\"false\" data-init=\"$chatHistory = aesthetic.chatRestore(); $chatOpen = aesthetic.chatWasOpen()\" data-effect=\"aesthetic.chatSave($chatHistory, $chatOpen)\" class=\"fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] left-4 z-40 lg:bottom-6 lg:left-6\"><button id=\"chat-open\" type=\"button\" class=\"btn btn-circle btn-accent size-14 shadow-lg\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
