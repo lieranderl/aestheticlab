@@ -167,6 +167,27 @@ func TestTheAssistantReadsTheCareNotesInThePageLanguage(t *testing.T) {
 	}
 }
 
+// The assistant describes the studio and each category as the site does.
+func TestTheAssistantKnowsTheStudioAndEachCategory(t *testing.T) {
+	ctx := i18n.WithLocale(context.Background(), i18n.EnBE)
+	loc := &content.Localized{ServiceGroups: []content.ServiceGroup{
+		{ID: "1", Name: "Laser hair removal FACE", NameEN: "Laser hair removal FACE"},
+		{ID: "2", Name: "Pedicure", NameEN: "Pedicure"},
+	}}
+	facts := strings.Join(views.AssistantFacts(ctx, loc), "\n")
+	if !strings.Contains(facts, "Opened in 2024 with a simple promise") {
+		t.Errorf("facts lack the studio's story:\n%s", facts)
+	}
+	about := views.AssistantCategories(ctx, loc)
+	if !strings.Contains(about["1"], "diode laser") || !strings.Contains(about["2"], "hygienic pedicure") {
+		t.Errorf("categories = %q", about)
+	}
+	nl := views.AssistantCategories(i18n.WithLocale(context.Background(), i18n.NlBE), loc)
+	if nl["2"] == "" || nl["2"] == about["2"] {
+		t.Error("the Dutch category description is missing or English")
+	}
+}
+
 // Good to know answers payment, and the cancellation answer matches the
 // studio's policy: no changes within 24 hours.
 func TestGoodToKnowCoversPaymentAndTheCancellationPolicy(t *testing.T) {
