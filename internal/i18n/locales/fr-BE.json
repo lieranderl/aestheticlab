@@ -223,7 +223,10 @@
 			"use": "2. Comment nous utilisons vos informations",
 			"use_text": "nous utilisons vos informations pour :",
 			"who": "Qui sommes-nous",
-			"who_text": "Aesthetic Lab, {{address}}. Pour toute question sur vos données, écrivez à {{email}}."
+			"who_text": "Aesthetic Lab, {{address}}. Pour toute question sur vos données, écrivez à {{email}}.",
+			"chat_messages": "Les messages que vous envoyez dans le chat de notre site",
+			"chat_answer": "Répondre à vos questions dans le chat de notre site",
+			"chat_processor": "Google Cloud (Vertex AI, dans l’UE), qui fait fonctionner l’assistant de chat de notre site. Les messages servent uniquement à vous répondre ; notre site ne les conserve pas."
 		},
 		"services": {
 			"add_on_note": "Les prix concernent le soin lui-même. Réparations, nail art et dépose sont en supplément, dès {{price}}.",
@@ -296,6 +299,21 @@
 			"kicker": "Depuis notre atelier",
 			"lightbox_label": "Visionneuse d’images de la galerie",
 			"more_on_instagram": "Plus sur Instagram"
+		},
+		"chat": {
+			"open": "Discuter avec notre assistant",
+			"title": "Demandez à Aesthetic Lab",
+			"close": "Fermer la discussion",
+			"disclaimer": "Assistant IA : il peut se tromper. Ne partagez pas d’informations de santé.",
+			"greeting": "Bonjour ! Posez-moi vos questions sur nos soins, nos prix, notre équipe ou les créneaux libres.",
+			"thinking": "Réflexion…",
+			"input_label": "Votre question",
+			"placeholder": "Soins, prix ou créneaux libres",
+			"send": "Envoyer",
+			"book": "Réserver : {{service}}",
+			"book_with": "Réserver {{service}} avec {{name}}",
+			"unavailable": "Désolé, je ne peux pas répondre pour le moment. Écrivez-nous sur Instagram ou par e-mail.",
+			"too_fast": "Vous envoyez des messages trop vite. Patientez une minute puis réessayez."
 		}
 	}
 }

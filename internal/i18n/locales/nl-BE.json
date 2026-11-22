@@ -223,7 +223,10 @@
 			"use": "2. Hoe we uw informatie gebruiken",
 			"use_text": "we gebruiken uw informatie om:",
 			"who": "Wie we zijn",
-			"who_text": "Aesthetic Lab, {{address}}. Voor alles over je gegevens kun je mailen naar {{email}}."
+			"who_text": "Aesthetic Lab, {{address}}. Voor alles over je gegevens kun je mailen naar {{email}}.",
+			"chat_messages": "Berichten die je in onze websitechat stuurt",
+			"chat_answer": "Je vragen beantwoorden in onze websitechat",
+			"chat_processor": "Google Cloud (Vertex AI, in de EU), waarop onze websitechat draait. Chatberichten worden alleen gebruikt om je te antwoorden; onze website bewaart ze niet."
 		},
 		"services": {
 			"add_on_note": "Prijzen gelden voor de behandeling zelf. Herstellingen, nail art en verwijderen zijn extra, vanaf {{price}}.",
@@ -296,6 +299,21 @@
 			"kicker": "Uit ons atelier",
 			"lightbox_label": "Galerijviewer",
 			"more_on_instagram": "Meer op Instagram"
+		},
+		"chat": {
+			"open": "Chat met onze assistent",
+			"title": "Vraag het Aesthetic Lab",
+			"close": "Chat sluiten",
+			"disclaimer": "AI-assistent: kan fouten maken. Deel geen gezondheidsgegevens.",
+			"greeting": "Hallo! Vraag me naar onze behandelingen, prijzen, team of vrije tijden.",
+			"thinking": "Even denken…",
+			"input_label": "Je vraag",
+			"placeholder": "Vraag naar behandelingen, prijzen of vrije tijden",
+			"send": "Versturen",
+			"book": "{{service}} boeken",
+			"book_with": "{{service}} boeken bij {{name}}",
+			"unavailable": "Sorry, ik kan nu niet antwoorden. Stuur ons een bericht op Instagram of per e-mail.",
+			"too_fast": "Je stuurt te snel berichten. Wacht een minuut en probeer het opnieuw."
 		}
 	}
 }

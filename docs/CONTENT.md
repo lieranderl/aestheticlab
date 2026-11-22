@@ -43,6 +43,7 @@ A treatment with its price.
 | `priority` | Order within the data. Within a group, the site shows services cheapest first. |
 | `active` | `true` to show the service |
 | `category` | Unused label kept from Supabase |
+| `staff_ids` | Optional. List of the `staff` IDs who do this treatment, as Timely assigns them (Timely's public booking page lists them). The chat assistant offers times only with these people. |
 
 - Names starting with "Extra", and names containing "coating removal", are add-ons. Add-ons never set a group's "from" price.
 - Groups whose English name contains "laser" or "removal" are shown together as one laser category.
@@ -57,6 +58,20 @@ A treatment with its price.
 | `photo_url` | A bundled photo name (`julia`, `julia.jpg`) or an `https://` URL |
 | `active` | `true` to show the person |
 | `color` | Unused, kept from Supabase |
+| `hours` | Optional. Timely's "Normal working hours": a map from `monday` … `sunday` to a list of shifts, each `{from: "HH:MM", to: "HH:MM"}`. A day left out or with an empty list is a day off. |
+| `booking_step` | Optional. Timely's "Can be booked online every", in minutes. Default 15. |
+| `days_off` | Optional. List of dates (`"YYYY-MM-DD"`) the person doesn't work, such as holidays. |
+
+The chat assistant uses `hours`, `booking_step` and `days_off` to suggest booking times. If any of them is malformed (an unknown weekday, a time like `10h`, overlapping shifts, a date like `25/12/2026`), the assistant offers no times for that person; the site still shows them. Example:
+
+```json
+"hours": {
+  "monday": [{ "from": "10:00", "to": "18:30" }],
+  "saturday": [{ "from": "11:00", "to": "15:00" }]
+},
+"booking_step": 15,
+"days_off": ["2026-12-25"]
+```
 
 Staff email addresses were not copied from Supabase, and don't belong here: every field in this database can end up on the public site.
 

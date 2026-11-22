@@ -223,7 +223,10 @@
 			"use": "2. How We Use Your Information",
 			"use_text": "We use your information to:",
 			"who": "Who we are",
-			"who_text": "Aesthetic Lab, {{address}}. For anything about your data, write to {{email}}."
+			"who_text": "Aesthetic Lab, {{address}}. For anything about your data, write to {{email}}.",
+			"chat_messages": "Messages you send in our website chat",
+			"chat_answer": "Answer your questions in our website chat",
+			"chat_processor": "Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our website does not store them."
 		},
 		"services": {
 			"add_on_note": "Prices are for the treatment itself. Repairs, nail art and removal are add-ons from {{price}}.",
@@ -296,6 +299,21 @@
 			"kicker": "Our work",
 			"lightbox_label": "Gallery image viewer",
 			"more_on_instagram": "More on Instagram"
+		},
+		"chat": {
+			"open": "Chat with our assistant",
+			"title": "Ask Aesthetic Lab",
+			"close": "Close chat",
+			"disclaimer": "AI assistant: it can make mistakes. Please don't share health details.",
+			"greeting": "Hi! Ask me about our treatments, prices, team or free times.",
+			"thinking": "Thinking…",
+			"input_label": "Your question",
+			"placeholder": "Ask about treatments, prices or free times",
+			"send": "Send",
+			"book": "Book {{service}}",
+			"book_with": "Book {{service}} with {{name}}",
+			"unavailable": "Sorry, I can't answer right now. Please message us on Instagram or by email.",
+			"too_fast": "You're sending messages too quickly. Please wait a minute and try again."
 		}
 	}
 }

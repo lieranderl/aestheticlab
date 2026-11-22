@@ -6,7 +6,14 @@ import { createServer } from "node:https";
 import { localCertificate } from "./local-tls";
 
 const child = spawn("./bin/web", [], {
-	env: { ...process.env, PORT: "43122", FIRESTORE_DATABASE: "" },
+	// The chat runs on the scripted fake model: no network, no cost.
+	env: {
+		...process.env,
+		PORT: "43122",
+		FIRESTORE_DATABASE: "",
+		CHAT_ENABLED: "true",
+		CHAT_MODEL: "fake",
+	},
 	stdio: "inherit",
 });
 const server = createServer(localCertificate(), (req, res) => {

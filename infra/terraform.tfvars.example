@@ -7,3 +7,7 @@ initial_image           = "europe-west1-docker.pkg.dev/example-project/aesthetic
 notification_channel_ids = [
   "projects/PROJECT_ID/notificationChannels/CHANNEL_ID",
 ]
+
+# The chat assistant's staff calendars (<calendarId>|<staffId>;...). Kept out
+# of the repository; CI sets it from the AVAILABILITY_CALENDARS secret.
+# availability_calendars = "CALENDAR_ID@group.calendar.google.com|642296;..."

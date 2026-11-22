@@ -32,6 +32,9 @@ jobs:
       TF_VAR_region: ${{ vars.GCP_REGION }}
       TF_VAR_initial_image: ${{ vars.INITIAL_IMAGE }}
       TF_VAR_notification_channel_ids: ${{ vars.MONITORING_NOTIFICATION_CHANNEL_IDS }}
+      # Staff calendar IDs for the chat assistant: a secret so they stay out
+      # of the repository and the logs. Optional; empty turns free times off.
+      TF_VAR_availability_calendars: ${{ secrets.AVAILABILITY_CALENDARS }}
     steps:
       - name: Require staging workflow ref and complete inputs
         env:
@@ -92,6 +95,9 @@ jobs:
       TF_VAR_region: ${{ vars.GCP_REGION }}
       TF_VAR_initial_image: ${{ vars.INITIAL_IMAGE }}
       TF_VAR_notification_channel_ids: ${{ vars.MONITORING_NOTIFICATION_CHANNEL_IDS }}
+      # Staff calendar IDs for the chat assistant: a secret so they stay out
+      # of the repository and the logs. Optional; empty turns free times off.
+      TF_VAR_availability_calendars: ${{ secrets.AVAILABILITY_CALENDARS }}
     steps:
       - name: Checkout exact planned revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

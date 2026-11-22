@@ -8,7 +8,9 @@ import (
 	"errors"
 	"slices"
 	"strconv"
+	"time"
 
+	"github.com/lieranderl/aestheticlab/internal/availability"
 	"github.com/lieranderl/aestheticlab/internal/i18n"
 )
 
@@ -50,6 +52,9 @@ type Service struct {
 	Duration float64
 	// Price is in euros.
 	Price float64
+	// StaffIDs are the members of staff who do the treatment, as Timely
+	// assigns them; empty when the content doesn't say.
+	StaffIDs []int64
 }
 
 // Member is a member of staff in one locale.
@@ -60,6 +65,10 @@ type Member struct {
 	Photo string
 	About string
 	Role  string
+	// Schedule is when the member can be booked online, from Timely's
+	// "Normal working hours"; nil when the content has none or it is
+	// malformed, so no booking time is ever offered from bad hours.
+	Schedule *availability.Schedule
 }
 
 // Contact is the studio's contact details. They have no translations.
@@ -223,6 +232,7 @@ type storedService struct {
 	name, description translated
 	duration, price   float64
 	priority          float64
+	staffIDs          []int64
 }
 
 func parseService(doc Document) (storedService, bool) {
@@ -238,13 +248,14 @@ func parseService(doc Document) (storedService, bool) {
 		name:        readTranslated(doc, "name", name),
 		description: readTranslated(doc, "description", readString(doc, "description")),
 		duration:    duration, price: price, priority: priority,
+		staffIDs: readIDList(doc, "staff_ids"),
 	}, true
 }
 
 func (s storedService) in(l i18n.Locale) Service {
 	return Service{
 		ID: s.id, GroupID: s.groupID, Name: s.name.in(l), NameEN: s.name.english,
-		Description: s.description.in(l), Duration: s.duration, Price: s.price,
+		Description: s.description.in(l), Duration: s.duration, Price: s.price, StaffIDs: s.staffIDs,
 	}
 }
 
@@ -252,6 +263,7 @@ type storedMember struct {
 	id                int64
 	name, photo, role string
 	about             translated
+	schedule          *availability.Schedule
 }
 
 func parseMember(doc Document) (storedMember, bool) {
@@ -262,12 +274,74 @@ func parseMember(doc Document) (storedMember, bool) {
 	}
 	return storedMember{
 		id: int64(id), name: name, photo: readPhoto(doc, "photo_url"), role: readString(doc, "role"),
-		about: readTranslated(doc, "about", readString(doc, "about")),
+		about:    readTranslated(doc, "about", readString(doc, "about")),
+		schedule: readSchedule(doc),
 	}, true
 }
 
 func (m storedMember) in(l i18n.Locale) Member {
-	return Member{ID: m.id, Name: m.name, Photo: m.photo, About: m.about.in(l), Role: m.role}
+	return Member{ID: m.id, Name: m.name, Photo: m.photo, About: m.about.in(l), Role: m.role, Schedule: m.schedule}
+}
+
+// defaultBookingStep is Timely's "Can be booked online every" for every
+// member of staff today.
+const defaultBookingStep = 15 * time.Minute
+
+// weekdays are the keys of a staff document's hours map.
+var weekdays = map[string]time.Weekday{
+	"sunday": time.Sunday, "monday": time.Monday, "tuesday": time.Tuesday, "wednesday": time.Wednesday,
+	"thursday": time.Thursday, "friday": time.Friday, "saturday": time.Saturday,
+}
+
+// readSchedule reads a staff document's hours, booking_step and days_off.
+// Anything malformed gives no schedule rather than a partly read one.
+func readSchedule(doc Document) *availability.Schedule {
+	hours, ok := doc["hours"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	s := availability.Schedule{Step: defaultBookingStep}
+	for day, v := range hours {
+		weekday, okDay := weekdays[day]
+		shifts, okShifts := v.([]any)
+		if !okDay || !okShifts {
+			return nil
+		}
+		for _, raw := range shifts {
+			shift, okShift := raw.(map[string]any)
+			from, okFrom := availability.ParseClock(readString(shift, "from"))
+			to, okTo := availability.ParseClock(readString(shift, "to"))
+			if !okShift || !okFrom || !okTo {
+				return nil
+			}
+			s.Week[weekday] = append(s.Week[weekday], availability.Shift{From: from, To: to})
+		}
+	}
+	if _, set := doc["booking_step"]; set {
+		step, okStep := readNumber(doc, "booking_step")
+		if !okStep || step != float64(int64(step)) {
+			return nil
+		}
+		s.Step = time.Duration(step) * time.Minute
+	}
+	if _, set := doc["days_off"]; set {
+		days, okDays := doc["days_off"].([]any)
+		if !okDays {
+			return nil
+		}
+		for _, raw := range days {
+			text, _ := raw.(string)
+			day, okDate := availability.ParseDate(text)
+			if !okDate {
+				return nil
+			}
+			s.DaysOff = append(s.DaysOff, day)
+		}
+	}
+	if !s.Valid() {
+		return nil
+	}
+	return &s
 }
 
 func parseContact(doc Document) (Contact, bool) {

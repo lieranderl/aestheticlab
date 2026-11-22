@@ -61,6 +61,9 @@ templ Layout(meta PageMeta) {
 			{ children... }
 			@cookieBanner()
 			@bookingDialog()
+			if chatEnabled(ctx) {
+				@chatWidget()
+			}
 		</body>
 	</html>
 }

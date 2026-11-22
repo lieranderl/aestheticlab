@@ -4,7 +4,9 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
+	"github.com/lieranderl/aestheticlab/internal/availability"
 	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/i18n"
 )
@@ -216,5 +218,79 @@ func TestJSONNumbersParseLikeFirestoreIntegers(t *testing.T) {
 	}
 	if got := en.Services[0]; got.GroupID != "635110" || got.Price != 37.5 {
 		t.Errorf("service = %+v, want group 635110 and price 37.5", got)
+	}
+}
+
+// Working hours are Timely's "Normal working hours": shifts per weekday,
+// the online booking step, and dated days off.
+func TestStaffHoursBecomeABookingSchedule(t *testing.T) {
+	d := docs()
+	d.Staff[0]["hours"] = map[string]any{
+		"monday":   []any{map[string]any{"from": "12:00", "to": "19:00"}},
+		"thursday": []any{map[string]any{"from": "11:00", "to": "13:00"}, map[string]any{"from": "14:00", "to": "16:30"}},
+		"saturday": []any{map[string]any{"from": "11:00", "to": "15:00"}},
+		"sunday":   []any{},
+	}
+	d.Staff[0]["booking_step"] = int64(15)
+	d.Staff[0]["days_off"] = []any{"2026-12-25"}
+
+	got := parse(t, d).In(i18n.EnBE).Staff[0].Schedule
+	var week availability.Week
+	week[time.Monday] = []availability.Shift{{From: 720, To: 1140}}
+	week[time.Thursday] = []availability.Shift{{From: 660, To: 780}, {From: 840, To: 990}}
+	week[time.Saturday] = []availability.Shift{{From: 660, To: 900}}
+	want := &availability.Schedule{Week: week, Step: 15 * time.Minute, DaysOff: []availability.Date{{Year: 2026, Month: time.December, Day: 25}}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("schedule = %+v, want %+v", got, want)
+	}
+}
+
+func TestTheBookingStepDefaultsToTimelysFifteenMinutes(t *testing.T) {
+	d := docs()
+	d.Staff[0]["hours"] = map[string]any{"friday": []any{map[string]any{"from": "10:00", "to": "18:30"}}}
+	if got := parse(t, d).In(i18n.EnBE).Staff[0].Schedule; got == nil || got.Step != 15*time.Minute {
+		t.Errorf("schedule = %+v, want a 15-minute step", got)
+	}
+}
+
+// Bad hours only turn off booking times for that person: the team section
+// still shows them.
+func TestMalformedHoursLeaveTheMemberWithoutASchedule(t *testing.T) {
+	for name, hours := range map[string]any{
+		"not a map":     "Mon–Fri 10–18",
+		"bad time":      map[string]any{"monday": []any{map[string]any{"from": "10h", "to": "18:00"}}},
+		"backwards":     map[string]any{"monday": []any{map[string]any{"from": "18:00", "to": "10:00"}}},
+		"overlapping":   map[string]any{"monday": []any{map[string]any{"from": "10:00", "to": "14:00"}, map[string]any{"from": "13:00", "to": "18:00"}}},
+		"unknown day":   map[string]any{"funday": []any{map[string]any{"from": "10:00", "to": "18:00"}}},
+		"no shifts":     map[string]any{"monday": []any{}},
+		"shift not map": map[string]any{"monday": []any{"10:00-18:00"}},
+	} {
+		d := docs()
+		d.Staff[0]["hours"] = hours
+		staff := parse(t, d).In(i18n.EnBE).Staff
+		if len(staff) != 1 || staff[0].Schedule != nil {
+			t.Errorf("%s: staff = %+v, want Julia without a schedule", name, staff)
+		}
+	}
+	d := docs()
+	d.Staff[0]["hours"] = map[string]any{"monday": []any{map[string]any{"from": "10:00", "to": "18:00"}}}
+	d.Staff[0]["booking_step"] = int64(0)
+	if got := parse(t, d).In(i18n.EnBE).Staff[0].Schedule; got != nil {
+		t.Errorf("a zero booking step gives schedule %+v", got)
+	}
+	// A day off that can't be read could be offered as a working day.
+	d.Staff[0]["booking_step"] = int64(15)
+	d.Staff[0]["days_off"] = []any{"2026-12-25", "25/12/2026"}
+	if got := parse(t, d).In(i18n.EnBE).Staff[0].Schedule; got != nil {
+		t.Errorf("an unreadable day off gives schedule %+v", got)
+	}
+}
+
+// staff_ids lists who does a treatment, as Timely assigns staff per service.
+func TestServicesListTheStaffWhoDoThem(t *testing.T) {
+	d := docs()
+	d.Services[0]["staff_ids"] = []any{int64(642296), float64(642297), "642298", 1.5, nil}
+	if got, want := parse(t, d).In(i18n.FrBE).Services[0].StaffIDs, []int64{642296, 642297}; !reflect.DeepEqual(got, want) {
+		t.Errorf("staff IDs = %v, want %v", got, want)
 	}
 }

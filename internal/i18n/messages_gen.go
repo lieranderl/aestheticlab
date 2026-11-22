@@ -17,8 +17,21 @@ var messages = []string{
 	"Before your session",       // app.care.laser_before
 	"Shave the area 24 hours before your session.",                         // app.care.laser_shave
 	"Avoid sun, tanning beds and self-tanner for at least 2 weeks before.", // app.care.laser_sun
-	"Nails",               // app.care.nails
-	"Care notes",          // app.care.title
+	"Nails",                 // app.care.nails
+	"Care notes",            // app.care.title
+	"Book %v",               // app.chat.book
+	"Book %[1]v with %[2]v", // app.chat.book_with
+	"Close chat",            // app.chat.close
+	"AI assistant: it can make mistakes. Please don't share health details.", // app.chat.disclaimer
+	"Hi! Ask me about our treatments, prices, team or free times.",           // app.chat.greeting
+	"Your question",                              // app.chat.input_label
+	"Chat with our assistant",                    // app.chat.open
+	"Ask about treatments, prices or free times", // app.chat.placeholder
+	"Send",              // app.chat.send
+	"Thinking…",         // app.chat.thinking
+	"Ask Aesthetic Lab", // app.chat.title
+	"You're sending messages too quickly. Please wait a minute and try again.",     // app.chat.too_fast
+	"Sorry, I can't answer right now. Please message us on Instagram or by email.", // app.chat.unavailable
 	"Close",               // app.common.close
 	"Next",                // app.common.next
 	"Previous",            // app.common.previous
@@ -145,6 +158,9 @@ var messages = []string{
 	"Change cookie settings",    // app.privacy.change_cookies
 	"7. Changes to This Policy", // app.privacy.changes
 	"We may update this Privacy Policy from time to time. The latest version will always be available on our website.", // app.privacy.changes_text
+	"Answer your questions in our website chat", // app.privacy.chat_answer
+	"Messages you send in our website chat",     // app.privacy.chat_messages
+	"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our website does not store them.", // app.privacy.chat_processor
 	"6. Cookies & Tracking Technologies",                                                 // app.privacy.cookies
 	"Analytics cookies: optional; analytics storage is granted only after your consent.", // app.privacy.cookies_analytics
 	"Strictly necessary cookies: always active for basic website functionality.",         // app.privacy.cookies_necessary
@@ -245,8 +261,21 @@ var translations = map[Locale]map[string]string{
 		"Before your session":       "Voor je sessie",
 		"Shave the area 24 hours before your session.":                         "Scheer de zone 24 uur voor je sessie.",
 		"Avoid sun, tanning beds and self-tanner for at least 2 weeks before.": "Vermijd zon, zonnebank en zelfbruiner minstens 2 weken vooraf.",
-		"Nails":               "Nagels",
-		"Care notes":          "Verzorgingstips",
+		"Nails":                 "Nagels",
+		"Care notes":            "Verzorgingstips",
+		"Book %v":               "%v boeken",
+		"Book %[1]v with %[2]v": "%[1]v boeken bij %[2]v",
+		"Close chat":            "Chat sluiten",
+		"AI assistant: it can make mistakes. Please don't share health details.": "AI-assistent: kan fouten maken. Deel geen gezondheidsgegevens.",
+		"Hi! Ask me about our treatments, prices, team or free times.":           "Hallo! Vraag me naar onze behandelingen, prijzen, team of vrije tijden.",
+		"Your question":                              "Je vraag",
+		"Chat with our assistant":                    "Chat met onze assistent",
+		"Ask about treatments, prices or free times": "Vraag naar behandelingen, prijzen of vrije tijden",
+		"Send":              "Versturen",
+		"Thinking…":         "Even denken…",
+		"Ask Aesthetic Lab": "Vraag het Aesthetic Lab",
+		"You're sending messages too quickly. Please wait a minute and try again.":     "Je stuurt te snel berichten. Wacht een minuut en probeer het opnieuw.",
+		"Sorry, I can't answer right now. Please message us on Instagram or by email.": "Sorry, ik kan nu niet antwoorden. Stuur ons een bericht op Instagram of per e-mail.",
 		"Close":               "Sluiten",
 		"Next":                "Volgende",
 		"Previous":            "Vorige",
@@ -373,6 +402,9 @@ var translations = map[Locale]map[string]string{
 		"Change cookie settings":    "Cookie-instellingen wijzigen",
 		"7. Changes to This Policy": "7. Wijzigingen in dit beleid",
 		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.": "We kunnen dit privacybeleid van tijd tot tijd bijwerken. De nieuwste versie is altijd beschikbaar op onze website.",
+		"Answer your questions in our website chat": "Je vragen beantwoorden in onze websitechat",
+		"Messages you send in our website chat":     "Berichten die je in onze websitechat stuurt",
+		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our website does not store them.": "Google Cloud (Vertex AI, in de EU), waarop onze websitechat draait. Chatberichten worden alleen gebruikt om je te antwoorden; onze website bewaart ze niet.",
 		"6. Cookies & Tracking Technologies":                                                 "6. Cookies & Traceertechnologieën",
 		"Analytics cookies: optional; analytics storage is granted only after your consent.": "Analysecookies: optioneel; analyseopslag wordt alleen na jouw toestemming toegestaan.",
 		"Strictly necessary cookies: always active for basic website functionality.":         "Strikt noodzakelijke cookies: altijd actief voor basisfunctionaliteit van de website.",
@@ -470,8 +502,21 @@ var translations = map[Locale]map[string]string{
 		"Before your session":       "Avant votre séance",
 		"Shave the area 24 hours before your session.":                         "Rasez la zone 24 heures avant votre séance.",
 		"Avoid sun, tanning beds and self-tanner for at least 2 weeks before.": "Évitez le soleil, les UV et l’autobronzant pendant au moins 2 semaines avant.",
-		"Nails":               "Ongles",
-		"Care notes":          "Conseils de soin",
+		"Nails":                 "Ongles",
+		"Care notes":            "Conseils de soin",
+		"Book %v":               "Réserver : %v",
+		"Book %[1]v with %[2]v": "Réserver %[1]v avec %[2]v",
+		"Close chat":            "Fermer la discussion",
+		"AI assistant: it can make mistakes. Please don't share health details.": "Assistant IA : il peut se tromper. Ne partagez pas d’informations de santé.",
+		"Hi! Ask me about our treatments, prices, team or free times.":           "Bonjour ! Posez-moi vos questions sur nos soins, nos prix, notre équipe ou les créneaux libres.",
+		"Your question":                              "Votre question",
+		"Chat with our assistant":                    "Discuter avec notre assistant",
+		"Ask about treatments, prices or free times": "Soins, prix ou créneaux libres",
+		"Send":              "Envoyer",
+		"Thinking…":         "Réflexion…",
+		"Ask Aesthetic Lab": "Demandez à Aesthetic Lab",
+		"You're sending messages too quickly. Please wait a minute and try again.":     "Vous envoyez des messages trop vite. Patientez une minute puis réessayez.",
+		"Sorry, I can't answer right now. Please message us on Instagram or by email.": "Désolé, je ne peux pas répondre pour le moment. Écrivez-nous sur Instagram ou par e-mail.",
 		"Close":               "Fermer",
 		"Next":                "Suivant",
 		"Previous":            "Précédent",
@@ -598,6 +643,9 @@ var translations = map[Locale]map[string]string{
 		"Change cookie settings":    "Modifier les cookies",
 		"7. Changes to This Policy": "7. Modifications de cette politique",
 		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.": "Nous pouvons mettre à jour cette politique de confidentialité de temps à autre. La dernière version sera toujours disponible sur notre site Web.",
+		"Answer your questions in our website chat": "Répondre à vos questions dans le chat de notre site",
+		"Messages you send in our website chat":     "Les messages que vous envoyez dans le chat de notre site",
+		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our website does not store them.": "Google Cloud (Vertex AI, dans l’UE), qui fait fonctionner l’assistant de chat de notre site. Les messages servent uniquement à vous répondre ; notre site ne les conserve pas.",
 		"6. Cookies & Tracking Technologies":                                                 "6. Cookies et technologies de suivi",
 		"Analytics cookies: optional; analytics storage is granted only after your consent.": "Cookies d'analyse : facultatifs ; le stockage analytique n'est autorisé qu'après votre consentement.",
 		"Strictly necessary cookies: always active for basic website functionality.":         "Cookies strictement nécessaires : toujours actifs pour le fonctionnement de base du site.",
@@ -695,8 +743,21 @@ var translations = map[Locale]map[string]string{
 		"Before your session":       "Перед сеансом",
 		"Shave the area 24 hours before your session.":                         "Побрейте зону за 24 часа до сеанса.",
 		"Avoid sun, tanning beds and self-tanner for at least 2 weeks before.": "Избегайте солнца, солярия и автозагара минимум 2 недели до сеанса.",
-		"Nails":               "Ногти",
-		"Care notes":          "Рекомендации по уходу",
+		"Nails":                 "Ногти",
+		"Care notes":            "Рекомендации по уходу",
+		"Book %v":               "Записаться: %v",
+		"Book %[1]v with %[2]v": "Записаться: %[1]v, мастер %[2]v",
+		"Close chat":            "Закрыть чат",
+		"AI assistant: it can make mistakes. Please don't share health details.": "ИИ-ассистент: может ошибаться. Пожалуйста, не сообщайте данные о здоровье.",
+		"Hi! Ask me about our treatments, prices, team or free times.":           "Здравствуйте! Спросите меня о процедурах, ценах, мастерах или свободном времени.",
+		"Your question":                              "Ваш вопрос",
+		"Chat with our assistant":                    "Чат с нашим ассистентом",
+		"Ask about treatments, prices or free times": "Процедуры, цены или свободное время",
+		"Send":              "Отправить",
+		"Thinking…":         "Думаю…",
+		"Ask Aesthetic Lab": "Спросите Aesthetic Lab",
+		"You're sending messages too quickly. Please wait a minute and try again.":     "Вы отправляете сообщения слишком часто. Подождите минуту и попробуйте снова.",
+		"Sorry, I can't answer right now. Please message us on Instagram or by email.": "Извините, сейчас не могу ответить. Напишите нам в Instagram или на почту.",
 		"Close":               "Закрыть",
 		"Next":                "Далее",
 		"Previous":            "Назад",
@@ -823,6 +884,9 @@ var translations = map[Locale]map[string]string{
 		"Change cookie settings":    "Изменить настройки cookies",
 		"7. Changes to This Policy": "7. Изменения в этой политике",
 		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.": "Мы можем время от времени обновлять эту Политику конфиденциальности. Последняя версия всегда будет доступна на нашем сайте.",
+		"Answer your questions in our website chat": "Отвечать на ваши вопросы в чате на сайте",
+		"Messages you send in our website chat":     "Сообщения, которые вы отправляете в чат на нашем сайте",
+		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our website does not store them.": "Google Cloud (Vertex AI, в ЕС), на котором работает чат-ассистент нашего сайта. Сообщения используются только для ответа вам; наш сайт их не хранит.",
 		"6. Cookies & Tracking Technologies":                                                 "6. Файлы cookie и технологии отслеживания",
 		"Analytics cookies: optional; analytics storage is granted only after your consent.": "Аналитические cookie: необязательны; аналитическое хранилище разрешается только после вашего согласия.",
 		"Strictly necessary cookies: always active for basic website functionality.":         "Строго необходимые cookie: всегда активны для базовой работы сайта.",
@@ -920,8 +984,21 @@ var translations = map[Locale]map[string]string{
 		"Before your session":       "Перед сеансом",
 		"Shave the area 24 hours before your session.":                         "Поголіть зону за 24 години до сеансу.",
 		"Avoid sun, tanning beds and self-tanner for at least 2 weeks before.": "Уникайте сонця, солярію та автозасмаги щонайменше 2 тижні до сеансу.",
-		"Nails":               "Нігті",
-		"Care notes":          "Поради з догляду",
+		"Nails":                 "Нігті",
+		"Care notes":            "Поради з догляду",
+		"Book %v":               "Записатися: %v",
+		"Book %[1]v with %[2]v": "Записатися: %[1]v, майстер %[2]v",
+		"Close chat":            "Закрити чат",
+		"AI assistant: it can make mistakes. Please don't share health details.": "ШІ-асистент: може помилятися. Будь ласка, не діліться даними про здоров’я.",
+		"Hi! Ask me about our treatments, prices, team or free times.":           "Вітаю! Запитайте мене про процедури, ціни, майстрів або вільний час.",
+		"Your question":                              "Ваше запитання",
+		"Chat with our assistant":                    "Чат з нашим асистентом",
+		"Ask about treatments, prices or free times": "Процедури, ціни або вільний час",
+		"Send":              "Надіслати",
+		"Thinking…":         "Думаю…",
+		"Ask Aesthetic Lab": "Запитайте Aesthetic Lab",
+		"You're sending messages too quickly. Please wait a minute and try again.":     "Ви надсилаєте повідомлення занадто часто. Зачекайте хвилину й спробуйте знову.",
+		"Sorry, I can't answer right now. Please message us on Instagram or by email.": "Вибачте, зараз не можу відповісти. Напишіть нам в Instagram або на пошту.",
 		"Close":               "Закрити",
 		"Next":                "Далі",
 		"Previous":            "Назад",
@@ -1048,6 +1125,9 @@ var translations = map[Locale]map[string]string{
 		"Change cookie settings":    "Змінити налаштування cookies",
 		"7. Changes to This Policy": "7. Зміни в цій політиці",
 		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.": "Ми можемо час від часу оновлювати цю Політику конфіденційності. Остання версія завжди буде доступна на нашому сайті.",
+		"Answer your questions in our website chat": "Відповідати на ваші запитання в чаті на сайті",
+		"Messages you send in our website chat":     "Повідомлення, які ви надсилаєте в чат на нашому сайті",
+		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our website does not store them.": "Google Cloud (Vertex AI, у ЄС), на якому працює чат-асистент нашого сайту. Повідомлення використовуються лише для відповіді вам; наш сайт їх не зберігає.",
 		"6. Cookies & Tracking Technologies":                                                 "6. Файли cookie та технології відстеження",
 		"Analytics cookies: optional; analytics storage is granted only after your consent.": "Аналітичні cookie: необов'язкові; аналітичне сховище дозволяється лише після вашої згоди.",
 		"Strictly necessary cookies: always active for basic website functionality.":         "Строго необхідні cookie: завжди активні для базової роботи сайту.",

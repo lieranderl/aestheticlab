@@ -60,6 +60,14 @@ After both environment-scoped deployers have completed a successful deployment:
 1. The `lieranderl/qwik-aestheticlab` principal (the repository's name before Phase 10c) was removed from the legacy shared `github-deployer` service account on 2026-10-31; the other repositories' principals remain.
 2. Do not remove shared-service-account project roles until its other repositories have migrated to dedicated identities.
 
+## Chat assistant
+
+`chat_environments` (default `["staging"]`) sets `CHAT_ENABLED` and grants those runtime accounts `roles/aiplatform.user` for Gemini on Vertex AI. `chat_model` and `chat_location` (`eu`) choose the model and keep processing in the EU.
+
+`availability_calendars` maps staff calendars to staff IDs (`<calendarId>|<staffId>;…`). It is `sensitive` and never in the repository: CI reads it from the `AVAILABILITY_CALENDARS` repository secret (`TF_VAR_availability_calendars`); locally, put it in the git-ignored `terraform.tfvars`. Each calendar must be shared with the environment's runtime account at "See only free/busy (hide details)". Empty turns free times off: the chat offers the Book button instead.
+
+Settings changes reach traffic with the next deploy, which copies the service's current template.
+
 ## Deployment contract
 
 OpenTofu owns service configuration and IAM. GitHub Actions owns only the container image and exact-revision traffic promotion. Image and traffic fields are intentionally ignored after bootstrap so a later plan cannot roll back a digest or promote an untested revision.
