@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"google.golang.org/genai"
@@ -263,13 +264,27 @@ func rewrites(a, b string) bool {
 }
 
 // wholeSentences is s up to its last whole sentence: a reply cut off by
-// the token limit must not end mid-word. Empty if none ended.
+// the token limit must not end mid-word. A sentence ends at a line break,
+// or at . ! ? or … followed by a space; at the very end of s only if no
+// digit comes before it, since "1." may be a cut "1.5". Empty if none ended.
 func wholeSentences(s string) string {
-	if i := strings.LastIndexAny(s, ".!?…\n"); i >= 0 {
-		_, size := utf8.DecodeRuneInString(s[i:])
-		return strings.TrimSpace(s[:i+size])
+	end := -1
+	var prev rune
+	for i, r := range s {
+		next, _ := utf8.DecodeRuneInString(s[i+utf8.RuneLen(r):])
+		last := i+utf8.RuneLen(r) == len(s)
+		switch {
+		case r == '\n':
+			end = i
+		case strings.ContainsRune(".!?…", r) && (unicode.IsSpace(next) || last && !unicode.IsDigit(prev)):
+			end = i + utf8.RuneLen(r)
+		}
+		prev = r
 	}
-	return ""
+	if end < 0 {
+		return ""
+	}
+	return strings.TrimSpace(s[:end])
 }
 
 // replyText is the answer to the visitor: the last text part that isn't a

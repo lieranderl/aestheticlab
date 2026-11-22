@@ -49,3 +49,20 @@ func TestGeminiRetriesABusyEndpointOnce(t *testing.T) {
 		srv.Close()
 	}
 }
+
+// A cut reply keeps only whole sentences: a decimal point in a price or a
+// duration doesn't end one.
+func TestWholeSentencesIgnoresDecimalPoints(t *testing.T) {
+	for in, want := range map[string]string{
+		"The treatment takes 1.5 hours and inclu":                  "",
+		"It costs €12.50. The treatment takes 1.5 hours and inclu": "It costs €12.50.",
+		"Lamination lasts up to 3 months. It costs 1.":             "Lamination lasts up to 3 months.",
+		"Free times:\n• 10:00\n• 10:15 with Za":                    "Free times:\n• 10:00",
+		"Is that all? Yes! It is…":                                 "Is that all? Yes! It is…",
+		"Ламинирование держится до 3 месяцев. Процедура фикс":      "Ламинирование держится до 3 месяцев.",
+	} {
+		if got := wholeSentences(in); got != want {
+			t.Errorf("wholeSentences(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
