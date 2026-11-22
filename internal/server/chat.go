@@ -175,7 +175,7 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 		}
 		history := cleanHistory(sig.ChatHistory)
 		n := len(history)
-		_ = sse.PatchElementTempl(views.ChatMessage(true, message, nil, n), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
+		_ = sse.PatchElementTempl(views.ChatMessage(true, message, nil, nil, n), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
 		_ = sse.MarshalAndPatchSignals(map[string]any{"chatInput": "", "chatBusy": true})
 
 		start := time.Now()
@@ -242,15 +242,25 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 		for _, o := range answer.Offers {
 			offers = append(offers, views.ChatOffer{ServiceID: o.ServiceID, Service: o.Service, StaffID: o.StaffID, Staff: o.Staff})
 		}
+		// Free times are shown as the lookup found them, never from the
+		// model's text.
+		times := make([]views.ChatTimes, 0, len(answer.Times))
+		for _, ft := range answer.Times {
+			ct := views.ChatTimes{Service: ft.Service, Staff: ft.Staff, Unchecked: ft.Unchecked}
+			for _, s := range ft.Slots {
+				ct.Slots = append(ct.Slots, views.ChatSlot{Start: s.Start, Staff: s.Staff})
+			}
+			times = append(times, ct)
+		}
 		// Visitors' messages and replies are never logged: only counts.
 		log.InfoContext(ctx, "chat_reply", "locale", string(l), "outcome", outcome, "turns", n+1,
-			"offers", len(offers), "duration_ms", time.Since(start).Milliseconds(), "cost_eur", cost,
+			"offers", len(offers), "times", len(times), "duration_ms", time.Since(start).Milliseconds(), "cost_eur", cost,
 			"prompt_tokens", answer.Tokens.Prompt, "cached_tokens", answer.Tokens.Cached, "output_tokens", answer.Tokens.Output,
 			"unmetered_calls", answer.Unmetered)
-		_ = sse.PatchElementTempl(views.ChatMessage(false, answer.Text, offers, n+1), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
+		_ = sse.PatchElementTempl(views.ChatMessage(false, answer.Text, times, offers, n+1), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
 		history = append(history,
 			assistant.Turn{Role: assistant.RoleVisitor, Text: message},
-			assistant.Turn{Role: assistant.RoleAssistant, Text: answer.Text})
+			assistant.Turn{Role: assistant.RoleAssistant, Text: views.ChatTranscript(ctx, answer.Text, times)})
 		_ = sse.MarshalAndPatchSignals(map[string]any{"chatHistory": history, "chatBusy": false})
 	}
 }

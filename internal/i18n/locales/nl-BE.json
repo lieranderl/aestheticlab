@@ -324,7 +324,20 @@
 			"suggest_prices": "Wat kosten jullie behandelingen?",
 			"suggest_free": "Wanneer is er een vrij moment?",
 			"suggest_studio": "Vertel me over de studio",
-			"suggest_laser": "Hoe werkt laserontharing?"
+			"suggest_laser": "Hoe werkt laserontharing?",
+			"times": "Vrije tijden voor {{service}}",
+			"times_with": "Vrije tijden voor {{service}} bij {{name}}",
+			"times_note": "Deze tijden lijken nu vrij; de boekingspagina bevestigt ze.",
+			"times_unchecked": "De tijden van {{names}} konden niet worden gecontroleerd: de boekingspagina toont ze.",
+			"weekday_short": {
+				"mon": "ma",
+				"tue": "di",
+				"wed": "wo",
+				"thu": "do",
+				"fri": "vr",
+				"sat": "za",
+				"sun": "zo"
+			}
 		}
 	}
 }

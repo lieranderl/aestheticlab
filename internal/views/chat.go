@@ -3,6 +3,8 @@ package views
 import (
 	"context"
 	"strconv"
+	"strings"
+	"time"
 )
 
 type chatKey struct{}
@@ -33,6 +35,84 @@ type ChatOffer struct {
 	Service   string
 	StaffID   int64
 	Staff     string
+}
+
+// ChatTimes are the free times under an assistant reply, as the lookup
+// found them: a treatment's, with one member of staff or anyone.
+type ChatTimes struct {
+	Service string
+	// Staff is the person the lookup was for; empty for anyone.
+	Staff string
+	Slots []ChatSlot
+	// Unchecked are the people whose times could not be checked.
+	Unchecked []string
+}
+
+// ChatSlot is a free start time, in the studio's time zone, and the person
+// free then.
+type ChatSlot struct {
+	Start time.Time
+	Staff string
+}
+
+// chatTimesHeading names the treatment (and person) the times are for.
+func chatTimesHeading(ctx context.Context, t ChatTimes) string {
+	if t.Staff != "" {
+		return trf(ctx, "Free times for %[1]v with %[2]v", t.Service, t.Staff)
+	}
+	return trf(ctx, "Free times for %v", t.Service)
+}
+
+// chatSlotWhen is a free time as the chat lists it: "Mon 23/11 · 10:00".
+func chatSlotWhen(ctx context.Context, s ChatSlot) string {
+	days := [...]string{
+		tr(ctx, "Sun"), tr(ctx, "Mon"), tr(ctx, "Tue"), tr(ctx, "Wed"), tr(ctx, "Thu"), tr(ctx, "Fri"), tr(ctx, "Sat"),
+	}
+	return days[s.Start.Weekday()] + " " + s.Start.Format("02/01") + " · " + s.Start.Format("15:04")
+}
+
+// chatSlotStaff is who is free then, unless the lookup was for one person.
+func chatSlotStaff(t ChatTimes, s ChatSlot) string {
+	if t.Staff != "" || s.Staff == "" {
+		return ""
+	}
+	return " · " + s.Staff
+}
+
+// chatUnchecked says whose times could not be checked; empty if none.
+func chatUnchecked(ctx context.Context, t ChatTimes) string {
+	if len(t.Unchecked) == 0 {
+		return ""
+	}
+	return trf(ctx, "%v could not be checked: the booking page shows their times.", strings.Join(t.Unchecked, ", "))
+}
+
+func chatTimesNote(ctx context.Context) string {
+	return tr(ctx, "These times look free now; the booking page confirms them.")
+}
+
+// ChatTranscript is an assistant reply as the transcript keeps it: its
+// text, then its free times as plain lines, so a restored chat and the
+// model's next turn see the times the visitor saw.
+func ChatTranscript(ctx context.Context, text string, times []ChatTimes) string {
+	parts := []string{}
+	if text != "" {
+		parts = append(parts, text)
+	}
+	for _, t := range times {
+		lines := []string{chatTimesHeading(ctx, t) + ":"}
+		for _, s := range t.Slots {
+			lines = append(lines, "• "+chatSlotWhen(ctx, s)+chatSlotStaff(t, s))
+		}
+		if u := chatUnchecked(ctx, t); u != "" {
+			lines = append(lines, u)
+		}
+		parts = append(parts, strings.Join(lines, "\n"))
+	}
+	if len(times) > 0 {
+		parts = append(parts, chatTimesNote(ctx))
+	}
+	return strings.Join(parts, "\n\n")
 }
 
 // chatBooking is o as a Book button; n keeps its id unique on the page.

@@ -35,9 +35,20 @@ var messages = []string{
 	"Tell me about the studio",          // app.chat.suggest_studio
 	"Suggested questions",               // app.chat.suggestions
 	"Thinking…",                         // app.chat.thinking
-	"Ask Aesthetic Lab",                 // app.chat.title
+	"Free times for %v",                 // app.chat.times
+	"These times look free now; the booking page confirms them.",                   // app.chat.times_note
+	"%v could not be checked: the booking page shows their times.",                 // app.chat.times_unchecked
+	"Free times for %[1]v with %[2]v",                                              // app.chat.times_with
+	"Ask Aesthetic Lab",                                                            // app.chat.title
 	"You're sending messages too quickly. Please wait a minute and try again.",     // app.chat.too_fast
 	"Sorry, I can't answer right now. Please message us on Instagram or by email.", // app.chat.unavailable
+	"Fri",                 // app.chat.weekday_short.fri
+	"Mon",                 // app.chat.weekday_short.mon
+	"Sat",                 // app.chat.weekday_short.sat
+	"Sun",                 // app.chat.weekday_short.sun
+	"Thu",                 // app.chat.weekday_short.thu
+	"Tue",                 // app.chat.weekday_short.tue
+	"Wed",                 // app.chat.weekday_short.wed
 	"Close",               // app.common.close
 	"Next",                // app.common.next
 	"Previous",            // app.common.previous
@@ -288,9 +299,20 @@ var translations = map[Locale]map[string]string{
 		"Tell me about the studio":          "Vertel me over de studio",
 		"Suggested questions":               "Voorgestelde vragen",
 		"Thinking…":                         "Even denken…",
-		"Ask Aesthetic Lab":                 "Vraag het Aesthetic Lab",
+		"Free times for %v":                 "Vrije tijden voor %v",
+		"These times look free now; the booking page confirms them.":                   "Deze tijden lijken nu vrij; de boekingspagina bevestigt ze.",
+		"%v could not be checked: the booking page shows their times.":                 "De tijden van %v konden niet worden gecontroleerd: de boekingspagina toont ze.",
+		"Free times for %[1]v with %[2]v":                                              "Vrije tijden voor %[1]v bij %[2]v",
+		"Ask Aesthetic Lab":                                                            "Vraag het Aesthetic Lab",
 		"You're sending messages too quickly. Please wait a minute and try again.":     "Je stuurt te snel berichten. Wacht een minuut en probeer het opnieuw.",
 		"Sorry, I can't answer right now. Please message us on Instagram or by email.": "Sorry, ik kan nu niet antwoorden. Stuur ons een bericht op Instagram of per e-mail.",
+		"Fri":                 "vr",
+		"Mon":                 "ma",
+		"Sat":                 "za",
+		"Sun":                 "zo",
+		"Thu":                 "do",
+		"Tue":                 "di",
+		"Wed":                 "wo",
 		"Close":               "Sluiten",
 		"Next":                "Volgende",
 		"Previous":            "Vorige",
@@ -538,9 +560,20 @@ var translations = map[Locale]map[string]string{
 		"Tell me about the studio":          "Parlez-moi du studio",
 		"Suggested questions":               "Questions suggérées",
 		"Thinking…":                         "Réflexion…",
-		"Ask Aesthetic Lab":                 "Demandez à Aesthetic Lab",
+		"Free times for %v":                 "Créneaux libres : %v",
+		"These times look free now; the booking page confirms them.":                   "Ces créneaux semblent libres pour l'instant ; la page de réservation les confirme.",
+		"%v could not be checked: the booking page shows their times.":                 "Impossible de vérifier les créneaux de %v : la page de réservation les affiche.",
+		"Free times for %[1]v with %[2]v":                                              "Créneaux libres : %[1]v avec %[2]v",
+		"Ask Aesthetic Lab":                                                            "Demandez à Aesthetic Lab",
 		"You're sending messages too quickly. Please wait a minute and try again.":     "Vous envoyez des messages trop vite. Patientez une minute puis réessayez.",
 		"Sorry, I can't answer right now. Please message us on Instagram or by email.": "Désolé, je ne peux pas répondre pour le moment. Écrivez-nous sur Instagram ou par e-mail.",
+		"Fri":                 "ven.",
+		"Mon":                 "lun.",
+		"Sat":                 "sam.",
+		"Sun":                 "dim.",
+		"Thu":                 "jeu.",
+		"Tue":                 "mar.",
+		"Wed":                 "mer.",
 		"Close":               "Fermer",
 		"Next":                "Suivant",
 		"Previous":            "Précédent",
@@ -788,9 +821,20 @@ var translations = map[Locale]map[string]string{
 		"Tell me about the studio":          "Расскажите о студии",
 		"Suggested questions":               "Частые вопросы",
 		"Thinking…":                         "Думаю…",
-		"Ask Aesthetic Lab":                 "Спросите Aesthetic Lab",
+		"Free times for %v":                 "Свободное время: %v",
+		"These times look free now; the booking page confirms them.":                   "Это время сейчас выглядит свободным; страница записи его подтвердит.",
+		"%v could not be checked: the booking page shows their times.":                 "Не удалось проверить время: %v. Его покажет страница записи.",
+		"Free times for %[1]v with %[2]v":                                              "Свободное время: %[1]v, мастер %[2]v",
+		"Ask Aesthetic Lab":                                                            "Спросите Aesthetic Lab",
 		"You're sending messages too quickly. Please wait a minute and try again.":     "Вы отправляете сообщения слишком часто. Подождите минуту и попробуйте снова.",
 		"Sorry, I can't answer right now. Please message us on Instagram or by email.": "Извините, сейчас не могу ответить. Напишите нам в Instagram или на почту.",
+		"Fri":                 "пт",
+		"Mon":                 "пн",
+		"Sat":                 "сб",
+		"Sun":                 "вс",
+		"Thu":                 "чт",
+		"Tue":                 "вт",
+		"Wed":                 "ср",
 		"Close":               "Закрыть",
 		"Next":                "Далее",
 		"Previous":            "Назад",
@@ -1038,9 +1082,20 @@ var translations = map[Locale]map[string]string{
 		"Tell me about the studio":          "Розкажіть про студію",
 		"Suggested questions":               "Часті запитання",
 		"Thinking…":                         "Думаю…",
-		"Ask Aesthetic Lab":                 "Запитайте Aesthetic Lab",
+		"Free times for %v":                 "Вільний час: %v",
+		"These times look free now; the booking page confirms them.":                   "Цей час зараз виглядає вільним; сторінка запису його підтвердить.",
+		"%v could not be checked: the booking page shows their times.":                 "Не вдалося перевірити час: %v. Його покаже сторінка запису.",
+		"Free times for %[1]v with %[2]v":                                              "Вільний час: %[1]v, майстер %[2]v",
+		"Ask Aesthetic Lab":                                                            "Запитайте Aesthetic Lab",
 		"You're sending messages too quickly. Please wait a minute and try again.":     "Ви надсилаєте повідомлення занадто часто. Зачекайте хвилину й спробуйте знову.",
 		"Sorry, I can't answer right now. Please message us on Instagram or by email.": "Вибачте, зараз не можу відповісти. Напишіть нам в Instagram або на пошту.",
+		"Fri":                 "пт",
+		"Mon":                 "пн",
+		"Sat":                 "сб",
+		"Sun":                 "нд",
+		"Thu":                 "чт",
+		"Tue":                 "вт",
+		"Wed":                 "ср",
 		"Close":               "Закрити",
 		"Next":                "Далі",
 		"Previous":            "Назад",

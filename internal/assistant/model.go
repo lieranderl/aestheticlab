@@ -49,9 +49,10 @@ func (g *Gemini) Generate(ctx context.Context, contents []*genai.Content, cfg *g
 }
 
 // Fake is a scripted stand-in for local development and the browser tests:
-// no network and no cost. A message about times calls find_free_slots, one
-// about booking calls offer_booking, for the first bookable treatment;
-// anything else gets a fixed reply.
+// no network and no cost. A message about times calls find_free_slots with
+// only_times, so the times found end the reply; one about booking calls
+// offer_booking, for the first bookable treatment; anything else gets a
+// fixed reply.
 type Fake struct{}
 
 var (
@@ -79,9 +80,9 @@ func (Fake) Generate(_ context.Context, contents []*genai.Content, cfg *genai.Ge
 	}
 	switch {
 	case service != "" && timesWords.MatchString(msg):
-		return fakeCall(toolFindFreeSlots, service), nil
+		return fakeCall(toolFindFreeSlots, map[string]any{"service_id": service, "only_times": true}), nil
 	case service != "" && bookWords.MatchString(msg):
-		return fakeCall(toolOfferBooking, service), nil
+		return fakeCall(toolOfferBooking, map[string]any{"service_id": service}), nil
 	}
 	return reply("I'm Aesthetic Lab's test assistant, without AI. Ask me for free times or to book, to try the tools."), nil
 }
@@ -95,10 +96,10 @@ func reply(text string) *genai.GenerateContentResponse {
 	}}, UsageMetadata: noTokens}
 }
 
-func fakeCall(name, service string) *genai.GenerateContentResponse {
+func fakeCall(name string, args map[string]any) *genai.GenerateContentResponse {
 	return &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{
 		Content: genai.NewContentFromParts([]*genai.Part{{FunctionCall: &genai.FunctionCall{
-			ID: "fake-1", Name: name, Args: map[string]any{"service_id": service},
+			ID: "fake-1", Name: name, Args: args,
 		}}}, genai.RoleModel),
 		FinishReason: genai.FinishReasonStop,
 	}}, UsageMetadata: noTokens}
@@ -111,13 +112,9 @@ func fakeSummary(fr *genai.FunctionResponse) string {
 	if fr.Name == toolOfferBooking {
 		return "Tap the button below to book."
 	}
-	slots, _ := fr.Response["slots"].([]map[string]any)
-	if len(slots) == 0 {
-		return "I found no free times in that period. Tap Book to see the booking page."
+	// The times found are shown under the reply; it never lists them.
+	if slots, _ := fr.Response["slots"].([]map[string]any); len(slots) > 0 {
+		return fmt.Sprintf("Here are the free times I found for %s.", fr.Response["service"])
 	}
-	var times []string
-	for _, s := range slots[:min(4, len(slots))] {
-		times = append(times, fmt.Sprintf("%s %s %s with %s", s["weekday"], s["date"], s["time"], s["staff"]))
-	}
-	return fmt.Sprintf("%s looks free: %s.", fr.Response["service"], strings.Join(times, "; "))
+	return "I found no free times in that period. Tap Book to see the booking page."
 }

@@ -70,11 +70,15 @@ type Offer struct {
 	Staff     string
 }
 
-// Answer is the assistant's reply, the Book buttons it offers, and the
-// tokens its model calls were billed for.
+// Answer is the assistant's reply, the Book buttons it offers, the free
+// times it found, and the tokens its model calls were billed for. Text may
+// be empty when Times answers on its own.
 type Answer struct {
 	Text   string
 	Offers []Offer
+	// Times are the free times find_free_slots returned, for the chat to
+	// show as they are: the model only explains them.
+	Times []FreeTimes
 	// Tokens are the billed tokens, with worstRoundTokens for each model
 	// call whose usage is unknown.
 	Tokens usage.Tokens
@@ -150,13 +154,14 @@ func New(opts Options) *Assistant {
 // transcript reaches the model as quoted data in one visitor message, so a
 // forged "assistant" line is just text.
 func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, message string) (Answer, error) {
+	prompt, visitor := systemPrompt(k), a.visitorMessage(history, message)
 	cfg := &genai.GenerateContentConfig{
-		SystemInstruction: genai.NewContentFromText(systemPrompt(k), genai.RoleUser),
+		SystemInstruction: genai.NewContentFromText(prompt, genai.RoleUser),
 		Tools:             tools(),
 		MaxOutputTokens:   maxOutputTokens,
 		ThinkingConfig:    &genai.ThinkingConfig{ThinkingLevel: genai.ThinkingLevelLow},
 	}
-	contents := []*genai.Content{genai.NewContentFromText(a.visitorMessage(history, message), genai.RoleUser)}
+	contents := []*genai.Content{genai.NewContentFromText(visitor, genai.RoleUser)}
 	run := &toolRun{a: a, k: k}
 	var tokens usage.Tokens
 	unmetered := 0
@@ -190,11 +195,7 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		}
 		said = append(said, reply)
 		if len(calls) == 0 {
-			text := finalAnswer(said)
-			if text == "" {
-				return Answer{Tokens: tokens, Unmetered: unmetered}, ErrNoAnswer
-			}
-			return Answer{Text: text, Offers: run.offers, Tokens: tokens, Unmetered: unmetered}, nil
+			return run.answer(said, prompt+"\n"+visitor, tokens, unmetered)
 		}
 		// Text written with a find_free_slots call comes before the times
 		// are known: any times in it are guesses, never shown.
@@ -204,17 +205,30 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		// Gemini needs its own message back unchanged (thought signatures).
 		contents = append(contents, resp.Candidates[0].Content)
 		parts := make([]*genai.Part, 0, len(calls))
+		// A plain availability question is answered once the model asked
+		// for only_times and every call worked and found times: another
+		// round would only repeat them, so the reply ends here.
+		onlyTimes, worked := false, true
 		for _, c := range calls {
-			part := genai.NewPartFromFunctionResponse(c.Name, run.call(ctx, c))
+			res := run.call(ctx, c)
+			_, failed := res["error"]
+			slots, _ := res["slots"].([]map[string]any)
+			if failed || c.Name == toolFindFreeSlots && len(slots) == 0 {
+				worked = false
+			}
+			if c.Name == toolFindFreeSlots && c.Args["only_times"] == true {
+				onlyTimes = true
+			}
+			part := genai.NewPartFromFunctionResponse(c.Name, res)
 			part.FunctionResponse.ID = c.ID
 			parts = append(parts, part)
 		}
+		if onlyTimes && worked {
+			return run.answer(said, prompt+"\n"+visitor, tokens, unmetered)
+		}
 		contents = append(contents, genai.NewContentFromParts(parts, genai.RoleUser))
 	}
-	if text := finalAnswer(append(said, "")); text != "" {
-		return Answer{Text: text, Offers: run.offers, Tokens: tokens, Unmetered: unmetered}, nil
-	}
-	return Answer{Tokens: tokens, Unmetered: unmetered}, ErrNoAnswer
+	return run.answer(said, prompt+"\n"+visitor, tokens, unmetered)
 }
 
 // billed is a response's billed tokens: the prompt with any tool-use
@@ -369,6 +383,10 @@ type toolRun struct {
 	a      *Assistant
 	k      Knowledge
 	offers []Offer
+	// times are the free times to show (showTimes); asked the times of day
+	// the lookups were asked for, which the reply may name.
+	times []FreeTimes
+	asked []string
 }
 
 func (r *toolRun) call(ctx context.Context, c *genai.FunctionCall) map[string]any {
@@ -441,6 +459,7 @@ func (r *toolRun) findFreeSlots(ctx context.Context, args map[string]any) map[st
 		first = today
 	}
 	window := [2]availability.Clock{0, 24 * 60}
+	var asked []string
 	for i, name := range []string{"from_time", "to_time"} {
 		if v, ok := args[name].(string); ok && v != "" {
 			c, okClock := availability.ParseClock(v)
@@ -448,6 +467,7 @@ func (r *toolRun) findFreeSlots(ctx context.Context, args map[string]any) map[st
 				return failure(name + " must be HH:MM")
 			}
 			window[i] = c
+			asked = append(asked, fmt.Sprintf("%02d:%02d", c/60, c%60))
 		}
 	}
 	people := make([]availability.Person, 0, len(staff))
@@ -461,16 +481,23 @@ func (r *toolRun) findFreeSlots(ctx context.Context, args map[string]any) map[st
 	case err != nil:
 		return failure("the calendars did not answer; offer the Book button so the visitor sees live times in the booking page")
 	}
+	r.asked = append(r.asked, asked...)
 	picked, more := spreadSlots(res.Slots, loc, window)
 	slots := make([]map[string]any, 0, len(picked))
+	shown := FreeTimes{ServiceID: s.ID, Service: s.Name, Unchecked: res.Unavailable}
+	if _, chosen := args["staff_id"]; chosen && len(staff) == 1 {
+		shown.StaffID, shown.Staff = staff[0].ID, staff[0].Name
+	}
 	for _, sl := range picked {
 		t := sl.Start.In(loc)
 		slots = append(slots, map[string]any{
 			"date": t.Format(time.DateOnly), "weekday": t.Weekday().String(), "time": t.Format("15:04"),
 			"staff_id": sl.StaffID, "staff": sl.Name,
 		})
+		shown.Slots = append(shown.Slots, Slot{Start: t, StaffID: sl.StaffID, Staff: sl.Name})
 	}
-	note := "These times look free now; the booking page confirms them."
+	r.showTimes(shown)
+	note := "These times are shown to the visitor under your reply, with a Book button: don't list them again. They look free now; the booking page confirms them."
 	if more {
 		note += " Only each person's first free time per day is listed; later times that day may be free too: call again with from_time to see them."
 	}
