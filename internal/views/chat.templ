@@ -90,14 +90,14 @@ templ chatWidget() {
 			<form class="flex items-end gap-2 border-t border-base-300 p-3" data-on:submit={ "$chatInput.trim() && !$chatBusy && @post('" + href(ctx, "chat") + "')" }>
 				<label for="chat-input" class="sr-only">{ tr(ctx, "Your question") }</label>
 				<!-- Enter sends, Shift+Enter adds a line. Typed text stays 16px (phones
-				zoom into smaller fields); only the hint is smaller, on two lines
-				where the field can't grow with its content. -->
+				zoom into smaller fields); only the hint is smaller. While empty the
+				field holds two lines of hint: Safari sizes it to typed text only. -->
 				<textarea
 					id="chat-input"
 					rows="2"
 					maxlength="500"
 					autocomplete="off"
-					class="textarea textarea-bordered max-h-32 min-h-11 grow resize-none field-sizing-content font-main text-base leading-snug placeholder:text-sm"
+					class="textarea textarea-bordered max-h-32 min-h-11 grow placeholder-shown:min-h-15 resize-none field-sizing-content font-main text-base leading-snug placeholder:text-sm"
 					placeholder={ tr(ctx, "Ask about treatments, prices or free times") }
 					data-bind:chat-input
 					data-attr:disabled="$chatBusy"

@@ -257,6 +257,18 @@ test("shows the whole hint in a smaller size than typed text", async ({
 	expect(sizes.tag).toBe("TEXTAREA");
 	expect(sizes.text).toBe(16);
 	expect(sizes.hint).toBeLessThan(16);
+	// Two lines of hint fit while the field is empty, also where it grows
+	// with its typed content only (Safari).
+	const room = await input.evaluate((el) => {
+		const cs = getComputedStyle(el);
+		return (
+			el.clientHeight -
+			Number.parseFloat(cs.paddingTop) -
+			Number.parseFloat(cs.paddingBottom) -
+			2 * Number.parseFloat(getComputedStyle(el, "::placeholder").lineHeight)
+		);
+	});
+	expect(room).toBeGreaterThanOrEqual(0);
 });
 
 for (const [width, height] of [

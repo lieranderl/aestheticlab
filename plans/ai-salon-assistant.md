@@ -87,6 +87,8 @@ Cut replies (2026-11-22): a Russian staging answer stopped mid-word at 1,020 of 
 
 Test set in the repo (2026-11-22): `scripts/chat-test-set.json` holds the 71 cases (75 messages) with what a good answer says; `bun run chat-test-set` sends them to a local server with a real model and saves the transcripts in `tmp/chat-test-set/` for grading. Re-run it after big content changes or a model change (about €0.25). The prompt now says an owner note wins over a treatment's description when they disagree.
 
+Free times by time of day (2026-11-22): on staging, "any day next week at 17:00" was answered "nothing free" while the calendars had room. `find_free_slots` returned the eight earliest start times, all on the first morning. It now takes `from_time`/`to_time` and returns each person's first free time per day in that window (up to 12), with a note when later times exist. The empty chat field also keeps room for two lines of hint in Safari, which sizes it to typed text only.
+
 Still to do: ~~create the `AVAILABILITY_CALENDARS` repository secret~~ (done); ~~review and apply the infrastructure plan; PR to `staging`; check real calendars and Gemini on staging; the 60-question test set~~ (done); check free times against the Timely widget on staging; update the privacy policy's "Last updated" date when the chat reaches production; seed production Firestore.
 
 ## Phases

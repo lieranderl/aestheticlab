@@ -208,6 +208,50 @@ func TestFindFreeSlotsAnswersFromHoursAndCalendars(t *testing.T) {
 	}
 }
 
+// slotsFor runs find_free_slots with args and returns the times it gave the
+// model.
+func slotsFor(t *testing.T, args map[string]any) []map[string]any {
+	t.Helper()
+	m := &scripted{replies: []*genai.GenerateContentResponse{call("find_free_slots", args), text("ok")}}
+	if _, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?"); err != nil {
+		t.Fatal(err)
+	}
+	slots, _ := m.requests[1][2].Parts[0].FunctionResponse.Response["slots"].([]map[string]any)
+	return slots
+}
+
+// Found on staging: "any day next week at 17:00" got the eight earliest
+// times, all on Monday morning, so the assistant said 17:00 was full. A
+// time of day narrows the search, and times spread over the days.
+func TestFreeTimesCanBeAskedForATimeOfDay(t *testing.T) {
+	week := map[string]any{"service_id": "4847871", "from_date": "2026-11-23", "to_date": "2026-11-27"}
+	at17 := map[string]any{"from_time": "17:00", "to_time": "17:00"}
+	for k, v := range week {
+		at17[k] = v
+	}
+	got := slotsFor(t, at17)
+	if len(got) != 5 {
+		t.Fatalf("17:00 on five weekdays: got %v", got)
+	}
+	for _, s := range got {
+		if s["time"] != "17:00" {
+			t.Errorf("slot %v is not at 17:00", s)
+		}
+	}
+
+	days := map[any]bool{}
+	for _, s := range slotsFor(t, week) {
+		days[s["date"]] = true
+	}
+	if len(days) < 4 {
+		t.Errorf("a week without a time gave times on %d days; want them spread over the week", len(days))
+	}
+
+	if bad := slotsFor(t, map[string]any{"service_id": "4847871", "from_time": "5pm"}); bad != nil {
+		t.Errorf("a malformed time gave slots %v; want an error", bad)
+	}
+}
+
 func TestToolsRejectUnknownServicesAndStaff(t *testing.T) {
 	for name, args := range map[string]map[string]any{
 		"unknown service":       {"service_id": "999"},
