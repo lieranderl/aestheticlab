@@ -231,7 +231,7 @@
 			"who_text": "Aesthetic Lab, {{address}}. Pour toute question sur vos données, écrivez à {{email}}.",
 			"chat_messages": "Les messages que vous envoyez dans le chat de notre site",
 			"chat_answer": "Répondre à vos questions dans le chat de notre site",
-			"chat_processor": "Google Cloud (Vertex AI, dans l’UE), qui fait fonctionner l’assistant de chat de notre site. Les messages servent uniquement à vous répondre ; notre site ne les conserve pas."
+			"chat_processor": "Google Cloud (Vertex AI, dans l’UE), qui fait fonctionner l’assistant de chat de notre site. Les messages servent uniquement à vous répondre ; nos serveurs ne les conservent pas, et votre navigateur garde la conversation seulement jusqu’à la fermeture de l’onglet."
 		},
 		"services": {
 			"add_on_note": "Les prix concernent le soin lui-même. Réparations, nail art et dépose sont en supplément, dès {{price}}.",

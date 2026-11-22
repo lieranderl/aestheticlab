@@ -231,7 +231,7 @@
 			"who_text": "Aesthetic Lab, {{address}}. Voor alles over je gegevens kun je mailen naar {{email}}.",
 			"chat_messages": "Berichten die je in onze websitechat stuurt",
 			"chat_answer": "Je vragen beantwoorden in onze websitechat",
-			"chat_processor": "Google Cloud (Vertex AI, in de EU), waarop onze websitechat draait. Chatberichten worden alleen gebruikt om je te antwoorden; onze website bewaart ze niet."
+			"chat_processor": "Google Cloud (Vertex AI, in de EU), waarop onze websitechat draait. Chatberichten worden alleen gebruikt om je te antwoorden; onze servers bewaren ze niet, en je browser bewaart het gesprek alleen tot je het tabblad sluit."
 		},
 		"services": {
 			"add_on_note": "Prijzen gelden voor de behandeling zelf. Herstellingen, nail art en verwijderen zijn extra, vanaf {{price}}.",

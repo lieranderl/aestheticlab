@@ -5,7 +5,16 @@ package views
 // starts hidden and Datastar reveals it: without JavaScript the chat cannot
 // send, so it must not cover the page.
 templ chatWidget() {
-	<div id="chat" hidden data-signals={ chatSignals } data-attr:hidden="false" class="fixed bottom-4 left-4 z-40 max-lg:bottom-24">
+	<!-- The conversation is kept for this tab (aesthetic.chatRestore, chatSave in site.js). -->
+	<div
+		id="chat"
+		hidden
+		data-signals={ chatSignals }
+		data-attr:hidden="false"
+		data-init="$chatHistory = aesthetic.chatRestore(); $chatOpen = aesthetic.chatWasOpen()"
+		data-effect="aesthetic.chatSave($chatHistory, $chatOpen)"
+		class="fixed bottom-4 left-4 z-40 max-lg:bottom-24"
+	>
 		<button
 			id="chat-open"
 			type="button"

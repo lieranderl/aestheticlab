@@ -128,3 +128,67 @@ test("stays out of the way without JavaScript", async ({ browser }) => {
 	await expect(page.locator("#chat")).toBeHidden();
 	await context.close();
 });
+
+test("keeps the conversation across reloads and pages in the same tab", async ({
+	page,
+}) => {
+	await page.goto("/en-BE/");
+	await page.getByRole("button", { name: "Chat with our assistant" }).click();
+	const panel = page.getByRole("dialog", { name: "Ask Aesthetic Lab" });
+	const input = panel.getByRole("textbox", { name: "Your question" });
+	await input.fill("Remember me");
+	await input.press("Enter");
+	await expect(panel.locator("#chat-log .chat-start")).toHaveCount(2);
+
+	// Reloaded while open: the panel reopens with the conversation.
+	await page.reload();
+	await expect(panel).toBeVisible();
+	await expect(panel.locator("#chat-log .chat-end")).toHaveText("Remember me");
+	await expect(panel.locator("#chat-log .chat-start")).toHaveCount(2);
+
+	// Another page of the site, same tab.
+	await page.goto("/en-BE/pricelist/");
+	await expect(panel.locator("#chat-log .chat-end")).toHaveText("Remember me");
+
+	// The next message carries the restored transcript to the server.
+	const request = page.waitForRequest(
+		(r) => r.method() === "POST" && r.url().endsWith("/en-BE/chat"),
+	);
+	await input.fill("Still there?");
+	await input.press("Enter");
+	const sent = (await request).postDataJSON();
+	expect(sent.chatHistory).toHaveLength(2);
+	expect(sent.chatHistory[0]).toEqual({ role: "visitor", text: "Remember me" });
+	await expect(panel.locator("#chat-log .chat-end")).toHaveCount(2);
+});
+
+test("stays closed after a reload if it was closed", async ({ page }) => {
+	await page.goto("/en-BE/");
+	await page.getByRole("button", { name: "Chat with our assistant" }).click();
+	const panel = page.getByRole("dialog", { name: "Ask Aesthetic Lab" });
+	const input = panel.getByRole("textbox", { name: "Your question" });
+	await input.fill("Hello");
+	await input.press("Enter");
+	await expect(panel.locator("#chat-log .chat-start")).toHaveCount(2);
+	await panel.getByRole("button", { name: "Close chat" }).click();
+
+	await page.reload();
+	await expect(panel).toBeHidden();
+	await page.getByRole("button", { name: "Chat with our assistant" }).click();
+	await expect(panel.locator("#chat-log .chat-end")).toHaveText("Hello");
+});
+
+test("starts fresh in a new tab", async ({ page, context }) => {
+	await page.goto("/en-BE/");
+	await page.getByRole("button", { name: "Chat with our assistant" }).click();
+	const input = page.getByRole("textbox", { name: "Your question" });
+	await input.fill("Only in this tab");
+	await input.press("Enter");
+	await expect(page.locator("#chat-log .chat-end")).toHaveCount(1);
+
+	const other = await context.newPage();
+	await other.goto("/en-BE/");
+	await expect(other.locator("#chat-log .chat-start")).toHaveCount(1);
+	await expect(other.locator("#chat-log .chat-end")).toHaveCount(0);
+	await other.close();
+});

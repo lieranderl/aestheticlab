@@ -30,27 +30,27 @@ func chatWidget() templ.Component {
 		}
 		ctx = templ.InitializeContext(ctx)
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"chat\" hidden data-signals=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!-- The conversation is kept for this tab (aesthetic.chatRestore, chatSave in site.js). --><div id=\"chat\" hidden data-signals=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templruntime.NewAttributeExpression(chatSignals).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 8, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 12, Col: 28}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" data-attr:hidden=\"false\" class=\"fixed bottom-4 left-4 z-40 max-lg:bottom-24\"><button id=\"chat-open\" type=\"button\" class=\"btn btn-circle btn-accent size-14 shadow-lg\" aria-label=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" data-attr:hidden=\"false\" data-init=\"$chatHistory = aesthetic.chatRestore(); $chatOpen = aesthetic.chatWasOpen()\" data-effect=\"aesthetic.chatSave($chatHistory, $chatOpen)\" class=\"fixed bottom-4 left-4 z-40 max-lg:bottom-24\"><button id=\"chat-open\" type=\"button\" class=\"btn btn-circle btn-accent size-14 shadow-lg\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Chat with our assistant")).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 13, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 22, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
@@ -63,7 +63,7 @@ func chatWidget() templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Chat with our assistant")).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 14, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 23, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 		if templ_7745c5c3_Err != nil {
@@ -84,7 +84,7 @@ func chatWidget() templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Ask Aesthetic Lab"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 32, Col: 99}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 41, Col: 99}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -97,7 +97,7 @@ func chatWidget() templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Close chat")).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 33, Col: 116}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 42, Col: 116}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 		if templ_7745c5c3_Err != nil {
@@ -118,7 +118,7 @@ func chatWidget() templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "AI assistant: it can make mistakes. Please don't share health details."))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 38, Col: 87}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 47, Col: 87}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -139,7 +139,7 @@ func chatWidget() templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Thinking…"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 49, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 58, Col: 53}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -152,7 +152,7 @@ func chatWidget() templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templruntime.NewAttributeExpression("$chatInput.trim() && !$chatBusy && @post('" + href(ctx, "chat") + "')").Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 54, Col: 155}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 63, Col: 155}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 		if templ_7745c5c3_Err != nil {
@@ -165,7 +165,7 @@ func chatWidget() templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Your question"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 55, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 64, Col: 70}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -178,7 +178,7 @@ func chatWidget() templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Ask about treatments, prices or free times")).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 62, Col: 72}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 71, Col: 72}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
 		if templ_7745c5c3_Err != nil {
@@ -191,7 +191,7 @@ func chatWidget() templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Send")).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 66, Col: 104}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 75, Col: 104}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 		if templ_7745c5c3_Err != nil {
@@ -241,7 +241,7 @@ func ChatMessage(visitor bool, text string, offers []ChatOffer, n int) templ.Com
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(text)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 80, Col: 92}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 89, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -259,7 +259,7 @@ func ChatMessage(visitor bool, text string, offers []ChatOffer, n int) templ.Com
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(text)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 84, Col: 102}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 93, Col: 102}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {

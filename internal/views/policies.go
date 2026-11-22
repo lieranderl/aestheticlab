@@ -62,7 +62,7 @@ func privacySections(ctx context.Context) []policySection {
 	if chatEnabled(ctx) {
 		sections[1].List = append(sections[1].List, tr(ctx, "Messages you send in our website chat"))
 		sections[2].List = append(sections[2].List, tr(ctx, "Answer your questions in our website chat"))
-		sections[4].List = append([]string{tr(ctx, "Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our website does not store them.")}, sections[4].List...)
+		sections[4].List = append([]string{tr(ctx, "Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab.")}, sections[4].List...)
 	}
 	for i := range sections {
 		sections[i].Title = leadingNumber.ReplaceAllString(sections[i].Title, "")

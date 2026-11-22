@@ -163,7 +163,7 @@ var messages = []string{
 	"We may update this Privacy Policy from time to time. The latest version will always be available on our website.", // app.privacy.changes_text
 	"Answer your questions in our website chat", // app.privacy.chat_answer
 	"Messages you send in our website chat",     // app.privacy.chat_messages
-	"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our website does not store them.", // app.privacy.chat_processor
+	"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab.", // app.privacy.chat_processor
 	"6. Cookies & Tracking Technologies",                                                 // app.privacy.cookies
 	"Analytics cookies: optional; analytics storage is granted only after your consent.", // app.privacy.cookies_analytics
 	"Strictly necessary cookies: always active for basic website functionality.",         // app.privacy.cookies_necessary
@@ -410,7 +410,7 @@ var translations = map[Locale]map[string]string{
 		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.": "We kunnen dit privacybeleid van tijd tot tijd bijwerken. De nieuwste versie is altijd beschikbaar op onze website.",
 		"Answer your questions in our website chat": "Je vragen beantwoorden in onze websitechat",
 		"Messages you send in our website chat":     "Berichten die je in onze websitechat stuurt",
-		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our website does not store them.": "Google Cloud (Vertex AI, in de EU), waarop onze websitechat draait. Chatberichten worden alleen gebruikt om je te antwoorden; onze website bewaart ze niet.",
+		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab.": "Google Cloud (Vertex AI, in de EU), waarop onze websitechat draait. Chatberichten worden alleen gebruikt om je te antwoorden; onze servers bewaren ze niet, en je browser bewaart het gesprek alleen tot je het tabblad sluit.",
 		"6. Cookies & Tracking Technologies":                                                 "6. Cookies & Traceertechnologieën",
 		"Analytics cookies: optional; analytics storage is granted only after your consent.": "Analysecookies: optioneel; analyseopslag wordt alleen na jouw toestemming toegestaan.",
 		"Strictly necessary cookies: always active for basic website functionality.":         "Strikt noodzakelijke cookies: altijd actief voor basisfunctionaliteit van de website.",
@@ -654,7 +654,7 @@ var translations = map[Locale]map[string]string{
 		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.": "Nous pouvons mettre à jour cette politique de confidentialité de temps à autre. La dernière version sera toujours disponible sur notre site Web.",
 		"Answer your questions in our website chat": "Répondre à vos questions dans le chat de notre site",
 		"Messages you send in our website chat":     "Les messages que vous envoyez dans le chat de notre site",
-		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our website does not store them.": "Google Cloud (Vertex AI, dans l’UE), qui fait fonctionner l’assistant de chat de notre site. Les messages servent uniquement à vous répondre ; notre site ne les conserve pas.",
+		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab.": "Google Cloud (Vertex AI, dans l’UE), qui fait fonctionner l’assistant de chat de notre site. Les messages servent uniquement à vous répondre ; nos serveurs ne les conservent pas, et votre navigateur garde la conversation seulement jusqu’à la fermeture de l’onglet.",
 		"6. Cookies & Tracking Technologies":                                                 "6. Cookies et technologies de suivi",
 		"Analytics cookies: optional; analytics storage is granted only after your consent.": "Cookies d'analyse : facultatifs ; le stockage analytique n'est autorisé qu'après votre consentement.",
 		"Strictly necessary cookies: always active for basic website functionality.":         "Cookies strictement nécessaires : toujours actifs pour le fonctionnement de base du site.",
@@ -898,7 +898,7 @@ var translations = map[Locale]map[string]string{
 		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.": "Мы можем время от времени обновлять эту Политику конфиденциальности. Последняя версия всегда будет доступна на нашем сайте.",
 		"Answer your questions in our website chat": "Отвечать на ваши вопросы в чате на сайте",
 		"Messages you send in our website chat":     "Сообщения, которые вы отправляете в чат на нашем сайте",
-		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our website does not store them.": "Google Cloud (Vertex AI, в ЕС), на котором работает чат-ассистент нашего сайта. Сообщения используются только для ответа вам; наш сайт их не хранит.",
+		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab.": "Google Cloud (Vertex AI, в ЕС), на котором работает чат-ассистент нашего сайта. Сообщения используются только для ответа вам; наши серверы их не хранят, а ваш браузер сохраняет переписку только до закрытия вкладки.",
 		"6. Cookies & Tracking Technologies":                                                 "6. Файлы cookie и технологии отслеживания",
 		"Analytics cookies: optional; analytics storage is granted only after your consent.": "Аналитические cookie: необязательны; аналитическое хранилище разрешается только после вашего согласия.",
 		"Strictly necessary cookies: always active for basic website functionality.":         "Строго необходимые cookie: всегда активны для базовой работы сайта.",
@@ -1142,7 +1142,7 @@ var translations = map[Locale]map[string]string{
 		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.": "Ми можемо час від часу оновлювати цю Політику конфіденційності. Остання версія завжди буде доступна на нашому сайті.",
 		"Answer your questions in our website chat": "Відповідати на ваші запитання в чаті на сайті",
 		"Messages you send in our website chat":     "Повідомлення, які ви надсилаєте в чат на нашому сайті",
-		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our website does not store them.": "Google Cloud (Vertex AI, у ЄС), на якому працює чат-асистент нашого сайту. Повідомлення використовуються лише для відповіді вам; наш сайт їх не зберігає.",
+		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab.": "Google Cloud (Vertex AI, у ЄС), на якому працює чат-асистент нашого сайту. Повідомлення використовуються лише для відповіді вам; наші сервери їх не зберігають, а ваш браузер зберігає розмову лише до закриття вкладки.",
 		"6. Cookies & Tracking Technologies":                                                 "6. Файли cookie та технології відстеження",
 		"Analytics cookies: optional; analytics storage is granted only after your consent.": "Аналітичні cookie: необов'язкові; аналітичне сховище дозволяється лише після вашої згоди.",
 		"Strictly necessary cookies: always active for basic website functionality.":         "Строго необхідні cookie: завжди активні для базової роботи сайту.",

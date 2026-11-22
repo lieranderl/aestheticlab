@@ -352,6 +352,78 @@
 	}
 	scrollMotion();
 
+	// The chat's visible conversation, kept for this tab only
+	// (sessionStorage): it survives reloads and moving between pages, and
+	// goes when the tab closes. The server stores none of it.
+	const chatKey = "aestheticlab_chat_v1";
+	const chatTurns = 20;
+	let chatRestored = false;
+
+	function chatSaved() {
+		try {
+			const saved = JSON.parse(sessionStorage.getItem(chatKey) || "null");
+			const history = Array.isArray(saved?.history) ? saved.history : [];
+			return {
+				history: history
+					.filter(
+						(turn) =>
+							(turn?.role === "visitor" || turn?.role === "assistant") &&
+							typeof turn.text === "string" &&
+							turn.text.trim() !== "",
+					)
+					.slice(-chatTurns),
+				open: saved?.open === true,
+			};
+		} catch {
+			return { history: [], open: false };
+		}
+	}
+
+	/** A message as views.ChatMessage draws it (same classes), as text only. */
+	function chatBubble({ role, text }) {
+		const visitor = role === "visitor";
+		const row = document.createElement("div");
+		row.className = `chat ${visitor ? "chat-end" : "chat-start"}`;
+		const bubble = document.createElement("div");
+		bubble.className = visitor
+			? "chat-bubble chat-bubble-primary whitespace-pre-line font-main text-sm"
+			: "chat-bubble bg-base-200 whitespace-pre-line font-main text-sm text-base-content";
+		bubble.textContent = text;
+		row.append(bubble);
+		return row;
+	}
+
+	/** Draws this tab's saved conversation into the log and returns it. */
+	function chatRestore() {
+		const { history } = chatSaved();
+		const log = document.getElementById("chat-log");
+		if (log) for (const turn of history) log.append(chatBubble(turn));
+		chatRestored = true;
+		return history;
+	}
+
+	/** Whether the panel was open when the visitor last left a page. */
+	function chatWasOpen() {
+		const { history, open } = chatSaved();
+		return open && history.length > 0;
+	}
+
+	function chatSave(history, open) {
+		if (!chatRestored) return; // never overwrite before restoring
+		try {
+			sessionStorage.setItem(
+				chatKey,
+				JSON.stringify({
+					version: 1,
+					history: (Array.isArray(history) ? history : []).slice(-chatTurns),
+					open: open === true,
+				}),
+			);
+		} catch {
+			// Private mode or full storage: the chat lasts for this page only.
+		}
+	}
+
 	window.aesthetic = {
 		/** True when the cookie banner should show: no choice stored yet. */
 		needsConsent: () => stored() === null,
@@ -367,5 +439,8 @@
 		showGallery,
 		closeGallery,
 		navigation,
+		chatRestore,
+		chatWasOpen,
+		chatSave,
 	};
 })();
