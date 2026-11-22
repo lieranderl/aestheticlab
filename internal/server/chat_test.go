@@ -177,3 +177,12 @@ func TestThePrivacyPolicyNamesTheChatOnlyWhereItRuns(t *testing.T) {
 		t.Error("with the chat off, the privacy policy names it")
 	}
 }
+
+func TestGoodToKnowOffersTheAssistantOnlyWhereTheChatRuns(t *testing.T) {
+	if body := get(t, chatSite(t, answers{"ok"}), "/fr-BE/").Body.String(); !strings.Contains(body, `id="faq-ask-assistant"`) || !strings.Contains(body, "Demandez à notre assistant") {
+		t.Error("with the chat on, Good to know has no assistant button")
+	}
+	if body := get(t, server.New(server.Config{}), "/fr-BE/").Body.String(); strings.Contains(body, `id="faq-ask-assistant"`) {
+		t.Error("with the chat off, Good to know shows the assistant button")
+	}
+}

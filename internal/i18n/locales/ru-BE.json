@@ -56,7 +56,7 @@
 				"question": "Как записаться на процедуру?"
 			},
 			"cancellation": {
-				"answer_direct": "Да, не позднее чем за 24 часа в системе записи, или напишите нам в <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> или на <a href='mailto:aestheticlabbe@gmail.com'>почту</a>. За позднюю отмену может взиматься плата.",
+				"answer_direct": "Да, не позднее чем за 24 часа до визита — в системе записи или сообщением в <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> или на <a href='mailto:aestheticlabbe@gmail.com'>почту</a>. Менее чем за 24 часа до записи отмена и перенос невозможны.",
 				"question_short": "Можно ли отменить или перенести запись?"
 			},
 			"consultation": {
@@ -80,7 +80,12 @@
 			},
 			"message_instagram": "Напишите нам в Instagram",
 			"still_question": "Остались вопросы?",
-			"still_question_body": "Напишите нам в Instagram или на {{email}}."
+			"still_question_body": "Напишите нам в Instagram или на {{email}}.",
+			"payment": {
+				"answer_direct": "Наличными или переводом по QR-коду. Оплату картой мы не принимаем.",
+				"question_short": "Как можно оплатить?"
+			},
+			"ask_assistant": "Спросите нашего ассистента"
 		},
 		"footer": {
 			"explore": "Навигация",

@@ -56,7 +56,7 @@
 				"question": "Hoe maak ik een afspraak?"
 			},
 			"cancellation": {
-				"answer_direct": "Ja, minstens 24 uur vooraf via het boekingssysteem, of stuur ons een bericht op <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> of per <a href='mailto:aestheticlabbe@gmail.com'>e-mail</a>. Bij late annulering kunnen kosten worden aangerekend.",
+				"answer_direct": "Ja, tot 24 uur voor je afspraak, via het boekingssysteem of met een bericht op <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> of per <a href='mailto:aestheticlabbe@gmail.com'>e-mail</a>. Binnen 24 uur voor de afspraak kun je niet meer annuleren of wijzigen.",
 				"question_short": "Kan ik annuleren of verplaatsen?"
 			},
 			"consultation": {
@@ -80,7 +80,12 @@
 			},
 			"message_instagram": "Stuur ons een bericht op Instagram",
 			"still_question": "Nog een vraag?",
-			"still_question_body": "Stuur ons een bericht op Instagram of mail naar {{email}}."
+			"still_question_body": "Stuur ons een bericht op Instagram of mail naar {{email}}.",
+			"payment": {
+				"answer_direct": "Contant of via overschrijving met QR-code. Kaartbetalingen aanvaarden we niet.",
+				"question_short": "Hoe kan ik betalen?"
+			},
+			"ask_assistant": "Vraag het onze assistent"
 		},
 		"footer": {
 			"explore": "Ontdek",

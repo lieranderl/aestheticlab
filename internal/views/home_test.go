@@ -166,3 +166,17 @@ func TestTheAssistantReadsTheCareNotesInThePageLanguage(t *testing.T) {
 		t.Error("the Dutch care notes are missing or English")
 	}
 }
+
+// Good to know answers payment, and the cancellation answer matches the
+// studio's policy: no changes within 24 hours.
+func TestGoodToKnowCoversPaymentAndTheCancellationPolicy(t *testing.T) {
+	html := renderAt(t, "/en-BE/", home)
+	for _, want := range []string{"How can I pay?", "We don’t accept card payments.", "cancellations and changes are not possible"} {
+		if !strings.Contains(html, want) {
+			t.Errorf("Good to know lacks %q", want)
+		}
+	}
+	if strings.Contains(html, "Late cancellations may be charged") {
+		t.Error("Good to know still has the old cancellation answer")
+	}
+}

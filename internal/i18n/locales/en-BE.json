@@ -56,7 +56,7 @@
 				"question": "How do I book an appointment?"
 			},
 			"cancellation": {
-				"answer_direct": "Yes, at least 24 hours ahead in the booking system, or message us on <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> or by <a href='mailto:aestheticlabbe@gmail.com'>email</a>. Late cancellations may be charged.",
+				"answer_direct": "Yes, up to 24 hours before your appointment, in the booking system or by message on <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> or <a href='mailto:aestheticlabbe@gmail.com'>email</a>. Within 24 hours of the appointment, cancellations and changes are not possible.",
 				"question_short": "Can I cancel or reschedule?"
 			},
 			"consultation": {
@@ -80,7 +80,12 @@
 			},
 			"message_instagram": "Message us on Instagram",
 			"still_question": "Still have a question?",
-			"still_question_body": "Message us on Instagram or email {{email}}."
+			"still_question_body": "Message us on Instagram or email {{email}}.",
+			"payment": {
+				"answer_direct": "In cash or by QR code bank transfer. We don’t accept card payments.",
+				"question_short": "How can I pay?"
+			},
+			"ask_assistant": "Ask our assistant"
 		},
 		"footer": {
 			"explore": "Explore",

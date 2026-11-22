@@ -56,7 +56,7 @@
 				"question": "Comment prendre rendez-vous ?"
 			},
 			"cancellation": {
-				"answer_direct": "Oui, au moins 24 heures à l’avance via le système de réservation, ou écrivez-nous sur <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> ou par <a href='mailto:aestheticlabbe@gmail.com'>e-mail</a>. Les annulations tardives peuvent être facturées.",
+				"answer_direct": "Oui, jusqu’à 24 heures avant votre rendez-vous, via le système de réservation ou par message sur <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> ou par <a href='mailto:aestheticlabbe@gmail.com'>e-mail</a>. Dans les 24 heures qui précèdent le rendez-vous, aucune annulation ni modification n’est possible.",
 				"question_short": "Puis-je annuler ou déplacer ?"
 			},
 			"consultation": {
@@ -80,7 +80,12 @@
 			},
 			"message_instagram": "Écrivez-nous sur Instagram",
 			"still_question": "Encore une question ?",
-			"still_question_body": "Écrivez-nous sur Instagram ou à {{email}}."
+			"still_question_body": "Écrivez-nous sur Instagram ou à {{email}}.",
+			"payment": {
+				"answer_direct": "En espèces ou par virement via QR code. Nous n’acceptons pas les paiements par carte.",
+				"question_short": "Comment puis-je payer ?"
+			},
+			"ask_assistant": "Demandez à notre assistant"
 		},
 		"footer": {
 			"explore": "Découvrir",

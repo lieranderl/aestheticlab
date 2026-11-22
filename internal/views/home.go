@@ -155,7 +155,8 @@ func faqItems(ctx context.Context, loc *content.Localized) []faqItem {
 		{tr(ctx, "How long do treatments take?"), duration},
 		{tr(ctx, "Where is the studio?"), trf(ctx, "%v, in the centre of Leuven. Directions and nearby parking are under <a href='#contact'>Visit</a>.", street+", "+zip+" "+city)},
 		{tr(ctx, "How should I prepare for laser?"), tr(ctx, "Shave the area 24 hours before and avoid sun, tanning and self-tanner for at least 2 weeks. Read the full <a href='./notice?tab=laser'>care notes</a> before your visit.")},
-		{tr(ctx, "Can I cancel or reschedule?"), tr(ctx, "Yes, at least 24 hours ahead in the booking system, or message us on <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> or by <a href='mailto:aestheticlabbe@gmail.com'>email</a>. Late cancellations may be charged.")},
+		{tr(ctx, "Can I cancel or reschedule?"), tr(ctx, "Yes, up to 24 hours before your appointment, in the booking system or by message on <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> or <a href='mailto:aestheticlabbe@gmail.com'>email</a>. Within 24 hours of the appointment, cancellations and changes are not possible.")},
+		{tr(ctx, "How can I pay?"), tr(ctx, "In cash or by QR code bank transfer. We don’t accept card payments.")},
 		{tr(ctx, "Can I get advice before booking?"), tr(ctx, "Yes. If you are unsure which treatment suits you, <a href='https://ig.me/m/aestheticlabbe' target='_blank' rel='noopener noreferrer'>ask us</a> for a short, free consultation.")},
 	}
 }
