@@ -14,6 +14,7 @@ import (
 	"github.com/lieranderl/aestheticlab/internal/availability"
 	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/i18n"
+	"github.com/lieranderl/aestheticlab/internal/usage"
 )
 
 var brussels = func() *time.Location {
@@ -314,5 +315,71 @@ func TestMarkdownInTheReplyBecomesPlainText(t *testing.T) {
 	}
 	if want := "Prices:\n\n• Manicure + gel: €60\n• Pedicure: €70\n• Brows: €25\nA*B stays."; got.Text != want {
 		t.Errorf("reply = %q, want %q", got.Text, want)
+	}
+}
+
+// textAndCall is a response that writes the answer and calls a tool at once,
+// as Gemini often does before showing a Book button.
+func textAndCall(text, name string, args map[string]any) *genai.GenerateContentResponse {
+	return &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{
+		Content: &genai.Content{Role: genai.RoleModel, Parts: []*genai.Part{
+			{Text: text},
+			{FunctionCall: &genai.FunctionCall{ID: "call-1", Name: name, Args: args}},
+		}},
+		FinishReason: genai.FinishReasonStop,
+	}}}
+}
+
+func TestAnAnswerWrittenWithAToolCallIsKept(t *testing.T) {
+	const times = "Zara is free on Monday at 12:15 and 12:30."
+	book := map[string]any{"service_id": "4847871"}
+	empty := &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{Content: &genai.Content{Role: genai.RoleModel}, FinishReason: genai.FinishReasonStop}}}
+	for name, tc := range map[string]struct {
+		final *genai.GenerateContentResponse
+		want  string
+	}{
+		"empty final":     {empty, times},
+		"no content":      {&genai.GenerateContentResponse{Candidates: []*genai.Candidate{{FinishReason: genai.FinishReasonStop}}}, times},
+		"closing line":    {text("These times look free now."), times + "\n\nThese times look free now."},
+		"repeated answer": {text(times + "\nTap the button to book."), times + "\nTap the button to book."},
+	} {
+		m := &scripted{replies: []*genai.GenerateContentResponse{textAndCall(times, "offer_booking", book), tc.final}}
+		got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if got.Text != tc.want || len(got.Offers) != 1 {
+			t.Errorf("%s: reply = %q (%d offers), want %q", name, got.Text, len(got.Offers), tc.want)
+		}
+	}
+}
+
+func withUsage(r *genai.GenerateContentResponse, prompt, cached, out, thoughts int32) *genai.GenerateContentResponse {
+	r.UsageMetadata = &genai.GenerateContentResponseUsageMetadata{
+		PromptTokenCount: prompt, CachedContentTokenCount: cached, CandidatesTokenCount: out, ThoughtsTokenCount: thoughts,
+	}
+	return r
+}
+
+// Every model call in a reply is billed, thinking as output, so the reply
+// carries the sum, failed replies included.
+func TestARepliesTokensAreSummedOverItsModelCalls(t *testing.T) {
+	m := &scripted{replies: []*genai.GenerateContentResponse{
+		withUsage(call("offer_booking", map[string]any{"service_id": "4847871"}), 9000, 8000, 40, 100),
+		withUsage(text("Tap the button."), 9200, 8000, 20, 30),
+	}}
+	got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := (usage.Tokens{Prompt: 18200, Cached: 16000, Output: 190}); got.Tokens != want {
+		t.Errorf("tokens = %+v, want %+v", got.Tokens, want)
+	}
+
+	blocked := withUsage(&genai.GenerateContentResponse{Candidates: []*genai.Candidate{{FinishReason: genai.FinishReasonSafety}}}, 9000, 0, 0, 50)
+	m = &scripted{replies: []*genai.GenerateContentResponse{blocked}}
+	got, err = newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
+	if !errors.Is(err, assistant.ErrNoAnswer) || got.Tokens.Prompt != 9000 || got.Tokens.Output != 50 {
+		t.Errorf("a blocked reply = %+v, %v; want its tokens with ErrNoAnswer", got.Tokens, err)
 	}
 }

@@ -68,6 +68,17 @@ After both environment-scoped deployers have completed a successful deployment:
 
 Settings changes reach traffic with the next deploy, which copies the service's current template.
 
+### Spending caps
+
+Google Cloud budgets only alert; they never stop spending, and billing data arrives hours late. The chat's spending is therefore capped in the app: every reply's tokens are priced (Vertex AI's prices plus 25%) and added to a ledger in the `chat-usage` Firestore database, shared by every environment, and the chat stops calling models at `chat_monthly_budget_eur` (default €9) or `chat_daily_budget_eur` (default €0.50). If the ledger can't be read, the chat stays off. The runtime accounts may write that database only.
+
+On top, `google_billing_budget.chat_models` is a €10 (`chat_budget_eur`) monthly budget on the billing account for the project's Vertex AI and Gemini API spending, alerting at 50%, 90%, 100% and a 100% forecast. The alert policies `chat_budget` (a cap reached, or the ledger failing) and `chat_volume` (more than `chat_replies_alert_per_hour` replies) notify the same channels.
+
+The budget needs one-time access on the billing account, which only its Billing Admin can grant (OpenTofu can't grant itself access there):
+
+1. In the console, **Billing → Account management → Permissions** for the AestheticLab account, grant `aesthetic-infra-deployer@PROJECT.iam.gserviceaccount.com` **Billing Account Costs Manager** and `aesthetic-infra-planner@PROJECT.iam.gserviceaccount.com` **Billing Account Viewer**.
+2. Set the repository variable `GCP_BILLING_ACCOUNT` to the account ID (`gh variable set GCP_BILLING_ACCOUNT`). Until it is set, the budget is skipped and the plan stays clean.
+
 ## Deployment contract
 
 OpenTofu owns service configuration and IAM. GitHub Actions owns only the container image and exact-revision traffic promotion. Image and traffic fields are intentionally ignored after bootstrap so a later plan cannot roll back a digest or promote an untested revision.

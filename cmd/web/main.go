@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -29,6 +30,7 @@ import (
 	"github.com/lieranderl/aestheticlab/internal/availability"
 	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/server"
+	"github.com/lieranderl/aestheticlab/internal/usage"
 	"github.com/lieranderl/aestheticlab/static"
 )
 
@@ -67,10 +69,12 @@ func run(ctx context.Context, getenv func(string) string, logOut io.Writer) erro
 	// allocates CPU to the starting instance.
 	store.Prefetch()
 
+	chat := openChat(ctx, getenv, log)
+	defer chat.close()
 	srv := &http.Server{
 		Handler: server.New(server.Config{
 			Static: static.Files, Logger: log, Content: store, PlainHTTP: plainHTTP(getenv),
-			Assistant: openAssistant(ctx, getenv, log),
+			Assistant: chat.assistant, Spending: chat.spending, ChatPrice: chat.price,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       120 * time.Second,
@@ -147,36 +151,105 @@ const (
 	bookingLead = 2 * time.Hour
 )
 
-// openAssistant is the chat assistant when CHAT_ENABLED is "true", else
-// nil (no chat). CHAT_MODEL names the Gemini model, or "fake" for a
-// scripted one (local development, browser tests). Free times come from
-// the calendars AVAILABILITY_CALENDARS maps to staff, or, with
-// AVAILABILITY_DEV "true", from a made-up calendar.
-func openAssistant(ctx context.Context, getenv func(string) string, log *slog.Logger) *assistant.Assistant {
+// Default chat spending caps in euros, shared by staging and production
+// (the budget is €10 a month; the cap leaves a margin under it).
+const (
+	defaultMonthlyBudgetEUR = 9.0
+	defaultDailyBudgetEUR   = 0.5
+)
+
+// chat is the chat assistant and what caps its spending; all nil when the
+// chat is off.
+type chat struct {
+	assistant *assistant.Assistant
+	spending  server.Spending
+	price     usage.Price
+	close     func()
+}
+
+// openChat is the chat when CHAT_ENABLED is "true". CHAT_MODEL names the
+// Gemini model, or "fake" for a scripted one (local development, browser
+// tests). Its spending is capped by a ledger in the CHAT_USAGE_DATABASE
+// Firestore database (in memory without one) at CHAT_MONTHLY_BUDGET_EUR and
+// CHAT_DAILY_BUDGET_EUR. Free times come from the calendars
+// AVAILABILITY_CALENDARS maps to staff, or, with AVAILABILITY_DEV "true",
+// from a made-up calendar. Anything it cannot set up leaves the chat off.
+func openChat(ctx context.Context, getenv func(string) string, log *slog.Logger) chat {
+	off := chat{close: func() {}}
 	if getenv("CHAT_ENABLED") != "true" {
-		return nil
+		return off
 	}
 	brussels, err := time.LoadLocation("Europe/Brussels")
 	if err != nil {
 		log.Error("chat_config_rejected", "error", err.Error())
-		return nil
+		return off
 	}
+	project := getenv("GOOGLE_CLOUD_PROJECT")
 	var model assistant.Model = assistant.Fake{}
+	var price usage.Price
 	name := cmp.Or(getenv("CHAT_MODEL"), defaultChatModel)
 	if name != "fake" {
-		project := getenv("GOOGLE_CLOUD_PROJECT")
+		var ok bool
+		if price, ok = usage.PriceOf(name); !ok {
+			log.Error("chat_config_rejected", "error", "no price for CHAT_MODEL, so its spending could not be capped", "model", name)
+			return off
+		}
 		if project == "" {
 			log.Error("chat_config_rejected", "error", "GOOGLE_CLOUD_PROJECT is required for the chat model")
-			return nil
+			return off
 		}
 		gemini, err := assistant.NewGemini(ctx, project, cmp.Or(getenv("CHAT_LOCATION"), defaultChatLocation), name)
 		if err != nil {
 			log.Error("chat_model_failed", "model", name, "error", err.Error())
-			return nil
+			return off
 		}
 		model = gemini
 	}
-	return assistant.New(assistant.Options{Model: model, Finder: openFinder(ctx, getenv, brussels, log), Location: brussels})
+	monthly, errMonth := budget(getenv("CHAT_MONTHLY_BUDGET_EUR"), defaultMonthlyBudgetEUR)
+	daily, errDay := budget(getenv("CHAT_DAILY_BUDGET_EUR"), defaultDailyBudgetEUR)
+	if err := errors.Join(errMonth, errDay); err != nil {
+		log.Error("chat_config_rejected", "error", err.Error())
+		return off
+	}
+	var store usage.Store
+	closeStore := func() {}
+	if database := getenv("CHAT_USAGE_DATABASE"); database != "" {
+		fs, err := usage.NewFirestore(ctx, cmp.Or(project, firestore.DetectProjectID), database)
+		if err != nil {
+			log.Error("chat_usage_failed", "database", database, "error", err.Error())
+			return off
+		}
+		store, closeStore = fs, func() { _ = fs.Close() }
+	} else {
+		// Local only: the caps hold per process, not across restarts.
+		log.Warn("chat_usage_in_memory")
+		store = usage.NewMemory()
+	}
+	ledger := usage.NewLedger(usage.Options{
+		Store: store, Caps: usage.Caps{MonthEUR: monthly, DayEUR: daily},
+		Environment: cmp.Or(getenv("CHAT_ENVIRONMENT"), "local"), Location: brussels,
+	})
+	log.Info("chat_on", "model", name, "monthly_budget_eur", monthly, "daily_budget_eur", daily)
+	return chat{
+		assistant: assistant.New(assistant.Options{Model: model, Finder: openFinder(ctx, getenv, brussels, log), Location: brussels}),
+		spending:  ledger,
+		price:     price,
+		close:     closeStore,
+	}
+}
+
+// budget is a cap in euros from raw, else fallback: positive and finite.
+func budget(raw string, fallback float64) (float64, error) {
+	if raw == "" {
+		return fallback, nil
+	}
+	v, err := strconv.ParseFloat(raw, 64)
+	// NaN passes every comparison as false, so a NaN cap would never be
+	// reached: reject it with the rest.
+	if err != nil || math.IsNaN(v) || math.IsInf(v, 0) || v <= 0 {
+		return 0, fmt.Errorf("chat budget %q is not a positive number of euros", raw)
+	}
+	return v, nil
 }
 
 // openFinder reads free times from the configured calendars; nil when none
