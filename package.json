@@ -1,7 +1,7 @@
 {
 	"name": "aestheticlab",
 	"description": "AestheticLab",
-	"version": "5.0.6",
+	"version": "5.0.7",
 	"packageManager": "bun@1.4.2",
 	"engines": {
 		"node": "^20.3.0 || >=21.0.0"
@@ -27,16 +27,16 @@
 		"prepare": "husky || true"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.6.6",
+		"@biomejs/biome": "^2.6.7",
 		"@fontsource-variable/onest": "^5.3.1",
 		"@playwright/test": "^1.65.0",
 		"@tailwindcss/cli": "4.3.5",
-		"daisyui": "^5.7.50",
+		"daisyui": "^5.8.0",
 		"heroicons": "2.2.0",
 		"husky": "^9.1.7",
 		"lint-staged": "^17.6.0",
 		"sharp": "0.35.5",
-		"simple-icons": "16.36.0",
+		"simple-icons": "16.37.0",
 		"tailwindcss": "^4.3.5"
 	},
 	"overrides": {
