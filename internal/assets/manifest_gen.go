@@ -8,7 +8,7 @@ func fileURL(name string) string {
 	case "Bird.svg":
 		return "/static/dist/media/Bird.02de9cbcb0.svg"
 	case "app.css":
-		return "/static/dist/app.af8254b509.css"
+		return "/static/dist/app.c23616fd4d.css"
 	case "datastar.js":
 		return "/static/dist/datastar.727844adfc.js"
 	case "fonts/QESTERO-Regular.ttf":
