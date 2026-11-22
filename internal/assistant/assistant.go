@@ -14,6 +14,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"google.golang.org/genai"
 
@@ -100,8 +102,9 @@ const (
 	maxOffers = 3
 	// defaultDays is how far find_free_slots looks without dates.
 	defaultDays = 7
-	// maxOutputTokens keeps replies short and cheap.
-	maxOutputTokens = 1024
+	// maxOutputTokens bounds one model call's output, Gemini's thinking
+	// included: 1024 cut Russian answers off mid-word.
+	maxOutputTokens = 2048
 )
 
 // Options configure an Assistant.
@@ -162,7 +165,11 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 			break
 		}
 		calls := resp.FunctionCalls()
-		said = append(said, replyText(resp.Candidates[0].Content))
+		reply := replyText(resp.Candidates[0].Content)
+		if resp.Candidates[0].FinishReason == genai.FinishReasonMaxTokens {
+			reply = wholeSentences(reply)
+		}
+		said = append(said, reply)
 		if len(calls) == 0 {
 			text := finalAnswer(said)
 			if text == "" {
@@ -254,6 +261,30 @@ func rewrites(a, b string) bool {
 	}
 	// At least half of all their words are shared.
 	return shared*2 >= len(wa)+len(wb)-shared
+}
+
+// wholeSentences is s up to its last whole sentence: a reply cut off by
+// the token limit must not end mid-word. A sentence ends at a line break,
+// or at . ! ? or … followed by a space; at the very end of s only if no
+// digit comes before it, since "1." may be a cut "1.5". Empty if none ended.
+func wholeSentences(s string) string {
+	end := -1
+	var prev rune
+	for i, r := range s {
+		next, _ := utf8.DecodeRuneInString(s[i+utf8.RuneLen(r):])
+		last := i+utf8.RuneLen(r) == len(s)
+		switch {
+		case r == '\n':
+			end = i
+		case strings.ContainsRune(".!?…", r) && (unicode.IsSpace(next) || last && !unicode.IsDigit(prev)):
+			end = i + utf8.RuneLen(r)
+		}
+		prev = r
+	}
+	if end < 0 {
+		return ""
+	}
+	return strings.TrimSpace(s[:end])
 }
 
 // replyText is the answer to the visitor: the last text part that isn't a
