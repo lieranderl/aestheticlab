@@ -72,6 +72,12 @@ type Answer struct {
 	Tokens usage.Tokens
 }
 
+// WorstCaseTokens bounds what one reply can be billed: every model call
+// with a long prompt (the salon, 20 turns of transcript, tool results) and
+// the most output and thinking. The spending ledger holds its price before
+// each reply.
+var WorstCaseTokens = usage.Tokens{Prompt: maxRounds * 30_000, Output: maxRounds * (maxOutputTokens + 3_000)}
+
 // ErrNoAnswer is a reply the model did not give: blocked, empty, or still
 // calling tools after maxRounds.
 var ErrNoAnswer = errors.New("assistant gave no answer")

@@ -147,11 +147,15 @@ func cleanHistory(turns []assistant.Turn) []assistant.Turn {
 // chat answers one visitor message over SSE: it appends the message to the
 // log at once, then the assistant's reply with its Book buttons, and
 // returns the transcript in chatHistory. Any failure becomes a fixed reply.
-// Spending checks and records the chat's model spending (usage.Ledger).
+// Spending holds and records the chat's model spending (usage.Ledger).
 type Spending interface {
-	Allow(ctx context.Context) error
-	Record(ctx context.Context, eur float64) error
+	Reserve(ctx context.Context, eur float64) (usage.Reservation, error)
+	Settle(ctx context.Context, r usage.Reservation, eur float64) error
 }
+
+// settleTimeout bounds recording a reply's cost, which outlives the
+// request: a visitor who leaves mid-reply has still been billed.
+const settleTimeout = 5 * time.Second
 
 func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spending, price usage.Price, limit *limiter, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -178,10 +182,12 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 		var cost float64
 		outcome := "answered"
 		reason := limit.allow(clientIP(r), start)
-		budget := error(nil)
+		var budget error
+		var held usage.Reservation
 		if reason == "" {
-			// Checked before every model call: no spending the ledger can't see.
-			budget = spend.Allow(ctx)
+			// Held before every model call, atomically, at the most a reply can
+			// cost: no spending the ledger can't see, even from replies at once.
+			held, budget = spend.Reserve(ctx, price.Cost(assistant.WorstCaseTokens))
 		}
 		switch {
 		case reason == tooFast:
@@ -207,11 +213,14 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 			var err error
 			answer, err = a.Reply(replyCtx, k, history, message)
 			cancel()
-			// A failed reply is billed too: record whatever it used.
+			// A failed or abandoned reply is billed too: settle whatever it
+			// used, on a context the visitor leaving can't cancel.
 			cost = price.Cost(answer.Tokens)
-			if recErr := spend.Record(ctx, cost); recErr != nil {
+			settleCtx, cancelSettle := context.WithTimeout(context.WithoutCancel(ctx), settleTimeout)
+			if recErr := spend.Settle(settleCtx, held, cost); recErr != nil {
 				log.ErrorContext(ctx, "chat_spending_not_recorded", "eur", cost, "error", recErr.Error())
 			}
+			cancelSettle()
 			if err != nil {
 				outcome = "no_answer"
 				if !errors.Is(err, assistant.ErrNoAnswer) {

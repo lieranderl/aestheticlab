@@ -60,6 +60,29 @@ func eurOf(snap *firestore.DocumentSnapshot) float64 {
 	return 0
 }
 
+// Reserve implements Store in one transaction: it reads both totals,
+// checks the caps and adds eur, so concurrent reservations near a cap are
+// serialized by Firestore and only those that fit get through.
+func (f *Firestore) Reserve(ctx context.Context, day, month, env string, eur float64, caps Caps) error {
+	d, m := f.refs(day, month)
+	return f.client.RunTransaction(ctx, func(_ context.Context, tx *firestore.Transaction) error {
+		snaps, err := tx.GetAll([]*firestore.DocumentRef{d, m})
+		if err != nil {
+			return err
+		}
+		if err := caps.check(eurOf(snaps[0]), eurOf(snaps[1])); err != nil {
+			return err
+		}
+		inc := map[string]any{"eur": firestore.Increment(eur), "eur_" + env: firestore.Increment(eur)}
+		for _, ref := range []*firestore.DocumentRef{d, m} {
+			if err := tx.Set(ref, inc, firestore.MergeAll); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // Add implements Store with atomic increments, so instances recording at
 // once never lose each other's spending.
 func (f *Firestore) Add(ctx context.Context, day, month, env string, eur float64) error {

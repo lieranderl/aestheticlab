@@ -30,7 +30,11 @@ type Caps struct {
 type Store interface {
 	// Spent is what day ("2026-11-22") and month ("2026-11") have spent.
 	Spent(ctx context.Context, day, month string) (dayEUR, monthEUR float64, err error)
-	// Add adds eur to day and month, and to env's share of each.
+	// Reserve adds eur to day and month (and env's share) in one atomic
+	// step, only if both are still under their caps: ErrMonthCap or
+	// ErrDayCap otherwise, and nothing is added.
+	Reserve(ctx context.Context, day, month, env string, eur float64, caps Caps) error
+	// Add adds eur (negative to give back) to day, month and env's share.
 	Add(ctx context.Context, day, month, env string, eur float64) error
 }
 
@@ -60,31 +64,58 @@ func (l *Ledger) periods() (day, month string) {
 	return t.Format(time.DateOnly), t.Format("2006-01")
 }
 
-// Allow reports whether the chat may call the model now: ErrMonthCap or
-// ErrDayCap once a cap is reached, or the store's error, so that spending
-// it cannot check never happens.
-func (l *Ledger) Allow(ctx context.Context) error {
+// Reservation is budget held for one reply until Settle replaces it with
+// the reply's real cost.
+type Reservation struct {
+	day, month string
+	eur        float64
+}
+
+// Reserve holds eur, the most one reply can cost, before the model is
+// called: atomically, and only while today and this month are under their
+// caps, so concurrent replies near a cap can't all get through. It returns
+// ErrMonthCap or ErrDayCap at a cap, or the store's error, so spending the
+// ledger can't see never happens.
+func (l *Ledger) Reserve(ctx context.Context, eur float64) (Reservation, error) {
 	day, month := l.periods()
-	dayEUR, monthEUR, err := l.opts.Store.Spent(ctx, day, month)
-	switch {
-	case err != nil:
-		return fmt.Errorf("read chat spending: %w", err)
-	case monthEUR >= l.opts.Caps.MonthEUR:
-		return ErrMonthCap
-	case dayEUR >= l.opts.Caps.DayEUR:
-		return ErrDayCap
+	if err := l.opts.Store.Reserve(ctx, day, month, l.opts.Environment, eur, l.opts.Caps); err != nil {
+		if errors.Is(err, ErrDayCap) || errors.Is(err, ErrMonthCap) {
+			return Reservation{}, err
+		}
+		return Reservation{}, fmt.Errorf("reserve chat spending: %w", err)
+	}
+	return Reservation{day: day, month: month, eur: eur}, nil
+}
+
+// Settle replaces r with the reply's real cost, in the day and month r was
+// taken in.
+func (l *Ledger) Settle(ctx context.Context, r Reservation, eur float64) error {
+	if delta := eur - r.eur; delta != 0 {
+		if err := l.opts.Store.Add(ctx, r.day, r.month, l.opts.Environment, delta); err != nil {
+			return fmt.Errorf("record chat spending: %w", err)
+		}
 	}
 	return nil
 }
 
-// Record adds eur to today's and this month's spending.
-func (l *Ledger) Record(ctx context.Context, eur float64) error {
-	if eur <= 0 {
-		return nil
-	}
+// Allow reports whether today and this month are under their caps, without
+// holding anything: for checks, not for admitting a reply (Reserve).
+func (l *Ledger) Allow(ctx context.Context) error {
 	day, month := l.periods()
-	if err := l.opts.Store.Add(ctx, day, month, l.opts.Environment, eur); err != nil {
-		return fmt.Errorf("record chat spending: %w", err)
+	dayEUR, monthEUR, err := l.opts.Store.Spent(ctx, day, month)
+	if err != nil {
+		return fmt.Errorf("read chat spending: %w", err)
+	}
+	return l.opts.Caps.check(dayEUR, monthEUR)
+}
+
+// check is ErrMonthCap or ErrDayCap once spending reached a cap.
+func (c Caps) check(dayEUR, monthEUR float64) error {
+	switch {
+	case monthEUR >= c.MonthEUR:
+		return ErrMonthCap
+	case dayEUR >= c.DayEUR:
+		return ErrDayCap
 	}
 	return nil
 }
@@ -143,6 +174,18 @@ func (m *Memory) Spent(_ context.Context, day, month string) (float64, float64, 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.spent[day], m.spent[month], nil
+}
+
+// Reserve implements Store.
+func (m *Memory) Reserve(_ context.Context, day, month, _ string, eur float64, caps Caps) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := caps.check(m.spent[day], m.spent[month]); err != nil {
+		return err
+	}
+	m.spent[day] += eur
+	m.spent[month] += eur
+	return nil
 }
 
 // Add implements Store.

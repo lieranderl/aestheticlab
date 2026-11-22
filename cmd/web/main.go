@@ -244,7 +244,9 @@ func budget(raw string, fallback float64) (float64, error) {
 		return fallback, nil
 	}
 	v, err := strconv.ParseFloat(raw, 64)
-	if err != nil || v <= 0 || math.IsInf(v, 0) {
+	// NaN passes every comparison as false, so a NaN cap would never be
+	// reached: reject it with the rest.
+	if err != nil || math.IsNaN(v) || math.IsInf(v, 0) || v <= 0 {
 		return 0, fmt.Errorf("chat budget %q is not a positive number of euros", raw)
 	}
 	return v, nil

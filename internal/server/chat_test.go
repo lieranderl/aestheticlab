@@ -57,16 +57,23 @@ func (a answers) Generate(_ context.Context, contents []*genai.Content, _ *genai
 	return &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{Content: content, FinishReason: genai.FinishReasonStop}}}, nil
 }
 
-// spending is a Spending with fixed answers that records what it is told.
+// spending is a Spending with fixed answers that records what it is told,
+// and whether its contexts were still live.
 type spending struct {
-	allow    error
-	recorded []float64
+	allow      error
+	reserved   []float64
+	recorded   []float64
+	liveSettle []bool
 }
 
-func (s *spending) Allow(context.Context) error { return s.allow }
+func (s *spending) Reserve(_ context.Context, eur float64) (usage.Reservation, error) {
+	s.reserved = append(s.reserved, eur)
+	return usage.Reservation{}, s.allow
+}
 
-func (s *spending) Record(_ context.Context, eur float64) error {
+func (s *spending) Settle(ctx context.Context, _ usage.Reservation, eur float64) error {
 	s.recorded = append(s.recorded, eur)
+	s.liveSettle = append(s.liveSettle, ctx.Err() == nil)
 	return nil
 }
 
@@ -257,5 +264,33 @@ func TestWithoutSpendingThereIsNoChat(t *testing.T) {
 	h := server.New(server.Config{Content: bookableContent(t), Assistant: assistant.New(assistant.Options{Model: &counting{}})})
 	if body := get(t, h, "/en-BE/").Body.String(); strings.Contains(body, `id="chat"`) {
 		t.Error("the chat is shown without a spending ledger")
+	}
+}
+
+func TestTheWorstCaseIsReservedBeforeTheModelIsCalled(t *testing.T) {
+	spend := &spending{}
+	_ = post(t, chatSiteWith(t, &counting{}, spend), "/en-BE/chat", `{"chatInput":"hi"}`, nil)
+	want := testPrice.Cost(assistant.WorstCaseTokens)
+	if len(spend.reserved) != 1 || spend.reserved[0] != want || want < 0.01 {
+		t.Errorf("reserved %v, want [%v] (the worst case, at least a cent)", spend.reserved, want)
+	}
+}
+
+// A visitor who leaves mid-reply has still been billed: the cost is
+// settled on a context their leaving doesn't cancel.
+func TestAReplyIsSettledEvenIfTheVisitorLeaves(t *testing.T) {
+	spend := &spending{}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/en-BE/chat", strings.NewReader(`{"chatInput":"hi"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Datastar-Request", "true")
+	req.Header.Set("Sec-Fetch-Site", "same-origin")
+	_ = serve(t, chatSiteWith(t, &counting{}, spend), req)
+	if len(spend.liveSettle) != 1 || !spend.liveSettle[0] {
+		t.Errorf("settled on a cancelled context: %v", spend.liveSettle)
+	}
+	if want := testPrice.Cost(usage.Tokens{Prompt: 10000, Cached: 8000, Output: 100}); len(spend.recorded) != 1 || spend.recorded[0] != want {
+		t.Errorf("recorded %v, want [%v]", spend.recorded, want)
 	}
 }

@@ -7,6 +7,8 @@ import (
 	"math"
 	"os"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -28,25 +30,29 @@ func ledger(store usage.Store, now *time.Time) *usage.Ledger {
 	})
 }
 
-func TestSpendingIsAllowedUntilTheDailyCap(t *testing.T) {
+func TestRepliesAreAdmittedUntilTheDailyCap(t *testing.T) {
 	now := time.Date(2026, 11, 22, 10, 0, 0, 0, brussels)
 	l := ledger(usage.NewMemory(), &now)
 	ctx := context.Background()
 	for range 4 {
-		if err := l.Allow(ctx); err != nil {
-			t.Fatalf("Allow() = %v before the cap", err)
+		r, err := l.Reserve(ctx, 0.05)
+		if err != nil {
+			t.Fatalf("Reserve() = %v before the cap", err)
 		}
-		if err := l.Record(ctx, 0.125); err != nil {
+		if err := l.Settle(ctx, r, 0.125); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if _, err := l.Reserve(ctx, 0.05); !errors.Is(err, usage.ErrDayCap) {
+		t.Errorf("Reserve() at €0.50 today = %v, want ErrDayCap", err)
 	}
 	if err := l.Allow(ctx); !errors.Is(err, usage.ErrDayCap) {
 		t.Errorf("Allow() at €0.50 today = %v, want ErrDayCap", err)
 	}
 	// Midnight in Brussels starts a new day.
 	now = time.Date(2026, 11, 23, 0, 0, 1, 0, brussels)
-	if err := l.Allow(ctx); err != nil {
-		t.Errorf("Allow() the next day = %v", err)
+	if _, err := l.Reserve(ctx, 0.05); err != nil {
+		t.Errorf("Reserve() the next day = %v", err)
 	}
 }
 
@@ -56,7 +62,8 @@ func TestTheMonthlyCapHoldsAcrossDays(t *testing.T) {
 	ctx := context.Background()
 	for day := range 30 {
 		now = time.Date(2026, 11, 1+day, 9, 0, 0, 0, brussels)
-		if err := l.Allow(ctx); err != nil {
+		r, err := l.Reserve(ctx, 0.05)
+		if err != nil {
 			if !errors.Is(err, usage.ErrMonthCap) {
 				t.Fatalf("day %d: %v", day+1, err)
 			}
@@ -65,11 +72,35 @@ func TestTheMonthlyCapHoldsAcrossDays(t *testing.T) {
 			}
 			break
 		}
-		_ = l.Record(ctx, 0.49)
+		_ = l.Settle(ctx, r, 0.49)
 	}
 	now = time.Date(2026, 12, 1, 9, 0, 0, 0, brussels)
-	if err := l.Allow(ctx); err != nil {
-		t.Errorf("Allow() in a new month = %v", err)
+	if _, err := l.Reserve(ctx, 0.05); err != nil {
+		t.Errorf("Reserve() in a new month = %v", err)
+	}
+}
+
+// Near a cap, replies arriving at once can't all pass a check made before
+// any of them is recorded: the reservation admits one, which then counts.
+func TestConcurrentRepliesNearTheCapAdmitOnlyWhatFits(t *testing.T) {
+	now := time.Date(2026, 11, 22, 10, 0, 0, 0, brussels)
+	store := usage.NewMemory()
+	l := ledger(store, &now)
+	ctx := context.Background()
+	r, _ := l.Reserve(ctx, 0.05)
+	_ = l.Settle(ctx, r, 0.49)
+	var admitted atomic.Int32
+	var wg sync.WaitGroup
+	for range 30 {
+		wg.Go(func() {
+			if _, err := l.Reserve(ctx, 0.05); err == nil {
+				admitted.Add(1)
+			}
+		})
+	}
+	wg.Wait()
+	if got := admitted.Load(); got != 1 {
+		t.Errorf("%d of 30 concurrent replies admitted at €0.49 of €0.50, want 1", got)
 	}
 }
 
@@ -80,10 +111,14 @@ func (failing) Spent(context.Context, string, string) (float64, float64, error) 
 	return 0, 0, errors.New("unreachable")
 }
 
+func (failing) Reserve(context.Context, string, string, string, float64, usage.Caps) error {
+	return errors.New("unreachable")
+}
+
 func TestAnUnreadableLedgerStopsTheChat(t *testing.T) {
 	now := time.Date(2026, 11, 22, 10, 0, 0, 0, brussels)
-	if err := ledger(failing{}, &now).Allow(context.Background()); err == nil || errors.Is(err, usage.ErrDayCap) {
-		t.Errorf("Allow() with an unreadable ledger = %v, want a read error", err)
+	if _, err := ledger(failing{}, &now).Reserve(context.Background(), 0.05); err == nil || errors.Is(err, usage.ErrDayCap) {
+		t.Errorf("Reserve() with an unreadable ledger = %v, want a read error", err)
 	}
 }
 
@@ -123,7 +158,12 @@ func TestFirestoreKeepsSpendingAcrossLedgers(t *testing.T) {
 	}
 	defer func() { _ = store.Close() }()
 	now := time.Date(2026, 11, 22, 10, 0, 0, 0, brussels)
-	if err := ledger(store, &now).Record(ctx, 0.3); err != nil {
+	first := ledger(store, &now)
+	r, err := first.Reserve(ctx, 0.05)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := first.Settle(ctx, r, 0.3); err != nil {
 		t.Fatal(err)
 	}
 	// Another instance, or this one after a restart, sees the same spending.
@@ -131,10 +171,31 @@ func TestFirestoreKeepsSpendingAcrossLedgers(t *testing.T) {
 		Store: store, Caps: usage.Caps{MonthEUR: 9, DayEUR: 0.5}, Environment: "production",
 		Location: brussels, Now: func() time.Time { return now },
 	})
-	if err := other.Record(ctx, 0.25); err != nil {
+	r, err = other.Reserve(ctx, 0.05)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := other.Allow(ctx); !errors.Is(err, usage.ErrDayCap) {
-		t.Errorf("Allow() after €0.55 across environments = %v, want ErrDayCap", err)
+	if err := other.Settle(ctx, r, 0.25); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := other.Reserve(ctx, 0.05); !errors.Is(err, usage.ErrDayCap) {
+		t.Errorf("Reserve() after €0.55 across environments = %v, want ErrDayCap", err)
+	}
+	// Reservations near the cap are serialized by the transaction.
+	now = now.AddDate(0, 0, 1)
+	r, _ = other.Reserve(ctx, 0.05)
+	_ = other.Settle(ctx, r, 0.49)
+	var admitted atomic.Int32
+	var wg sync.WaitGroup
+	for range 10 {
+		wg.Go(func() {
+			if _, err := other.Reserve(ctx, 0.05); err == nil {
+				admitted.Add(1)
+			}
+		})
+	}
+	wg.Wait()
+	if got := admitted.Load(); got != 1 {
+		t.Errorf("%d of 10 concurrent reservations admitted near the cap, want 1", got)
 	}
 }

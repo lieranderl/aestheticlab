@@ -182,6 +182,8 @@ func TestChatSettingsThatCannotBeCappedKeepTheChatOff(t *testing.T) {
 		"unknown model":    {"CHAT_ENABLED": "true", "CHAT_MODEL": "some-new-model", "GOOGLE_CLOUD_PROJECT": "p"},
 		"zero budget":      {"CHAT_ENABLED": "true", "CHAT_MODEL": "fake", "CHAT_MONTHLY_BUDGET_EUR": "0"},
 		"bad daily budget": {"CHAT_ENABLED": "true", "CHAT_MODEL": "fake", "CHAT_DAILY_BUDGET_EUR": "ten"},
+		"NaN budget":       {"CHAT_ENABLED": "true", "CHAT_MODEL": "fake", "CHAT_MONTHLY_BUDGET_EUR": "NaN"},
+		"Inf budget":       {"CHAT_ENABLED": "true", "CHAT_MODEL": "fake", "CHAT_DAILY_BUDGET_EUR": "+Inf"},
 		"switched off":     {"CHAT_ENABLED": "false", "CHAT_MODEL": "fake"},
 	} {
 		if c := openChat(context.Background(), env(vars), quiet); c.assistant != nil || c.spending != nil {
