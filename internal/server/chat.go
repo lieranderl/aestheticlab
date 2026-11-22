@@ -246,7 +246,7 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 		// model's text.
 		times := make([]views.ChatTimes, 0, len(answer.Times))
 		for _, ft := range answer.Times {
-			ct := views.ChatTimes{Service: ft.Service, Staff: ft.Staff, Unchecked: ft.Unchecked}
+			ct := views.ChatTimes{Service: ft.Service, Staff: ft.Staff, Unchecked: ft.Unchecked, Failed: ft.Failed}
 			for _, s := range ft.Slots {
 				ct.Slots = append(ct.Slots, views.ChatSlot{Start: s.Start, Staff: s.Staff})
 			}

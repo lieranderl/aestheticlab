@@ -326,6 +326,8 @@
 			"suggest_studio": "Vertel me over de studio",
 			"suggest_laser": "Hoe werkt laserontharing?",
 			"times": "Vrije tijden voor {{service}}",
+			"times_empty": "Geen vrije tijden gevonden voor deze zoekopdracht.",
+			"times_failed": "We konden de beschikbaarheid niet controleren. Kijk op de boekingspagina.",
 			"times_with": "Vrije tijden voor {{service}} bij {{name}}",
 			"times_note": "Deze tijden lijken nu vrij; de boekingspagina bevestigt ze.",
 			"times_unchecked": "De tijden van {{names}} konden niet worden gecontroleerd: de boekingspagina toont ze.",

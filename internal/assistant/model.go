@@ -43,6 +43,24 @@ func geminiConfig(project, location string) *genai.ClientConfig {
 	}
 }
 
+// checkInput counts each complete Vertex request, including the tool schema
+// and the conversation accumulated during earlier rounds.
+func (g *Gemini) checkInput(ctx context.Context, contents []*genai.Content, cfg *genai.GenerateContentConfig) error {
+	count, err := g.client.Models.CountTokens(ctx, g.model, contents, &genai.CountTokensConfig{
+		SystemInstruction: cfg.SystemInstruction,
+		Tools:             cfg.Tools,
+	})
+	if err != nil {
+		return fmt.Errorf("chat token count failed: %w", err)
+	}
+	// Leave room for provider-added formatting and token-accounting differences.
+	const inputHeadroom = 1024
+	if count == nil || count.TotalTokens <= 0 || count.TotalTokens > maxInputTokens-inputHeadroom {
+		return fmt.Errorf("chat input exceeds the reserved token allowance or could not be counted")
+	}
+	return nil
+}
+
 // Generate implements Model.
 func (g *Gemini) Generate(ctx context.Context, contents []*genai.Content, cfg *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error) {
 	return g.client.Models.GenerateContent(ctx, g.model, contents, cfg)

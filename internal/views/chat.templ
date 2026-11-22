@@ -128,16 +128,20 @@ templ ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOff
 				{ text }
 				for i, t := range times {
 					<p class={ "font-semibold", templ.KV("mt-2", text != "" || i > 0) }>{ chatTimesHeading(ctx, t) }</p>
+                    if status := chatTimesStatus(ctx, t); status != "" {
+                        <p class="mt-1">{ status }</p>
+                    } else {
 					<ul class="chat-times mt-1 tabular-nums" aria-label={ chatTimesHeading(ctx, t) }>
 						for _, s := range t.Slots {
 							<li><time datetime={ s.Start.Format("2006-01-02T15:04") }>{ chatSlotWhen(ctx, s) }</time>{ chatSlotStaff(t, s) }</li>
 						}
 					</ul>
+                    }
 					if u := chatUnchecked(ctx, t); u != "" {
 						<p class="mt-1 text-xs text-base-content/80">{ u }</p>
 					}
 				}
-				if len(times) > 0 {
+				if chatHasSlots(times) {
 					<p class="mt-2 text-xs text-base-content/80">{ chatTimesNote(ctx) }</p>
 				}
 			</div>

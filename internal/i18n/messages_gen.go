@@ -28,14 +28,16 @@ var messages = []string{
 	"Your question",                              // app.chat.input_label
 	"Chat with our assistant",                    // app.chat.open
 	"Ask about treatments, prices or free times", // app.chat.placeholder
-	"Send",                              // app.chat.send
-	"When is the next free time?",       // app.chat.suggest_free
-	"How does laser hair removal work?", // app.chat.suggest_laser
-	"What do your treatments cost?",     // app.chat.suggest_prices
-	"Tell me about the studio",          // app.chat.suggest_studio
-	"Suggested questions",               // app.chat.suggestions
-	"Thinking…",                         // app.chat.thinking
-	"Free times for %v",                 // app.chat.times
+	"Send",                                 // app.chat.send
+	"When is the next free time?",          // app.chat.suggest_free
+	"How does laser hair removal work?",    // app.chat.suggest_laser
+	"What do your treatments cost?",        // app.chat.suggest_prices
+	"Tell me about the studio",             // app.chat.suggest_studio
+	"Suggested questions",                  // app.chat.suggestions
+	"Thinking…",                            // app.chat.thinking
+	"Free times for %v",                    // app.chat.times
+	"No free times found for that search.", // app.chat.times_empty
+	"We could not check availability. Please check the booking page.",              // app.chat.times_failed
 	"These times look free now; the booking page confirms them.",                   // app.chat.times_note
 	"%v could not be checked: the booking page shows their times.",                 // app.chat.times_unchecked
 	"Free times for %[1]v with %[2]v",                                              // app.chat.times_with
@@ -292,14 +294,16 @@ var translations = map[Locale]map[string]string{
 		"Your question":                              "Je vraag",
 		"Chat with our assistant":                    "Chat met onze assistent",
 		"Ask about treatments, prices or free times": "Vraag naar behandelingen, prijzen of vrije tijden",
-		"Send":                              "Versturen",
-		"When is the next free time?":       "Wanneer is er een vrij moment?",
-		"How does laser hair removal work?": "Hoe werkt laserontharing?",
-		"What do your treatments cost?":     "Wat kosten jullie behandelingen?",
-		"Tell me about the studio":          "Vertel me over de studio",
-		"Suggested questions":               "Voorgestelde vragen",
-		"Thinking…":                         "Even denken…",
-		"Free times for %v":                 "Vrije tijden voor %v",
+		"Send":                                 "Versturen",
+		"When is the next free time?":          "Wanneer is er een vrij moment?",
+		"How does laser hair removal work?":    "Hoe werkt laserontharing?",
+		"What do your treatments cost?":        "Wat kosten jullie behandelingen?",
+		"Tell me about the studio":             "Vertel me over de studio",
+		"Suggested questions":                  "Voorgestelde vragen",
+		"Thinking…":                            "Even denken…",
+		"Free times for %v":                    "Vrije tijden voor %v",
+		"No free times found for that search.": "Geen vrije tijden gevonden voor deze zoekopdracht.",
+		"We could not check availability. Please check the booking page.":              "We konden de beschikbaarheid niet controleren. Kijk op de boekingspagina.",
 		"These times look free now; the booking page confirms them.":                   "Deze tijden lijken nu vrij; de boekingspagina bevestigt ze.",
 		"%v could not be checked: the booking page shows their times.":                 "De tijden van %v konden niet worden gecontroleerd: de boekingspagina toont ze.",
 		"Free times for %[1]v with %[2]v":                                              "Vrije tijden voor %[1]v bij %[2]v",
@@ -553,14 +557,16 @@ var translations = map[Locale]map[string]string{
 		"Your question":                              "Votre question",
 		"Chat with our assistant":                    "Discuter avec notre assistant",
 		"Ask about treatments, prices or free times": "Soins, prix ou créneaux libres",
-		"Send":                              "Envoyer",
-		"When is the next free time?":       "Quel est le prochain créneau libre ?",
-		"How does laser hair removal work?": "Comment fonctionne l’épilation laser ?",
-		"What do your treatments cost?":     "Combien coûtent vos soins ?",
-		"Tell me about the studio":          "Parlez-moi du studio",
-		"Suggested questions":               "Questions suggérées",
-		"Thinking…":                         "Réflexion…",
-		"Free times for %v":                 "Créneaux libres : %v",
+		"Send":                                 "Envoyer",
+		"When is the next free time?":          "Quel est le prochain créneau libre ?",
+		"How does laser hair removal work?":    "Comment fonctionne l’épilation laser ?",
+		"What do your treatments cost?":        "Combien coûtent vos soins ?",
+		"Tell me about the studio":             "Parlez-moi du studio",
+		"Suggested questions":                  "Questions suggérées",
+		"Thinking…":                            "Réflexion…",
+		"Free times for %v":                    "Créneaux libres : %v",
+		"No free times found for that search.": "Aucun créneau libre trouvé pour cette recherche.",
+		"We could not check availability. Please check the booking page.":              "Nous n’avons pas pu vérifier les disponibilités. Consultez la page de réservation.",
 		"These times look free now; the booking page confirms them.":                   "Ces créneaux semblent libres pour l'instant ; la page de réservation les confirme.",
 		"%v could not be checked: the booking page shows their times.":                 "Impossible de vérifier les créneaux de %v : la page de réservation les affiche.",
 		"Free times for %[1]v with %[2]v":                                              "Créneaux libres : %[1]v avec %[2]v",
@@ -814,14 +820,16 @@ var translations = map[Locale]map[string]string{
 		"Your question":                              "Ваш вопрос",
 		"Chat with our assistant":                    "Чат с нашим ассистентом",
 		"Ask about treatments, prices or free times": "Процедуры, цены или свободное время",
-		"Send":                              "Отправить",
-		"When is the next free time?":       "Когда ближайшее свободное время?",
-		"How does laser hair removal work?": "Как проходит лазерная эпиляция?",
-		"What do your treatments cost?":     "Сколько стоят процедуры?",
-		"Tell me about the studio":          "Расскажите о студии",
-		"Suggested questions":               "Частые вопросы",
-		"Thinking…":                         "Думаю…",
-		"Free times for %v":                 "Свободное время: %v",
+		"Send":                                 "Отправить",
+		"When is the next free time?":          "Когда ближайшее свободное время?",
+		"How does laser hair removal work?":    "Как проходит лазерная эпиляция?",
+		"What do your treatments cost?":        "Сколько стоят процедуры?",
+		"Tell me about the studio":             "Расскажите о студии",
+		"Suggested questions":                  "Частые вопросы",
+		"Thinking…":                            "Думаю…",
+		"Free times for %v":                    "Свободное время: %v",
+		"No free times found for that search.": "По этому запросу свободного времени не найдено.",
+		"We could not check availability. Please check the booking page.":              "Не удалось проверить наличие свободного времени. Посмотрите на странице записи.",
 		"These times look free now; the booking page confirms them.":                   "Это время сейчас выглядит свободным; страница записи его подтвердит.",
 		"%v could not be checked: the booking page shows their times.":                 "Не удалось проверить время: %v. Его покажет страница записи.",
 		"Free times for %[1]v with %[2]v":                                              "Свободное время: %[1]v, мастер %[2]v",
@@ -1075,14 +1083,16 @@ var translations = map[Locale]map[string]string{
 		"Your question":                              "Ваше запитання",
 		"Chat with our assistant":                    "Чат з нашим асистентом",
 		"Ask about treatments, prices or free times": "Процедури, ціни або вільний час",
-		"Send":                              "Надіслати",
-		"When is the next free time?":       "Коли найближчий вільний час?",
-		"How does laser hair removal work?": "Як проходить лазерна епіляція?",
-		"What do your treatments cost?":     "Скільки коштують процедури?",
-		"Tell me about the studio":          "Розкажіть про студію",
-		"Suggested questions":               "Часті запитання",
-		"Thinking…":                         "Думаю…",
-		"Free times for %v":                 "Вільний час: %v",
+		"Send":                                 "Надіслати",
+		"When is the next free time?":          "Коли найближчий вільний час?",
+		"How does laser hair removal work?":    "Як проходить лазерна епіляція?",
+		"What do your treatments cost?":        "Скільки коштують процедури?",
+		"Tell me about the studio":             "Розкажіть про студію",
+		"Suggested questions":                  "Часті запитання",
+		"Thinking…":                            "Думаю…",
+		"Free times for %v":                    "Вільний час: %v",
+		"No free times found for that search.": "За цим запитом вільного часу не знайдено.",
+		"We could not check availability. Please check the booking page.":              "Не вдалося перевірити наявність вільного часу. Перейдіть на сторінку запису.",
 		"These times look free now; the booking page confirms them.":                   "Цей час зараз виглядає вільним; сторінка запису його підтвердить.",
 		"%v could not be checked: the booking page shows their times.":                 "Не вдалося перевірити час: %v. Його покаже сторінка запису.",
 		"Free times for %[1]v with %[2]v":                                              "Вільний час: %[1]v, майстер %[2]v",

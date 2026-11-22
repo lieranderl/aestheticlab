@@ -326,6 +326,8 @@
 			"suggest_studio": "Tell me about the studio",
 			"suggest_laser": "How does laser hair removal work?",
 			"times": "Free times for {{service}}",
+			"times_empty": "No free times found for that search.",
+			"times_failed": "We could not check availability. Please check the booking page.",
 			"times_with": "Free times for {{service}} with {{name}}",
 			"times_note": "These times look free now; the booking page confirms them.",
 			"times_unchecked": "{{names}} could not be checked: the booking page shows their times.",
