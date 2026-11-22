@@ -63,18 +63,17 @@ func clockTimes(s string) []string {
 }
 
 // showTimes replaces a refinement of the same search and keeps independent
-// searches for different staff. A staff-specific lookup supersedes a broad one.
+// searches for different staff. Switching to or from all staff supersedes
+// earlier results for that treatment with the other staff scope.
 func (r *toolRun) showTimes(ft FreeTimes) {
+	r.times = slices.DeleteFunc(r.times, func(t FreeTimes) bool {
+		return t.ServiceID == ft.ServiceID && t.StaffID != ft.StaffID && (t.StaffID == 0 || ft.StaffID == 0)
+	})
 	if i := slices.IndexFunc(r.times, func(t FreeTimes) bool {
 		return t.ServiceID == ft.ServiceID && t.StaffID == ft.StaffID
 	}); i >= 0 {
 		r.times[i] = ft
 		return
-	}
-	if ft.StaffID != 0 {
-		r.times = slices.DeleteFunc(r.times, func(t FreeTimes) bool {
-			return t.ServiceID == ft.ServiceID && t.StaffID == 0
-		})
 	}
 	if len(r.times) < maxOffers {
 		r.times = append(r.times, ft)

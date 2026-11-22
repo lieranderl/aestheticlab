@@ -235,3 +235,18 @@ func TestFailedRefinementReplacesEarlierSlots(t *testing.T) {
 		t.Fatalf("want only the failed refinement, got %+v, %v", got, err)
 	}
 }
+
+func TestAllStaffRefinementReplacesStaffSpecificResults(t *testing.T) {
+	m := &scripted{replies: []*genai.GenerateContentResponse{
+		call("find_free_slots", monday(map[string]any{"staff_id": float64(642297)})),
+		call("find_free_slots", monday(map[string]any{"staff_id": float64(642296)})),
+		call("find_free_slots", monday(map[string]any{"from_time": "23:00"})),
+		text("There are no free times that late."),
+	}}
+	got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "Check Zara and Rubina, then anyone after 23:00")
+	if err != nil || len(got.Times) != 1 || got.Times[0].StaffID != 0 ||
+		len(got.Times[0].Slots) != 0 || got.Times[0].Failed ||
+		len(got.Offers) != 1 || got.Offers[0].StaffID != 0 {
+		t.Fatalf("want only the empty all-staff result and its booking offer, got %+v, %v", got, err)
+	}
+}
