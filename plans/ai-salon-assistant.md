@@ -85,6 +85,8 @@ Studio and treatment details (2026-11-22): the assistant also gets the site's ca
 
 Cut replies (2026-11-22): a Russian staging answer stopped mid-word at 1,020 of 1,024 output tokens (Gemini's thinking counts). The limit is now 2,048, and a reply that still hits it ends at its last whole sentence.
 
+Test set in the repo (2026-11-22): `scripts/chat-test-set.json` holds the 71 cases (75 messages) with what a good answer says; `bun run chat-test-set` sends them to a local server with a real model and saves the transcripts in `tmp/chat-test-set/` for grading. Re-run it after big content changes or a model change (about €0.25). The prompt now says an owner note wins over a treatment's description when they disagree.
+
 Still to do: ~~create the `AVAILABILITY_CALENDARS` repository secret~~ (done); ~~review and apply the infrastructure plan; PR to `staging`; check real calendars and Gemini on staging; the 60-question test set~~ (done); check free times against the Timely widget on staging; update the privacy policy's "Last updated" date when the chat reaches production; seed production Firestore.
 
 ## Phases
