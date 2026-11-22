@@ -12,6 +12,7 @@
 // (X-Forwarded-For), which a deployed site ignores, so there the
 // per-visitor limit (40 a day) stops the set halfway.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { parseArgs } from "node:util";
 
 export type Case = {
@@ -32,6 +33,18 @@ const entities: Record<string, string> = {
 	quot: '"',
 	"#39": "'",
 };
+
+// textOf is markup as plain text: tags are removed until none is left (one
+// pass can leave "<scr<b>ipt>" as "<script"), then any stray < or >.
+export function textOf(html: string): string {
+	let s = html;
+	let prev: string;
+	do {
+		prev = s;
+		s = s.replace(/<[^<>]*>/g, "");
+	} while (s !== prev);
+	return decodeEntities(s.replace(/[<>]/g, "")).trim();
+}
 
 function decodeEntities(s: string): string {
 	return s.replace(/&(amp|lt|gt|quot|#39);/g, (_, e) => entities[e]);
@@ -65,9 +78,9 @@ export function parseReply(sse: string, history: Turn[]): Reply {
 		...elements.matchAll(
 			/<button[^>]*id="chat-book-[^"]*"[^>]*>([\s\S]*?)<\/button>/g,
 		),
-	].map((m) => decodeEntities(m[1].replace(/<[^>]+>/g, "")).trim());
+	].map((m) => textOf(m[1]));
 	return {
-		text: bubble ? decodeEntities(bubble[1]) : "",
+		text: bubble ? textOf(bubble[1]) : "",
 		buttons,
 		history: next,
 	};
@@ -115,7 +128,7 @@ async function main() {
 	const out =
 		values.out ??
 		`tmp/chat-test-set/${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
-	mkdirSync(out.replace(/\/[^/]*$/, ""), { recursive: true });
+	mkdirSync(dirname(out), { recursive: true });
 
 	const results = [];
 	for (const [i, c] of cases.entries()) {

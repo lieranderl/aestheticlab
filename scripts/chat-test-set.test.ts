@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { type Case, parseReply } from "./chat-test-set";
+import { type Case, parseReply, textOf } from "./chat-test-set";
 
 test("reads the assistant's reply, Book buttons and transcript from the chat's response", () => {
 	const sse = [
@@ -42,4 +42,11 @@ test("every case has an id, a site locale, messages and what a good answer says"
 	for (const locale of locales) {
 		expect(cases.some((c) => c.locale === locale)).toBe(true);
 	}
+});
+
+test("leaves no tag behind, even one hidden inside another", () => {
+	expect(textOf("<scr<b>ipt>alert(1)</scr</b>ipt> Book &amp; go")).toBe(
+		"alert(1) Book & go",
+	);
+	expect(textOf("Zara &lt;3")).toBe("Zara <3");
 });
