@@ -205,7 +205,7 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 			log.ErrorContext(ctx, "chat_budget_unreadable", "error", budget.Error())
 		default:
 			loc := store.Content(ctx).In(l)
-			k := assistant.Knowledge{Locale: l, Content: loc, Facts: views.AssistantFacts(ctx, loc), CareNotes: views.AssistantCareNotes(ctx)}
+			k := assistant.Knowledge{Locale: l, Content: loc, Facts: views.AssistantFacts(ctx, loc), CareNotes: views.AssistantCareNotes(ctx), Categories: views.AssistantCategories(ctx, loc)}
 			for _, qa := range views.AssistantFAQ(ctx, loc) {
 				k.FAQ = append(k.FAQ, assistant.QA{Question: qa.Question, Answer: qa.Answer})
 			}

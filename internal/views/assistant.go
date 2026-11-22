@@ -37,6 +37,8 @@ func AssistantFAQ(ctx context.Context, loc *content.Localized) []QA {
 func AssistantFacts(ctx context.Context, loc *content.Localized) []string {
 	facts := []string{
 		siteName + ", " + street + ", " + zip + " " + city + ", Belgium",
+		tr(ctx, "Manicure, pedicure, brows, lashes and laser, in a calm studio in the heart of Leuven."),
+		tr(ctx, "Opened in 2024 with a simple promise: beautiful work in a space that feels calm, honest and welcoming. We listen first, then create."),
 		tr(ctx, "Monday") + " – " + tr(ctx, "Saturday") + " · " + opens + " – " + closes + " · " + tr(ctx, "By appointment only"),
 		"Email: " + siteEmail,
 		"Instagram: @aestheticlabbe (" + instagram + ")",
@@ -46,6 +48,16 @@ func AssistantFacts(ctx context.Context, loc *content.Localized) []string {
 		facts = append(facts, tr(ctx, "Parking")+": "+p.Name)
 	}
 	return facts
+}
+
+// AssistantCategories are the categories' descriptions as the services
+// section shows them, by service group ID, in the page's language.
+func AssistantCategories(ctx context.Context, loc *content.Localized) map[string]string {
+	out := make(map[string]string, len(loc.ServiceGroups))
+	for i := range loc.ServiceGroups {
+		out[loc.ServiceGroups[i].ID] = categoryDescription(ctx, &loc.ServiceGroups[i])
+	}
+	return out
 }
 
 var (

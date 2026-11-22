@@ -79,7 +79,7 @@ Staff email addresses were not copied from Supabase, and don't belong here: ever
 
 ### `assistant_notes/{id}`
 
-The owner's facts for the chat assistant that the site doesn't show elsewhere: payment, policies, anything visitors ask. One document per topic; the ID is a short name (`payment`, `cancellation`).
+The owner's facts for the chat assistant that the site doesn't show elsewhere: payment, policies, the studio itself, how each treatment is done, anything visitors ask. One document per topic; the ID is a short name (`payment`, `cancellation`, `about-studio`, `laser`). The assistant also reads each category's description from the services section and every treatment's full `description`, so a fact that belongs to one treatment goes there or in its `assistant_note`.
 
 | Field | Meaning |
 | --- | --- |

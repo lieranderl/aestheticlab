@@ -54,6 +54,9 @@ type Knowledge struct {
 	// CareNotes is the care notes page as plain text (preparation and
 	// aftercare).
 	CareNotes string
+	// Categories are the site's descriptions of the treatment categories,
+	// by service group ID.
+	Categories map[string]string
 }
 
 // Offer is a Book button for a treatment, with one person or anyone.
