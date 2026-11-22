@@ -365,7 +365,7 @@ func TestAnAnswerWrittenWithAToolCallIsKept(t *testing.T) {
 		"rewritten answer":  {text(rewritten), rewritten},
 		"answer said twice": {text(times), times},
 		"a second thought":  {text("I can also look up her other free days."), times + "\n\nI can also look up her other free days."},
-		"short rewrite":     {text("Zara is free Monday at 12:15, 12:30 and 12:45, and Tuesday at 10:00."), "Zara is free Monday at 12:15, 12:30 and 12:45, and Tuesday at 10:00."},
+		"a disclaimer":      {text("These times look free now."), times + "\n\nThese times look free now."},
 	} {
 		m := &scripted{replies: []*genai.GenerateContentResponse{textAndCall(times, "offer_booking", book), tc.final}}
 		got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
@@ -375,6 +375,24 @@ func TestAnAnswerWrittenWithAToolCallIsKept(t *testing.T) {
 		if got.Text != tc.want || len(got.Offers) != 1 {
 			t.Errorf("%s: reply = %q (%d offers), want %q", name, got.Text, len(got.Offers), tc.want)
 		}
+	}
+}
+
+// Answers written with separate tool calls (one per treatment) are all
+// kept when the final round adds nothing.
+func TestAnswersFromSeveralToolRoundsAreAllKept(t *testing.T) {
+	empty := &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{Content: &genai.Content{Role: genai.RoleModel}, FinishReason: genai.FinishReasonStop}}}
+	m := &scripted{replies: []*genai.GenerateContentResponse{
+		textAndCall("Pedicure costs 70 euros.", "offer_booking", map[string]any{"service_id": "4847871"}),
+		textAndCall("Coating removal costs 10 euros.", "offer_booking", map[string]any{"service_id": "4884910"}),
+		empty,
+	}}
+	got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "Pedicure costs 70 euros.\n\nCoating removal costs 10 euros."; got.Text != want {
+		t.Errorf("reply = %q, want %q", got.Text, want)
 	}
 }
 

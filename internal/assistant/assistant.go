@@ -201,37 +201,33 @@ func addTokens(t usage.Tokens, resp *genai.GenerateContentResponse) usage.Tokens
 	return t
 }
 
-// finalAnswer is the one answer the visitor sees, from the rounds' texts
-// (the last is the final round's). Gemini often writes the answer with a
-// Book button's tool call and then sends nothing, a further line, or the
-// answer rewritten: the visitor sees the answer once, with any further
-// line after it. Joining every round's text showed rewrites twice.
+// finalAnswer is what the visitor sees, from the rounds' texts in order.
+// Gemini often writes an answer with a tool call and then sends nothing, a
+// further line, or the answer rewritten: every distinct text is kept, in
+// order, but a text that repeats or rewrites an earlier one replaces it,
+// so the visitor sees each answer once.
 func finalAnswer(said []string) string {
-	final := said[len(said)-1]
-	earlier := ""
-	for _, t := range slices.Backward(said[:len(said)-1]) {
-		if t != "" {
-			earlier = t
-			break
+	var out []string
+	for _, t := range said {
+		if t == "" || slices.ContainsFunc(out, func(u string) bool { return strings.Contains(u, t) }) {
+			continue
 		}
+		if i := slices.IndexFunc(out, func(u string) bool { return strings.Contains(t, u) || rewrites(t, u) }); i >= 0 {
+			out[i] = t
+			continue
+		}
+		out = append(out, t)
 	}
-	switch {
-	case earlier == "" || strings.Contains(final, earlier):
-		return final
-	case final == "" || strings.Contains(earlier, final):
-		return earlier
-	case rewrites(final, earlier):
-		return final
-	}
-	return earlier + "\n\n" + final
+	return strings.Join(out, "\n\n")
 }
 
 // word is a word of four letters or more: short words ("the", "для",
 // times' digits) are shared by any two replies.
 var word = regexp.MustCompile(`[\p{L}\p{N}]{4,}`)
 
-// rewrites reports whether a says what b says: most of the shorter one's
-// words are in the other.
+// rewrites reports whether a says again what b says: about as many words,
+// half of them or more the same. A short line after an answer (a disclaimer, an
+// offer to look further) shares words with it but is no rewrite.
 func rewrites(a, b string) bool {
 	words := func(s string) map[string]bool {
 		set := map[string]bool{}
@@ -244,13 +240,17 @@ func rewrites(a, b string) bool {
 	if len(wa) > len(wb) {
 		wa, wb = wb, wa
 	}
+	if len(wa) == 0 || len(wa)*3 < len(wb)*2 {
+		return false
+	}
 	shared := 0
 	for w := range wa {
 		if wb[w] {
 			shared++
 		}
 	}
-	return len(wa) > 0 && shared*5 >= len(wa)*3
+	// At least half of all their words are shared.
+	return shared*2 >= len(wa)+len(wb)-shared
 }
 
 // replyText is the answer to the visitor: the last text part that isn't a
