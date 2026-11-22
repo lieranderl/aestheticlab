@@ -53,11 +53,13 @@ locals {
   }
 
   # roles/datastore.owner is the only predefined role that can create
-  # Firestore databases. It grants no more than this account's
-  # projectIamAdmin role already lets it grant itself.
+  # Firestore databases, and roles/iam.roleAdmin the only one that can manage
+  # the runtime's custom Vertex AI role. Neither grants more than this
+  # account's projectIamAdmin role already lets it grant itself.
   iac_project_roles = toset([
     "roles/artifactregistry.admin",
     "roles/datastore.owner",
+    "roles/iam.roleAdmin",
     "roles/iam.serviceAccountAdmin",
     "roles/iam.workloadIdentityPoolAdmin",
     "roles/logging.configWriter",
@@ -270,14 +272,38 @@ resource "google_project_iam_member" "runtime_chat_usage" {
   }
 }
 
-# The chat assistant calls Gemini on Vertex AI (plans/ai-salon-assistant.md),
-# only in the environments where it runs.
-resource "google_project_iam_member" "runtime_vertex_user" {
+# The chat assistant only calls generateContent on Gemini publisher models
+# (internal/assistant/model.go). Google maps prompt requests to
+# aiplatform.endpoints.predict alone (Vertex AI generative AI access control,
+# 2026-11-22); roles/aiplatform.user would also let the public runtime manage
+# every Vertex AI resource in the project.
+resource "google_project_iam_custom_role" "gemini_caller" {
+  project     = var.project_id
+  role_id     = "aestheticLabGeminiCaller"
+  title       = "Aesthetic Lab Gemini caller"
+  description = "Call generateContent on Vertex AI models, nothing else. Managed by OpenTofu (infra/main.tf)."
+  permissions = ["aiplatform.endpoints.predict"]
+
+  depends_on = [google_project_iam_member.iac]
+}
+
+# Only in the environments where the chat runs. A new binding is created
+# before the old one is removed, so the chat never loses access mid-apply.
+resource "google_project_iam_member" "runtime_vertex" {
   for_each = { for name, service in local.services : name => service if contains(var.chat_environments, name) }
 
   project = var.project_id
-  role    = "roles/aiplatform.user"
+  role    = google_project_iam_custom_role.gemini_caller.name
   member  = "serviceAccount:${google_service_account.runtime[each.key].email}"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+moved {
+  from = google_project_iam_member.runtime_vertex_user
+  to   = google_project_iam_member.runtime_vertex
 }
 
 resource "google_service_account_iam_member" "github_wif" {
@@ -500,7 +526,7 @@ resource "google_cloud_run_v2_service" "web" {
   depends_on = [
     google_project_service.required,
     google_project_iam_member.runtime_firestore_reader,
-    google_project_iam_member.runtime_vertex_user,
+    google_project_iam_member.runtime_vertex,
     google_project_iam_member.runtime_chat_usage,
     google_service_account_iam_member.iac_act_as,
   ]

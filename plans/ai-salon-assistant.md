@@ -166,7 +166,7 @@ Gate: httptest tests for success, a per-calendar error, a timeout and a malforme
 - `offer_booking(service_id, staff_id?)`: returns nothing to the model; the server renders a Book button for that service and person through `BookButton`. The model never writes a URL.
 - Gemini specifics: function declarations for both tools; the system instruction kept byte-identical so implicit caching applies; the lowest thinking level; a small `maxOutputTokens`; `safetySettings` at defaults.
 - Handle a blocked or truncated answer (`finishReason` `SAFETY`, `MAX_TOKENS` or an empty reply) with a short fixed reply that offers contact options.
-- `infra/`: `roles/aiplatform.user` for both runtime accounts.
+- `infra/`: the custom `aestheticLabGeminiCaller` role (`aiplatform.endpoints.predict` only, replacing `roles/aiplatform.user`) for the runtime accounts in `chat_environments`.
 
 Gate: tests for an unknown service ID, slots when availability is off, the tool-round limit, a blocked answer, and a system instruction that is byte-identical across requests (cache hits).
 

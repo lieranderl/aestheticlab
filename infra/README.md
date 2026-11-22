@@ -62,7 +62,16 @@ After both environment-scoped deployers have completed a successful deployment:
 
 ## Chat assistant
 
-`chat_environments` (default `["staging"]`) sets `CHAT_ENABLED` and grants those runtime accounts `roles/aiplatform.user` for Gemini on Vertex AI. `chat_model` and `chat_location` (`eu`) choose the model and keep processing in the EU.
+`chat_environments` (default `["staging"]`) sets `CHAT_ENABLED` and grants those runtime accounts the custom role `aestheticLabGeminiCaller`, which holds only `aiplatform.endpoints.predict`: the permission Google checks for prompt requests (`generateContent`) to Gemini on Vertex AI. Not `roles/aiplatform.user`, which would let the public runtime manage every Vertex AI resource in the project. `chat_model` and `chat_location` (`eu`) choose the model and keep processing in the EU.
+
+The infrastructure deployer holds `roles/iam.roleAdmin` to manage that role. The apply that introduces it grants the role to the deployer first; if IAM hasn't propagated yet, creating the custom role fails with a 403 on `iam.roles.create` and the runtime keeps its old binding (the new one is created before the old one is removed). Re-run the infrastructure workflow to finish.
+
+To confirm the chat still reaches Gemini under the runtime identity after an apply, and before promoting:
+
+1. Check the binding: `gcloud projects get-iam-policy PROJECT --flatten=bindings --filter='bindings.members:aesthetic-stage-runtime@' --format='value(bindings.role)'` lists `projects/PROJECT/roles/aestheticLabGeminiCaller` and no `roles/aiplatform.user`.
+2. Ask the staging chat one question that needs the model (not a canned answer) and get a real reply; IAM changes can take a few minutes to apply.
+3. In Cloud Logging for the staging service, there is no `PERMISSION_DENIED` or `aiplatform.endpoints.predict` error from the chat after that request.
+4. Optionally, as someone allowed to impersonate the runtime account, call the model directly: `curl -H "Authorization: Bearer $(gcloud auth print-access-token --impersonate-service-account=aesthetic-stage-runtime@PROJECT.iam.gserviceaccount.com)" -H 'Content-Type: application/json' -d '{"contents":[{"role":"user","parts":[{"text":"Say OK"}]}]}' https://aiplatform.eu.rep.googleapis.com/v1/projects/PROJECT/locations/eu/publishers/google/models/MODEL:generateContent` answers 200. This is a billed call outside the chat's ledger, so keep it to one.
 
 `availability_calendars` maps staff calendars to staff IDs (`<calendarId>|<staffId>;…`). It is `sensitive` and never in the repository: CI reads it from the `AVAILABILITY_CALENDARS` repository secret (`TF_VAR_availability_calendars`); locally, put it in the git-ignored `terraform.tfvars`. Each calendar must be shared with the environment's runtime account at "See only free/busy (hide details)". Empty turns free times off: the chat offers the Book button instead.
 
