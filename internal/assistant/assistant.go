@@ -75,14 +75,24 @@ type Offer struct {
 type Answer struct {
 	Text   string
 	Offers []Offer
+	// Tokens are the billed tokens, with worstRoundTokens for each model
+	// call whose usage is unknown.
 	Tokens usage.Tokens
+	// Unmetered counts the model calls whose usage is unknown: no usage in
+	// the response, or a call cut off (timeout, the visitor leaving) after
+	// Vertex AI may have processed it.
+	Unmetered int
 }
 
-// WorstCaseTokens bounds what one reply can be billed: every model call
-// with a long prompt (the salon, 20 turns of transcript, tool results) and
-// the most output and thinking. The spending ledger holds its price before
+// worstRoundTokens bounds what one model call can be billed: a long prompt
+// (the salon, 20 turns of transcript, tool results) and the most output
+// and thinking.
+var worstRoundTokens = usage.Tokens{Prompt: 30_000, Output: maxOutputTokens + 3_000}
+
+// WorstCaseTokens bounds what one reply can be billed: maxRounds model
+// calls at worstRoundTokens. The spending ledger holds its price before
 // each reply.
-var WorstCaseTokens = usage.Tokens{Prompt: maxRounds * 30_000, Output: maxRounds * (maxOutputTokens + 3_000)}
+var WorstCaseTokens = usage.Tokens{Prompt: maxRounds * worstRoundTokens.Prompt, Output: maxRounds * worstRoundTokens.Output}
 
 // ErrNoAnswer is a reply the model did not give: blocked, empty, or still
 // calling tools after maxRounds.
@@ -149,6 +159,7 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 	contents := []*genai.Content{genai.NewContentFromText(a.visitorMessage(history, message), genai.RoleUser)}
 	run := &toolRun{a: a, k: k}
 	var tokens usage.Tokens
+	unmetered := 0
 	// said is the visitor-facing text of the rounds so far: Gemini often
 	// writes the answer in the same response as a tool call, then sends
 	// nothing, a closing line or the answer again once it has the tool's
@@ -157,9 +168,16 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 	for range maxRounds {
 		resp, err := a.opts.Model.Generate(ctx, contents, cfg)
 		if err != nil {
-			return Answer{Tokens: tokens}, fmt.Errorf("model: %w", err)
+			if !rejected(err) {
+				tokens, unmetered = addTokens(tokens, worstRoundTokens), unmetered+1
+			}
+			return Answer{Tokens: tokens, Unmetered: unmetered}, fmt.Errorf("model: %w", err)
 		}
-		tokens = addTokens(tokens, resp)
+		if resp == nil || resp.UsageMetadata == nil {
+			tokens, unmetered = addTokens(tokens, worstRoundTokens), unmetered+1
+		} else {
+			tokens = addTokens(tokens, billed(resp.UsageMetadata))
+		}
 		// A response without content (blocked, or nothing more to say) ends
 		// the reply with whatever was already said.
 		if resp == nil || len(resp.Candidates) == 0 || resp.Candidates[0].Content == nil {
@@ -174,9 +192,9 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		if len(calls) == 0 {
 			text := finalAnswer(said)
 			if text == "" {
-				return Answer{Tokens: tokens}, ErrNoAnswer
+				return Answer{Tokens: tokens, Unmetered: unmetered}, ErrNoAnswer
 			}
-			return Answer{Text: text, Offers: run.offers, Tokens: tokens}, nil
+			return Answer{Text: text, Offers: run.offers, Tokens: tokens, Unmetered: unmetered}, nil
 		}
 		// Text written with a find_free_slots call comes before the times
 		// are known: any times in it are guesses, never shown.
@@ -194,22 +212,32 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		contents = append(contents, genai.NewContentFromParts(parts, genai.RoleUser))
 	}
 	if text := finalAnswer(append(said, "")); text != "" {
-		return Answer{Text: text, Offers: run.offers, Tokens: tokens}, nil
+		return Answer{Text: text, Offers: run.offers, Tokens: tokens, Unmetered: unmetered}, nil
 	}
-	return Answer{Tokens: tokens}, ErrNoAnswer
+	return Answer{Tokens: tokens, Unmetered: unmetered}, ErrNoAnswer
 }
 
-// addTokens adds resp's billed tokens to t: the prompt with any tool-use
+// billed is a response's billed tokens: the prompt with any tool-use
 // prompt, and the reply with the model's thinking, which bills as output.
-func addTokens(t usage.Tokens, resp *genai.GenerateContentResponse) usage.Tokens {
-	if resp == nil || resp.UsageMetadata == nil {
-		return t
+func billed(u *genai.GenerateContentResponseUsageMetadata) usage.Tokens {
+	return usage.Tokens{
+		Prompt: int64(u.PromptTokenCount) + int64(u.ToolUsePromptTokenCount),
+		Cached: int64(u.CachedContentTokenCount),
+		Output: int64(u.CandidatesTokenCount) + int64(u.ThoughtsTokenCount),
 	}
-	u := resp.UsageMetadata
-	t.Prompt += int64(u.PromptTokenCount) + int64(u.ToolUsePromptTokenCount)
-	t.Cached += int64(u.CachedContentTokenCount)
-	t.Output += int64(u.CandidatesTokenCount) + int64(u.ThoughtsTokenCount)
-	return t
+}
+
+func addTokens(t, u usage.Tokens) usage.Tokens {
+	return usage.Tokens{Prompt: t.Prompt + u.Prompt, Cached: t.Cached + u.Cached, Output: t.Output + u.Output}
+}
+
+// rejected reports whether err is Vertex AI's own answer that it failed
+// the request (an HTTP error status), which is not billed. Any other error
+// (a deadline, a cancelled request, a dropped connection) leaves unknown
+// what Vertex AI processed.
+func rejected(err error) bool {
+	var apiErr genai.APIError
+	return errors.As(err, &apiErr)
 }
 
 // finalAnswer is what the visitor sees, from the rounds' texts in order.

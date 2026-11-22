@@ -171,7 +171,8 @@ type chat struct {
 // openChat is the chat when CHAT_ENABLED is "true". CHAT_MODEL names the
 // Gemini model, or "fake" for a scripted one (local development, browser
 // tests). Its spending is capped by a ledger in the CHAT_USAGE_DATABASE
-// Firestore database (in memory without one) at CHAT_MONTHLY_BUDGET_EUR and
+// Firestore database (required for a billed model; the fake one may keep
+// it in memory) at CHAT_MONTHLY_BUDGET_EUR and
 // CHAT_DAILY_BUDGET_EUR. Free times come from the calendars
 // AVAILABILITY_CALENDARS maps to staff, or, with AVAILABILITY_DEV "true",
 // from a made-up calendar. Anything it cannot set up leaves the chat off.
@@ -199,6 +200,12 @@ func openChat(ctx context.Context, getenv func(string) string, log *slog.Logger)
 			log.Error("chat_config_rejected", "error", "GOOGLE_CLOUD_PROJECT is required for the chat model")
 			return off
 		}
+		// In memory, every Cloud Run instance and restart would start with a
+		// fresh allowance: a billed model needs the shared ledger.
+		if getenv("CHAT_USAGE_DATABASE") == "" {
+			log.Error("chat_config_rejected", "error", "CHAT_USAGE_DATABASE is required for a billed chat model", "model", name)
+			return off
+		}
 		gemini, err := assistant.NewGemini(ctx, project, cmp.Or(getenv("CHAT_LOCATION"), defaultChatLocation), name)
 		if err != nil {
 			log.Error("chat_model_failed", "model", name, "error", err.Error())
@@ -222,7 +229,8 @@ func openChat(ctx context.Context, getenv func(string) string, log *slog.Logger)
 		}
 		store, closeStore = fs, func() { _ = fs.Close() }
 	} else {
-		// Local only: the caps hold per process, not across restarts.
+		// The fake model only (a billed one needs the database): the caps
+		// hold per process, not across restarts.
 		log.Warn("chat_usage_in_memory")
 		store = usage.NewMemory()
 	}

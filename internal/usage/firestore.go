@@ -2,12 +2,9 @@ package usage
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"cloud.google.com/go/firestore"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // collection holds one document per day ("day-2026-11-22") and per month
@@ -61,8 +58,9 @@ func eurOf(snap *firestore.DocumentSnapshot) float64 {
 }
 
 // Reserve implements Store in one transaction: it reads both totals,
-// checks the caps and adds eur, so concurrent reservations near a cap are
-// serialized by Firestore and only those that fit get through.
+// checks that eur fits under both caps and adds it, so concurrent
+// reservations near a cap are serialized by Firestore and only those that
+// fit get through.
 func (f *Firestore) Reserve(ctx context.Context, day, month, env string, eur float64, caps Caps) error {
 	d, m := f.refs(day, month)
 	return f.client.RunTransaction(ctx, func(_ context.Context, tx *firestore.Transaction) error {
@@ -70,7 +68,7 @@ func (f *Firestore) Reserve(ctx context.Context, day, month, env string, eur flo
 		if err != nil {
 			return err
 		}
-		if err := caps.check(eurOf(snaps[0]), eurOf(snaps[1])); err != nil {
+		if err := caps.check(eurOf(snaps[0]), eurOf(snaps[1]), eur); err != nil {
 			return err
 		}
 		inc := map[string]any{"eur": firestore.Increment(eur), "eur_" + env: firestore.Increment(eur)}
@@ -83,27 +81,21 @@ func (f *Firestore) Reserve(ctx context.Context, day, month, env string, eur flo
 	})
 }
 
-// Add implements Store with atomic increments, so instances recording at
-// once never lose each other's spending.
+// Add implements Store with atomic increments in one transaction: both
+// totals change or neither does, so the day and month caps never drift
+// apart, and instances recording at once never lose each other's spending.
+// A transaction is retried only when Firestore aborted it, which applied
+// nothing, so an increment is never applied twice (a BulkWriter retries
+// each write on its own and could).
 func (f *Firestore) Add(ctx context.Context, day, month, env string, eur float64) error {
 	d, m := f.refs(day, month)
 	inc := map[string]any{"eur": firestore.Increment(eur), "eur_" + env: firestore.Increment(eur)}
-	batch := f.client.BulkWriter(ctx)
-	jobs := make([]*firestore.BulkWriterJob, 0, 2)
-	for _, ref := range []*firestore.DocumentRef{d, m} {
-		job, err := batch.Set(ref, inc, firestore.MergeAll)
-		if err != nil {
-			batch.End()
-			return err
+	return f.client.RunTransaction(ctx, func(_ context.Context, tx *firestore.Transaction) error {
+		for _, ref := range []*firestore.DocumentRef{d, m} {
+			if err := tx.Set(ref, inc, firestore.MergeAll); err != nil {
+				return err
+			}
 		}
-		jobs = append(jobs, job)
-	}
-	batch.End()
-	var errs []error
-	for _, job := range jobs {
-		if _, err := job.Results(); err != nil && status.Code(err) != codes.OK {
-			errs = append(errs, err)
-		}
-	}
-	return errors.Join(errs...)
+		return nil
+	})
 }

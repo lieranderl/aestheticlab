@@ -31,7 +31,8 @@ const (
 	maxTurns = 20
 	// maxTurnText bounds one transcript message, in characters.
 	maxTurnText = 2000
-	// replyTimeout bounds one answer, tool calls included.
+	// replyTimeout bounds one answer from the budget's reservation on, tool
+	// calls included.
 	replyTimeout = 30 * time.Second
 )
 
@@ -184,10 +185,14 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 		reason := limit.allow(clientIP(r), start)
 		var budget error
 		var held usage.Reservation
+		// The deadline starts before the reservation, so a slow ledger can't
+		// hold the request past it either.
+		replyCtx, cancel := context.WithTimeout(ctx, replyTimeout)
+		defer cancel()
 		if reason == "" {
 			// Held before every model call, atomically, at the most a reply can
 			// cost: no spending the ledger can't see, even from replies at once.
-			held, budget = spend.Reserve(ctx, price.Cost(assistant.WorstCaseTokens))
+			held, budget = spend.Reserve(replyCtx, price.Cost(assistant.WorstCaseTokens))
 		}
 		switch {
 		case reason == tooFast:
@@ -204,18 +209,21 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 			answer.Text, outcome = views.ChatUnavailable(ctx), "budget_unreadable"
 			log.ErrorContext(ctx, "chat_budget_unreadable", "error", budget.Error())
 		default:
-			loc := store.Content(ctx).In(l)
+			loc := store.Content(replyCtx).In(l)
 			k := assistant.Knowledge{Locale: l, Content: loc, Facts: views.AssistantFacts(ctx, loc), CareNotes: views.AssistantCareNotes(ctx), Categories: views.AssistantCategories(ctx, loc)}
 			for _, qa := range views.AssistantFAQ(ctx, loc) {
 				k.FAQ = append(k.FAQ, assistant.QA{Question: qa.Question, Answer: qa.Answer})
 			}
-			replyCtx, cancel := context.WithTimeout(ctx, replyTimeout)
 			var err error
 			answer, err = a.Reply(replyCtx, k, history, message)
 			cancel()
 			// A failed or abandoned reply is billed too: settle whatever it
-			// used, on a context the visitor leaving can't cancel.
+			// used, on a context the visitor leaving can't cancel. A model call
+			// of unknown usage counts at its worst case (assistant.Answer).
 			cost = price.Cost(answer.Tokens)
+			if answer.Unmetered > 0 {
+				log.WarnContext(ctx, "chat_usage_unknown", "model_calls", answer.Unmetered, "eur", cost)
+			}
 			settleCtx, cancelSettle := context.WithTimeout(context.WithoutCancel(ctx), settleTimeout)
 			if recErr := spend.Settle(settleCtx, held, cost); recErr != nil {
 				log.ErrorContext(ctx, "chat_spending_not_recorded", "eur", cost, "error", recErr.Error())
@@ -227,7 +235,7 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 					outcome = "failed"
 					log.ErrorContext(ctx, "chat_failed", "locale", string(l), "error", err.Error())
 				}
-				answer = assistant.Answer{Text: views.ChatUnavailable(ctx), Tokens: answer.Tokens}
+				answer = assistant.Answer{Text: views.ChatUnavailable(ctx), Tokens: answer.Tokens, Unmetered: answer.Unmetered}
 			}
 		}
 		offers := make([]views.ChatOffer, 0, len(answer.Offers))
@@ -237,7 +245,8 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 		// Visitors' messages and replies are never logged: only counts.
 		log.InfoContext(ctx, "chat_reply", "locale", string(l), "outcome", outcome, "turns", n+1,
 			"offers", len(offers), "duration_ms", time.Since(start).Milliseconds(), "cost_eur", cost,
-			"prompt_tokens", answer.Tokens.Prompt, "cached_tokens", answer.Tokens.Cached, "output_tokens", answer.Tokens.Output)
+			"prompt_tokens", answer.Tokens.Prompt, "cached_tokens", answer.Tokens.Cached, "output_tokens", answer.Tokens.Output,
+			"unmetered_calls", answer.Unmetered)
 		_ = sse.PatchElementTempl(views.ChatMessage(false, answer.Text, offers, n+1), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
 		history = append(history,
 			assistant.Turn{Role: assistant.RoleVisitor, Text: message},
