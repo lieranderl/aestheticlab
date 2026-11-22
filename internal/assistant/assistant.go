@@ -82,6 +82,12 @@ var WorstCaseTokens = usage.Tokens{Prompt: maxRounds * 30_000, Output: maxRounds
 // calling tools after maxRounds.
 var ErrNoAnswer = errors.New("assistant gave no answer")
 
+// The tools' names.
+const (
+	toolFindFreeSlots = "find_free_slots"
+	toolOfferBooking  = "offer_booking"
+)
+
 const (
 	// maxRounds bounds the model calls for one visitor message.
 	maxRounds = 4
@@ -136,9 +142,10 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 	contents := []*genai.Content{genai.NewContentFromText(a.visitorMessage(history, message), genai.RoleUser)}
 	run := &toolRun{a: a, k: k}
 	var tokens usage.Tokens
-	// said is the visitor-facing text of each round: Gemini often writes
-	// the answer in the same response as a tool call, then sends nothing,
-	// a closing line or the answer again once it has the tool's result.
+	// said is the visitor-facing text of the rounds so far: Gemini often
+	// writes the answer in the same response as a tool call, then sends
+	// nothing, a closing line or the answer again once it has the tool's
+	// result (finalAnswer).
 	var said []string
 	for range maxRounds {
 		resp, err := a.opts.Model.Generate(ctx, contents, cfg)
@@ -154,11 +161,16 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		calls := resp.FunctionCalls()
 		said = append(said, replyText(resp.Candidates[0].Content))
 		if len(calls) == 0 {
-			text := joinAnswer(said)
+			text := finalAnswer(said)
 			if text == "" {
 				return Answer{Tokens: tokens}, ErrNoAnswer
 			}
 			return Answer{Text: text, Offers: run.offers, Tokens: tokens}, nil
+		}
+		// Text written with a find_free_slots call comes before the times
+		// are known: any times in it are guesses, never shown.
+		if slices.ContainsFunc(calls, func(c *genai.FunctionCall) bool { return c.Name == toolFindFreeSlots }) {
+			said[len(said)-1] = ""
 		}
 		// Gemini needs its own message back unchanged (thought signatures).
 		contents = append(contents, resp.Candidates[0].Content)
@@ -170,7 +182,7 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		}
 		contents = append(contents, genai.NewContentFromParts(parts, genai.RoleUser))
 	}
-	if text := joinAnswer(said); text != "" {
+	if text := finalAnswer(append(said, "")); text != "" {
 		return Answer{Text: text, Offers: run.offers, Tokens: tokens}, nil
 	}
 	return Answer{Tokens: tokens}, ErrNoAnswer
@@ -189,18 +201,56 @@ func addTokens(t usage.Tokens, resp *genai.GenerateContentResponse) usage.Tokens
 	return t
 }
 
-// joinAnswer is the rounds' texts in order, without empty ones and without
-// any text another one repeats (the model often restates its answer).
-func joinAnswer(said []string) string {
-	var out []string
-	for i, t := range said {
-		repeated := slices.ContainsFunc(said, func(u string) bool { return u != t && strings.Contains(u, t) }) ||
-			slices.Contains(said[:i], t)
-		if t != "" && !repeated {
-			out = append(out, t)
+// finalAnswer is the one answer the visitor sees, from the rounds' texts
+// (the last is the final round's). Gemini often writes the answer with a
+// Book button's tool call and then sends nothing, a further line, or the
+// answer rewritten: the visitor sees the answer once, with any further
+// line after it. Joining every round's text showed rewrites twice.
+func finalAnswer(said []string) string {
+	final := said[len(said)-1]
+	earlier := ""
+	for _, t := range slices.Backward(said[:len(said)-1]) {
+		if t != "" {
+			earlier = t
+			break
 		}
 	}
-	return strings.Join(out, "\n\n")
+	switch {
+	case earlier == "" || strings.Contains(final, earlier):
+		return final
+	case final == "" || strings.Contains(earlier, final):
+		return earlier
+	case rewrites(final, earlier):
+		return final
+	}
+	return earlier + "\n\n" + final
+}
+
+// word is a word of four letters or more: short words ("the", "для",
+// times' digits) are shared by any two replies.
+var word = regexp.MustCompile(`[\p{L}\p{N}]{4,}`)
+
+// rewrites reports whether a says what b says: most of the shorter one's
+// words are in the other.
+func rewrites(a, b string) bool {
+	words := func(s string) map[string]bool {
+		set := map[string]bool{}
+		for _, w := range word.FindAllString(strings.ToLower(s), -1) {
+			set[w] = true
+		}
+		return set
+	}
+	wa, wb := words(a), words(b)
+	if len(wa) > len(wb) {
+		wa, wb = wb, wa
+	}
+	shared := 0
+	for w := range wa {
+		if wb[w] {
+			shared++
+		}
+	}
+	return len(wa) > 0 && shared*5 >= len(wa)*3
 }
 
 // replyText is the answer to the visitor: the last text part that isn't a
@@ -260,9 +310,9 @@ type toolRun struct {
 
 func (r *toolRun) call(ctx context.Context, c *genai.FunctionCall) map[string]any {
 	switch c.Name {
-	case "find_free_slots":
+	case toolFindFreeSlots:
 		return r.findFreeSlots(ctx, c.Args)
-	case "offer_booking":
+	case toolOfferBooking:
 		return r.offerBooking(c.Args)
 	}
 	return failure("unknown tool " + c.Name)
