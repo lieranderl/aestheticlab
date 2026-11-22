@@ -221,7 +221,7 @@ func chatWidget() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</label><!-- Enter sends, Shift+Enter adds a line. Typed text stays 16px (phones\n\t\t\t\tzoom into smaller fields); only the hint is smaller, on two lines\n\t\t\t\twhere the field can't grow with its content. --><textarea id=\"chat-input\" rows=\"2\" maxlength=\"500\" autocomplete=\"off\" class=\"textarea textarea-bordered max-h-32 min-h-11 grow resize-none field-sizing-content font-main text-base leading-snug placeholder:text-sm\" placeholder=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</label><!-- Enter sends, Shift+Enter adds a line. Typed text stays 16px (phones\n\t\t\t\tzoom into smaller fields); only the hint is smaller. While empty the\n\t\t\t\tfield holds two lines of hint: Safari sizes it to typed text only. --><textarea id=\"chat-input\" rows=\"2\" maxlength=\"500\" autocomplete=\"off\" class=\"textarea textarea-bordered max-h-32 min-h-11 grow placeholder-shown:min-h-15 resize-none field-sizing-content font-main text-base leading-snug placeholder:text-sm\" placeholder=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"slices"
 	"strings"
@@ -97,7 +98,7 @@ const (
 	// maxRounds bounds the model calls for one visitor message.
 	maxRounds = 4
 	// maxSlots bounds the times one find_free_slots call returns.
-	maxSlots = 8
+	maxSlots = 12
 	// maxOffers bounds the Book buttons under one reply.
 	maxOffers = 3
 	// defaultDays is how far find_free_slots looks without dates.
@@ -411,33 +412,76 @@ func (r *toolRun) findFreeSlots(ctx context.Context, args map[string]any) map[st
 	if first.Before(today) {
 		first = today
 	}
+	window := [2]availability.Clock{0, 24 * 60}
+	for i, name := range []string{"from_time", "to_time"} {
+		if v, ok := args[name].(string); ok && v != "" {
+			c, okClock := availability.ParseClock(v)
+			if !okClock {
+				return failure(name + " must be HH:MM")
+			}
+			window[i] = c
+		}
+	}
 	people := make([]availability.Person, 0, len(staff))
 	for _, m := range staff {
 		people = append(people, availability.Person{ID: m.ID, Name: m.Name, Schedule: m.Schedule})
 	}
-	res, err := r.a.opts.Finder.Find(ctx, people, time.Duration(s.Duration)*time.Minute, first, last, maxSlots)
+	res, err := r.a.opts.Finder.Find(ctx, people, time.Duration(s.Duration)*time.Minute, first, last, math.MaxInt)
 	switch {
 	case errors.Is(err, availability.ErrRange):
 		return failure(fmt.Sprintf("dates must run forward, at most %d days, from today on", availability.MaxDays))
 	case err != nil:
 		return failure("the calendars did not answer; offer the Book button so the visitor sees live times in the booking page")
 	}
-	slots := make([]map[string]any, 0, len(res.Slots))
-	for _, sl := range res.Slots {
+	picked, more := spreadSlots(res.Slots, loc, window)
+	slots := make([]map[string]any, 0, len(picked))
+	for _, sl := range picked {
 		t := sl.Start.In(loc)
 		slots = append(slots, map[string]any{
 			"date": t.Format(time.DateOnly), "weekday": t.Weekday().String(), "time": t.Format("15:04"),
 			"staff_id": sl.StaffID, "staff": sl.Name,
 		})
 	}
+	note := "These times look free now; the booking page confirms them."
+	if more {
+		note += " Only each person's first free time per day is listed; later times that day may be free too: call again with from_time to see them."
+	}
 	out := map[string]any{
 		"service": s.Name, "duration_minutes": int(s.Duration), "from": first.String(), "to": last.String(),
-		"slots": slots, "note": "These times look free now; the booking page confirms them.",
+		"slots": slots, "note": note,
 	}
 	if len(res.Unavailable) > 0 {
 		out["could_not_check"] = res.Unavailable
 	}
 	return out
+}
+
+// spreadSlots picks, from all free start times in time order, those that
+// start within window, then each person's first per day, at most maxSlots:
+// the earliest times alone would all fall on the first morning. more says
+// whether any time in the window was left out.
+func spreadSlots(all []availability.Slot, loc *time.Location, window [2]availability.Clock) ([]availability.Slot, bool) {
+	type key struct {
+		day   string
+		staff int64
+	}
+	seen := map[key]bool{}
+	var out []availability.Slot
+	more := false
+	for _, sl := range all {
+		t := sl.Start.In(loc)
+		if c := availability.Clock(t.Hour()*60 + t.Minute()); c < window[0] || c > window[1] {
+			continue
+		}
+		k := key{t.Format(time.DateOnly), sl.StaffID}
+		if seen[k] || len(out) == maxSlots {
+			more = true
+			continue
+		}
+		seen[k] = true
+		out = append(out, sl)
+	}
+	return out, more
 }
 
 func (r *toolRun) offerBooking(args map[string]any) map[string]any {
