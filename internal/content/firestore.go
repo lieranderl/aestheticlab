@@ -16,6 +16,9 @@ const (
 	ServiceGroupsCollection = "service_groups"
 	ServicesCollection      = "services"
 	StaffCollection         = "staff"
+	// AssistantNotesCollection holds the owner's facts for the chat
+	// assistant (docs/CONTENT.md).
+	AssistantNotesCollection = "assistant_notes"
 	// siteCollection/contactID is the one contact document.
 	siteCollection, contactID = "site", "contact"
 )
@@ -46,9 +49,10 @@ func (f *Firestore) Fetch(ctx context.Context) (Documents, error) {
 	var docs Documents
 	g, ctx := errgroup.WithContext(ctx)
 	for name, dst := range map[string]*[]Document{
-		ServiceGroupsCollection: &docs.ServiceGroups,
-		ServicesCollection:      &docs.Services,
-		StaffCollection:         &docs.Staff,
+		ServiceGroupsCollection:  &docs.ServiceGroups,
+		ServicesCollection:       &docs.Services,
+		StaffCollection:          &docs.Staff,
+		AssistantNotesCollection: &docs.AssistantNotes,
 	} {
 		g.Go(func() error {
 			snaps, err := f.client.Collection(name).Documents(ctx).GetAll()
@@ -94,9 +98,10 @@ func (f *Firestore) Import(ctx context.Context, docs Documents) (int, error) {
 	}
 	var writes []write
 	for name, list := range map[string][]Document{
-		ServiceGroupsCollection: docs.ServiceGroups,
-		ServicesCollection:      docs.Services,
-		StaffCollection:         docs.Staff,
+		ServiceGroupsCollection:  docs.ServiceGroups,
+		ServicesCollection:       docs.Services,
+		StaffCollection:          docs.Staff,
+		AssistantNotesCollection: docs.AssistantNotes,
 	} {
 		for _, doc := range list {
 			id := readID(doc, "id")
@@ -135,7 +140,7 @@ func (f *Firestore) Export(ctx context.Context) (Documents, error) {
 	if err != nil {
 		return Documents{}, err
 	}
-	for _, list := range []([]Document){docs.ServiceGroups, docs.Services, docs.Staff} {
+	for _, list := range []([]Document){docs.ServiceGroups, docs.Services, docs.Staff, docs.AssistantNotes} {
 		slices.SortFunc(list, func(a, b Document) int {
 			return cmp.Or(compareIDs(readID(a, "id"), readID(b, "id")), cmp.Compare(readID(a, "id"), readID(b, "id")))
 		})

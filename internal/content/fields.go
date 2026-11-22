@@ -49,6 +49,19 @@ func readID(doc Document, key string) string {
 	return ""
 }
 
+// readIDList is doc[key]'s whole-number entries, in order; anything else
+// in the list is skipped.
+func readIDList(doc Document, key string) []int64 {
+	list, _ := doc[key].([]any)
+	var out []int64
+	for _, v := range list {
+		if n, ok := readNumber(Document{"n": v}, "n"); ok && n == float64(int64(n)) {
+			out = append(out, int64(n))
+		}
+	}
+	return out
+}
+
 // readLink is doc[key] when it is an absolute http(s) URL, so content can
 // never put a javascript: or data: link on the page.
 func readLink(doc Document, key string) string {

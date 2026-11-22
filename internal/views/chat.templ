@@ -1,0 +1,103 @@
+package views
+
+// chatWidget is the assistant's launcher and panel. The transcript lives in
+// #chat-log; the server appends each message to it over SSE. Everything
+// starts hidden and Datastar reveals it: without JavaScript the chat cannot
+// send, so it must not cover the page.
+templ chatWidget() {
+	<!-- The conversation is kept for this tab (aesthetic.chatRestore, chatSave in site.js). -->
+	<div
+		id="chat"
+		hidden
+		data-signals={ chatSignals }
+		data-attr:hidden="false"
+		data-init="$chatHistory = aesthetic.chatRestore(); $chatOpen = aesthetic.chatWasOpen()"
+		data-effect="aesthetic.chatSave($chatHistory, $chatOpen)"
+		class="fixed bottom-4 left-4 z-40 max-lg:bottom-24"
+	>
+		<button
+			id="chat-open"
+			type="button"
+			class="btn btn-circle btn-accent size-14 shadow-lg"
+			aria-label={ tr(ctx, "Chat with our assistant") }
+			title={ tr(ctx, "Chat with our assistant") }
+			aria-controls="chat-panel"
+			data-attr:aria-expanded="$chatOpen ? 'true' : 'false'"
+			data-attr:hidden="$chatOpen"
+			data-on:click="$chatOpen = true; setTimeout(() => document.getElementById('chat-input')?.focus(), 0)"
+		>
+			@Icon("outline/chat-bubble-left-right", "size-6")
+		</button>
+		<section
+			id="chat-panel"
+			role="dialog"
+			aria-labelledby="chat-title"
+			class="card flex h-[min(36rem,calc(100dvh-8rem))] w-[min(24rem,calc(100vw-2rem))] flex-col border border-base-300 bg-base-100 shadow-xl"
+			hidden
+			data-attr:hidden="!$chatOpen"
+			data-on:keydown__window="evt.key === 'Escape' && $chatOpen && ($chatOpen = false)"
+		>
+			<header class="flex items-center justify-between gap-3 border-b border-base-300 px-4 py-3">
+				<h2 id="chat-title" class="font-cormorant text-2xl leading-none">{ tr(ctx, "Ask Aesthetic Lab") }</h2>
+				<button id="chat-close" type="button" class="btn btn-circle btn-ghost btn-sm" aria-label={ tr(ctx, "Close chat") } data-on:click="$chatOpen = false">
+					@Icon("mini/x-mark", "size-5")
+				</button>
+			</header>
+			<p class="border-b border-base-300 bg-base-200 px-4 py-2 font-main text-xs text-base-content/80">
+				{ tr(ctx, "AI assistant: it can make mistakes. Please don't share health details.") }
+			</p>
+			<!-- column-reverse keeps the newest message in view as the log grows. -->
+			<div class="flex grow flex-col-reverse overflow-y-auto px-4 py-3">
+				<div>
+					<div id="chat-log" class="flex flex-col gap-3" aria-live="polite">
+						@ChatMessage(false, tr(ctx, "Hi! Ask me about our treatments, prices, team or free times."), nil, 0)
+					</div>
+					<div class="chat chat-start" hidden data-attr:hidden="!$chatBusy">
+						<div class="chat-bubble bg-base-200 text-base-content">
+							<span class="loading loading-dots loading-sm" aria-hidden="true"></span>
+							<span class="sr-only">{ tr(ctx, "Thinking…") }</span>
+						</div>
+					</div>
+				</div>
+			</div>
+			<form class="flex items-end gap-2 border-t border-base-300 p-3" data-on:submit={ "$chatInput.trim() && !$chatBusy && @post('" + href(ctx, "chat") + "')" }>
+				<label for="chat-input" class="sr-only">{ tr(ctx, "Your question") }</label>
+				<input
+					id="chat-input"
+					type="text"
+					maxlength="500"
+					autocomplete="off"
+					class="input input-bordered grow font-main text-base"
+					placeholder={ tr(ctx, "Ask about treatments, prices or free times") }
+					data-bind:chat-input
+					data-attr:disabled="$chatBusy"
+				/>
+				<button id="chat-send" type="submit" class="btn btn-primary btn-square" aria-label={ tr(ctx, "Send") } data-attr:disabled="$chatBusy || !$chatInput.trim()">
+					@Icon("mini/paper-airplane", "size-5")
+				</button>
+			</form>
+		</section>
+	</div>
+}
+
+// ChatMessage is one message in the chat log: the visitor's on the right,
+// the assistant's on the left with its Book buttons. n numbers the
+// message so its buttons' ids stay unique.
+templ ChatMessage(visitor bool, text string, offers []ChatOffer, n int) {
+	if visitor {
+		<div class="chat chat-end">
+			<div class="chat-bubble chat-bubble-primary whitespace-pre-line font-main text-sm">{ text }</div>
+		</div>
+	} else {
+		<div class="chat chat-start">
+			<div class="chat-bubble bg-base-200 whitespace-pre-line font-main text-sm text-base-content">{ text }</div>
+			if len(offers) > 0 {
+				<div class="chat-footer mt-2 flex flex-col items-start gap-2 opacity-100">
+					for _, o := range offers {
+						@BookButton(chatBooking(ctx, o, n))
+					}
+				</div>
+			}
+		</div>
+	}
+}

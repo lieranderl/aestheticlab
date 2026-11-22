@@ -181,3 +181,38 @@ variable "firestore_read_alert_per_hour" {
   type        = number
   default     = 2000
 }
+
+variable "chat_environments" {
+  description = "Environments where the chat assistant runs (CHAT_ENABLED). Their runtime accounts get roles/aiplatform.user."
+  type        = set(string)
+  default     = ["staging"]
+
+  validation {
+    condition     = alltrue([for name in var.chat_environments : contains(["staging", "production"], name)])
+    error_message = "chat_environments may contain only staging and production."
+  }
+}
+
+variable "chat_model" {
+  description = "Gemini model the chat assistant uses on Vertex AI."
+  type        = string
+  default     = "gemini-3.1-flash-lite"
+}
+
+variable "chat_location" {
+  description = "Vertex AI location for the chat model: eu keeps requests and processing in the EU."
+  type        = string
+  default     = "eu"
+}
+
+variable "availability_calendars" {
+  description = "Staff calendars for the chat's free times: <calendarId>|<staffId>;... Not a credential, but kept out of the repository: set it from the AVAILABILITY_CALENDARS GitHub secret (TF_VAR_availability_calendars) or the git-ignored terraform.tfvars. Empty: the chat offers the Book button instead of times."
+  type        = string
+  default     = ""
+  sensitive   = true
+
+  validation {
+    condition     = var.availability_calendars == "" || can(regex("^[^|;\\s]+\\|[0-9]+(;[^|;\\s]+\\|[0-9]+)*;?$", var.availability_calendars))
+    error_message = "availability_calendars must be <calendarId>|<staffId> pairs separated by semicolons."
+  }
+}

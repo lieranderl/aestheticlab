@@ -56,7 +56,7 @@
 				"question": "How do I book an appointment?"
 			},
 			"cancellation": {
-				"answer_direct": "Yes, at least 24 hours ahead in the booking system, or message us on <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> or by <a href='mailto:aestheticlabbe@gmail.com'>email</a>. Late cancellations may be charged.",
+				"answer_direct": "Yes, up to 24 hours before your appointment, in the booking system or by message on <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> or <a href='mailto:aestheticlabbe@gmail.com'>email</a>. Within 24 hours of the appointment, cancellations and changes are not possible.",
 				"question_short": "Can I cancel or reschedule?"
 			},
 			"consultation": {
@@ -80,7 +80,12 @@
 			},
 			"message_instagram": "Message us on Instagram",
 			"still_question": "Still have a question?",
-			"still_question_body": "Message us on Instagram or email {{email}}."
+			"still_question_body": "Message us on Instagram or email {{email}}.",
+			"payment": {
+				"answer_direct": "In cash or by QR code bank transfer. We don’t accept card payments.",
+				"question_short": "How can I pay?"
+			},
+			"ask_assistant": "Ask our assistant"
 		},
 		"footer": {
 			"explore": "Explore",
@@ -223,7 +228,10 @@
 			"use": "2. How We Use Your Information",
 			"use_text": "We use your information to:",
 			"who": "Who we are",
-			"who_text": "Aesthetic Lab, {{address}}. For anything about your data, write to {{email}}."
+			"who_text": "Aesthetic Lab, {{address}}. For anything about your data, write to {{email}}.",
+			"chat_messages": "Messages you send in our website chat",
+			"chat_answer": "Answer your questions in our website chat",
+			"chat_processor": "Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab."
 		},
 		"services": {
 			"add_on_note": "Prices are for the treatment itself. Repairs, nail art and removal are add-ons from {{price}}.",
@@ -296,6 +304,21 @@
 			"kicker": "Our work",
 			"lightbox_label": "Gallery image viewer",
 			"more_on_instagram": "More on Instagram"
+		},
+		"chat": {
+			"open": "Chat with our assistant",
+			"title": "Ask Aesthetic Lab",
+			"close": "Close chat",
+			"disclaimer": "AI assistant: it can make mistakes. Please don't share health details.",
+			"greeting": "Hi! Ask me about our treatments, prices, team or free times.",
+			"thinking": "Thinking…",
+			"input_label": "Your question",
+			"placeholder": "Ask about treatments, prices or free times",
+			"send": "Send",
+			"book": "Book {{service}}",
+			"book_with": "Book {{service}} with {{name}}",
+			"unavailable": "Sorry, I can't answer right now. Please message us on Instagram or by email.",
+			"too_fast": "You're sending messages too quickly. Please wait a minute and try again."
 		}
 	}
 }

@@ -8,8 +8,10 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/lieranderl/aestheticlab/internal/assistant"
 	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/i18n"
+	"github.com/lieranderl/aestheticlab/internal/views"
 )
 
 // Config holds what the site needs to serve requests.
@@ -27,6 +29,9 @@ type Config struct {
 	// Content-Security-Policy, for a server reached without TLS (off Cloud
 	// Run). Every other directive stays.
 	PlainHTTP bool
+	// Assistant answers the chat; nil leaves the chat off: no widget on the
+	// pages and no chat route.
+	Assistant *assistant.Assistant
 }
 
 // New returns the site's HTTP handler, wrapped in Middleware.
@@ -68,12 +73,30 @@ func New(cfg Config) http.Handler {
 		mux.HandleFunc("GET /"+string(l)+"/notice/{$}", page(l, store, log, care))
 		mux.HandleFunc("GET /"+string(l)+"/notice", pages)
 	}
+	var site http.Handler = mux
+	if cfg.Assistant != nil {
+		// Only the site's own pages may post to the chat (Sec-Fetch-Site and
+		// Origin checks), so other sites cannot spend its model budget.
+		guard := http.NewCrossOriginProtection()
+		limit := newLimiter()
+		for _, l := range i18n.Supported() {
+			mux.Handle("POST /"+string(l)+"/chat", guard.Handler(chat(l, store, cfg.Assistant, limit, log)))
+		}
+		site = withChat(mux)
+	}
 	mux.HandleFunc("/", pages)
 	policy := contentSecurityPolicy
 	if cfg.PlainHTTP {
 		policy = localContentSecurityPolicy
 	}
-	return middleware(log, policy, withLocale(mux))
+	return middleware(log, policy, withLocale(site))
+}
+
+// withChat shows the chat widget on every page.
+func withChat(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r.WithContext(views.WithChat(r.Context())))
+	})
 }
 
 // probe answers a health probe, never from a cache.

@@ -118,6 +118,7 @@ templ Care() {
 		</section>
 		<div class="mx-auto max-w-360 px-5.5 pb-16 md:px-10 lg:px-16 lg:pb-24 xl:px-28">
 			<!-- Native radios in a labelled radio group, so the selected topic is announced. -->
+			<!-- assistant:care-notes -->
 			<div role="radiogroup" aria-label={ tr(ctx, "Care notes") } class="tabs tabs-border grid grid-cols-2 lg:max-w-3xl">
 				<input type="radio" name="care-notes" class={ careTab } aria-label={ tr(ctx, "Nails") } checked?={ !laser }/>
 				<div class="tab-content col-span-2 pt-6 lg:pt-10">
@@ -192,6 +193,7 @@ templ Care() {
 					</div>
 				</div>
 			</div>
+			<!-- /assistant:care-notes -->
 		</div>
 	}
 }

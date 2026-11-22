@@ -56,7 +56,7 @@
 				"question": "Comment prendre rendez-vous ?"
 			},
 			"cancellation": {
-				"answer_direct": "Oui, au moins 24 heures à l’avance via le système de réservation, ou écrivez-nous sur <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> ou par <a href='mailto:aestheticlabbe@gmail.com'>e-mail</a>. Les annulations tardives peuvent être facturées.",
+				"answer_direct": "Oui, jusqu’à 24 heures avant votre rendez-vous, via le système de réservation ou par message sur <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> ou par <a href='mailto:aestheticlabbe@gmail.com'>e-mail</a>. Dans les 24 heures qui précèdent le rendez-vous, aucune annulation ni modification n’est possible.",
 				"question_short": "Puis-je annuler ou déplacer ?"
 			},
 			"consultation": {
@@ -80,7 +80,12 @@
 			},
 			"message_instagram": "Écrivez-nous sur Instagram",
 			"still_question": "Encore une question ?",
-			"still_question_body": "Écrivez-nous sur Instagram ou à {{email}}."
+			"still_question_body": "Écrivez-nous sur Instagram ou à {{email}}.",
+			"payment": {
+				"answer_direct": "En espèces ou par virement via QR code. Nous n’acceptons pas les paiements par carte.",
+				"question_short": "Comment puis-je payer ?"
+			},
+			"ask_assistant": "Demandez à notre assistant"
 		},
 		"footer": {
 			"explore": "Découvrir",
@@ -223,7 +228,10 @@
 			"use": "2. Comment nous utilisons vos informations",
 			"use_text": "nous utilisons vos informations pour :",
 			"who": "Qui sommes-nous",
-			"who_text": "Aesthetic Lab, {{address}}. Pour toute question sur vos données, écrivez à {{email}}."
+			"who_text": "Aesthetic Lab, {{address}}. Pour toute question sur vos données, écrivez à {{email}}.",
+			"chat_messages": "Les messages que vous envoyez dans le chat de notre site",
+			"chat_answer": "Répondre à vos questions dans le chat de notre site",
+			"chat_processor": "Google Cloud (Vertex AI, dans l’UE), qui fait fonctionner l’assistant de chat de notre site. Les messages servent uniquement à vous répondre ; nos serveurs ne les conservent pas, et votre navigateur garde la conversation seulement jusqu’à la fermeture de l’onglet."
 		},
 		"services": {
 			"add_on_note": "Les prix concernent le soin lui-même. Réparations, nail art et dépose sont en supplément, dès {{price}}.",
@@ -296,6 +304,21 @@
 			"kicker": "Depuis notre atelier",
 			"lightbox_label": "Visionneuse d’images de la galerie",
 			"more_on_instagram": "Plus sur Instagram"
+		},
+		"chat": {
+			"open": "Discuter avec notre assistant",
+			"title": "Demandez à Aesthetic Lab",
+			"close": "Fermer la discussion",
+			"disclaimer": "Assistant IA : il peut se tromper. Ne partagez pas d’informations de santé.",
+			"greeting": "Bonjour ! Posez-moi vos questions sur nos soins, nos prix, notre équipe ou les créneaux libres.",
+			"thinking": "Réflexion…",
+			"input_label": "Votre question",
+			"placeholder": "Soins, prix ou créneaux libres",
+			"send": "Envoyer",
+			"book": "Réserver : {{service}}",
+			"book_with": "Réserver {{service}} avec {{name}}",
+			"unavailable": "Désolé, je ne peux pas répondre pour le moment. Écrivez-nous sur Instagram ou par e-mail.",
+			"too_fast": "Vous envoyez des messages trop vite. Patientez une minute puis réessayez."
 		}
 	}
 }

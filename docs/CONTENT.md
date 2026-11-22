@@ -28,6 +28,7 @@ A treatment category, such as Manicure or Laser hair removal FACE.
 | `name_nl`, `name_fr`, `name_ru`, `name_uk` | Translations. When empty, the English name is shown. |
 | `priority` | Order. The home page and pricelist show higher priorities first. |
 | `active` | `true` to show the group |
+| `assistant_note` | Optional. A fact about the whole category for the chat assistant, in English (for example "Usually 6–8 sessions, 4–6 weeks apart.") |
 
 ### `services/{id}`
 
@@ -43,6 +44,8 @@ A treatment with its price.
 | `priority` | Order within the data. Within a group, the site shows services cheapest first. |
 | `active` | `true` to show the service |
 | `category` | Unused label kept from Supabase |
+| `assistant_note` | Optional. A fact about this treatment for the chat assistant, in English (for example "A patch test 48 hours before is needed for first-time clients.") |
+| `staff_ids` | Optional. List of the `staff` IDs who do this treatment, as Timely assigns them (Timely's public booking page lists them). The chat assistant offers times only with these people. |
 
 - Names starting with "Extra", and names containing "coating removal", are add-ons. Add-ons never set a group's "from" price.
 - Groups whose English name contains "laser" or "removal" are shown together as one laser category.
@@ -57,8 +60,34 @@ A treatment with its price.
 | `photo_url` | A bundled photo name (`julia`, `julia.jpg`) or an `https://` URL |
 | `active` | `true` to show the person |
 | `color` | Unused, kept from Supabase |
+| `hours` | Optional. Timely's "Normal working hours": a map from `monday` … `sunday` to a list of shifts, each `{from: "HH:MM", to: "HH:MM"}`. A day left out or with an empty list is a day off. |
+| `booking_step` | Optional. Timely's "Can be booked online every", in minutes. Default 15. |
+| `days_off` | Optional. List of dates (`"YYYY-MM-DD"`) the person doesn't work, such as holidays. |
+
+The chat assistant uses `hours`, `booking_step` and `days_off` to suggest booking times. If any of them is malformed (an unknown weekday, a time like `10h`, overlapping shifts, a date like `25/12/2026`), the assistant offers no times for that person; the site still shows them. Example:
+
+```json
+"hours": {
+  "monday": [{ "from": "10:00", "to": "18:30" }],
+  "saturday": [{ "from": "11:00", "to": "15:00" }]
+},
+"booking_step": 15,
+"days_off": ["2026-12-25"]
+```
 
 Staff email addresses were not copied from Supabase, and don't belong here: every field in this database can end up on the public site.
+
+### `assistant_notes/{id}`
+
+The owner's facts for the chat assistant that the site doesn't show elsewhere: payment, policies, anything visitors ask. One document per topic; the ID is a short name (`payment`, `cancellation`).
+
+| Field | Meaning |
+| --- | --- |
+| `topic` | Short title, for example "Payment" |
+| `text` | The fact, in English: the assistant answers in the visitor's language |
+| `active` | `true` to give it to the assistant |
+
+The assistant treats these as the studio's rules and never invents what isn't here, in the FAQ ("Good to know"), on the care notes page (`/notice/`) or in the treatments. Changes reach it within about 15 minutes, with no deploy. Keep them short and factual; like every field here, they may end up on the public site.
 
 ### `site/contact`
 

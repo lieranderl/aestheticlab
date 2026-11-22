@@ -94,8 +94,8 @@ func importFile(ctx context.Context, db *content.Firestore, file string, stdout 
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(stdout, "Imported %d documents (%d service groups, %d services, %d staff, 1 contact).\n",
-		n, len(docs.ServiceGroups), len(docs.Services), len(docs.Staff))
+	_, err = fmt.Fprintf(stdout, "Imported %d documents (%d service groups, %d services, %d staff, %d assistant notes, 1 contact).\n",
+		n, len(docs.ServiceGroups), len(docs.Services), len(docs.Staff), len(docs.AssistantNotes))
 	return err
 }
 

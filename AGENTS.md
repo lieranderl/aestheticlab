@@ -3,7 +3,7 @@
 ## Scope
 
 - Canonical policy; nested `AGENTS.md` files override it for their subtree. Preserve user changes and requested scope.
-- Aesthetic Lab is a Go + templ + Datastar site with Firestore content, DaisyUI 5 and Tailwind CSS 4 (built with Bun), OpenTofu, and Cloud Run.
+- Aesthetic Lab is a Go + templ + Datastar site with Firestore content, DaisyUI 5 and Tailwind CSS 4 (built with Bun), OpenTofu, and Cloud Run. Its chat assistant uses Gemini on Vertex AI (`plans/ai-salon-assistant.md`).
 - Follow `plans/README.md` for multi-step work. Review-only tasks use `REVIEW.md`; `code_review.md` is a compatibility pointer.
 
 ## Commands
@@ -47,7 +47,7 @@
 ## Repository Boundaries
 
 - `cmd/web` is the site; `cmd/content` imports and exports Firestore content; `cmd/i18n-convert` writes the Go text tables.
-- `internal/server` owns routing, locales, headers, compression, static files and root files (`root.go`); `internal/views` owns templ pages and sections; `internal/content` owns the Firestore reader, cache and snapshot; `internal/i18n` owns texts and their locale files; `internal/assets` owns the asset manifest.
+- `internal/server` owns routing, locales, headers, compression, static files and root files (`root.go`); `internal/views` owns templ pages and sections; `internal/content` owns the Firestore reader, cache and snapshot; `internal/i18n` owns texts and their locale files; `internal/assets` owns the asset manifest; `internal/assistant` owns the chat assistant (prompt, tools, models) and `internal/availability` its free-time logic and calendar reader.
 - `frontend/` owns the asset sources and build: `app.css`, `site.js`, vendored Datastar, `media/` and `public/`. The built files go to `static/dist/`, which the binary embeds.
 - `e2e/` holds the browser specs; `scripts/` the deploy smoke tests and the link-preview renderer.
 - `infra/` owns OpenTofu-managed GCP resources; `.github/workflows/` owns delivery automation; `.agents/skills/` holds the Go, Datastar, DaisyUI and TDD skills.
@@ -67,6 +67,8 @@
 
 - Use the Bun version pinned in `package.json` and the Go version in `go.mod`; change dependencies, `bun.lock` and `go.sum` only when required by the task.
 - Runtime env vars: `FIRESTORE_DATABASE` and `GOOGLE_CLOUD_PROJECT`, set by `infra/`. Without a database the site serves its embedded content snapshot.
+- Chat env vars, also set by `infra/`: `CHAT_ENABLED` (`true` shows the chat), `CHAT_MODEL` (a Gemini model, or `fake` for local work and e2e), `CHAT_LOCATION` (`eu`), `AVAILABILITY_CALENDARS` (`<calendarId>|<staffId>;…`) and, locally only, `AVAILABILITY_DEV=true` for a made-up calendar.
+- Never commit staff calendar IDs: they come from the `AVAILABILITY_CALENDARS` GitHub secret, the git-ignored `infra/terraform.tfvars`, or a local `.env.*` file. Never log chat messages; log only counts.
 - The runtime reads Firestore with read-only, database-conditioned IAM and holds no database keys. Content is edited in the Firestore console; the data model is in `docs/CONTENT.md`.
 - Never commit `.env`, secret values or sensitive logs/plans.
 - Do not edit or commit build output: `bin/`, `static/dist/`, `node_modules/`, `tmp/`, reports, coverage, logs, or OpenTofu state/plan files. Do commit the generated Go files the checks compare (`*_templ.go`, `manifest_gen.go`, `icons_gen.go`, `messages_gen.go`).

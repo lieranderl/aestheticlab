@@ -342,6 +342,20 @@ templ faq(loc *content.Localized) {
 						<span class="lg:hidden">{ tr(ctx, "Message us on Instagram") }</span>
 						<span class="hidden lg:inline">{ tr(ctx, "Ask us") }</span>
 					</a>
+					if chatEnabled(ctx) {
+						<!-- Opens the chat assistant; hidden until Datastar runs, as the chat needs it. -->
+						<button
+							id="faq-ask-assistant"
+							type="button"
+							hidden
+							data-attr:hidden="false"
+							aria-controls="chat-panel"
+							class="inline-flex min-h-11 items-center self-start font-main text-xs font-semibold tracking-[0.16em] uppercase underline-offset-4 hover:underline lg:btn lg:btn-accent lg:h-12 lg:min-h-12 lg:px-5.5 lg:tracking-[0.18em] lg:no-underline"
+							data-on:click="$chatOpen = true; setTimeout(() => document.getElementById('chat-input')?.focus(), 0)"
+						>
+							{ tr(ctx, "Ask our assistant") }
+						</button>
+					}
 				</aside>
 			}
 		</div>

@@ -21,9 +21,12 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	_ "time/tzdata" // Europe/Brussels for booking times, whatever the image ships.
 
 	"cloud.google.com/go/firestore"
 
+	"github.com/lieranderl/aestheticlab/internal/assistant"
+	"github.com/lieranderl/aestheticlab/internal/availability"
 	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/server"
 	"github.com/lieranderl/aestheticlab/static"
@@ -65,7 +68,10 @@ func run(ctx context.Context, getenv func(string) string, logOut io.Writer) erro
 	store.Prefetch()
 
 	srv := &http.Server{
-		Handler:           server.New(server.Config{Static: static.Files, Logger: log, Content: store, PlainHTTP: plainHTTP(getenv)}),
+		Handler: server.New(server.Config{
+			Static: static.Files, Logger: log, Content: store, PlainHTTP: plainHTTP(getenv),
+			Assistant: openAssistant(ctx, getenv, log),
+		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       120 * time.Second,
 		MaxHeaderBytes:    1 << 20,
@@ -130,4 +136,81 @@ func listenPort(getenv func(string) string) (int, error) {
 		return 0, fmt.Errorf("PORT %q is not a TCP port", raw)
 	}
 	return port, nil
+}
+
+// defaultChatModel and defaultChatLocation keep chat requests on Gemini
+// 3.1 Flash-Lite at Vertex AI's EU endpoint (plans/ai-salon-assistant.md).
+const (
+	defaultChatModel    = "gemini-3.1-flash-lite"
+	defaultChatLocation = "eu"
+	// bookingLead is how far ahead the chat's first offered time is.
+	bookingLead = 2 * time.Hour
+)
+
+// openAssistant is the chat assistant when CHAT_ENABLED is "true", else
+// nil (no chat). CHAT_MODEL names the Gemini model, or "fake" for a
+// scripted one (local development, browser tests). Free times come from
+// the calendars AVAILABILITY_CALENDARS maps to staff, or, with
+// AVAILABILITY_DEV "true", from a made-up calendar.
+func openAssistant(ctx context.Context, getenv func(string) string, log *slog.Logger) *assistant.Assistant {
+	if getenv("CHAT_ENABLED") != "true" {
+		return nil
+	}
+	brussels, err := time.LoadLocation("Europe/Brussels")
+	if err != nil {
+		log.Error("chat_config_rejected", "error", err.Error())
+		return nil
+	}
+	var model assistant.Model = assistant.Fake{}
+	name := cmp.Or(getenv("CHAT_MODEL"), defaultChatModel)
+	if name != "fake" {
+		project := getenv("GOOGLE_CLOUD_PROJECT")
+		if project == "" {
+			log.Error("chat_config_rejected", "error", "GOOGLE_CLOUD_PROJECT is required for the chat model")
+			return nil
+		}
+		gemini, err := assistant.NewGemini(ctx, project, cmp.Or(getenv("CHAT_LOCATION"), defaultChatLocation), name)
+		if err != nil {
+			log.Error("chat_model_failed", "model", name, "error", err.Error())
+			return nil
+		}
+		model = gemini
+	}
+	return assistant.New(assistant.Options{Model: model, Finder: openFinder(ctx, getenv, brussels, log), Location: brussels})
+}
+
+// openFinder reads free times from the configured calendars; nil when none
+// are configured, so the chat offers the Book button instead of times.
+func openFinder(ctx context.Context, getenv func(string) string, loc *time.Location, log *slog.Logger) *availability.Finder {
+	calendars, err := availability.ParseCalendars(getenv("AVAILABILITY_CALENDARS"))
+	if err != nil {
+		log.Error("availability_config_rejected", "error", err.Error())
+		return nil
+	}
+	opts := availability.FinderOptions{Calendars: calendars, Location: loc, Lead: bookingLead}
+	switch {
+	case getenv("AVAILABILITY_DEV") == "true":
+		opts.Source, opts.EveryStaff = availability.DevSource{Location: loc}, true
+		log.Warn("availability_dev_calendar")
+	case len(calendars) > 0:
+		google, err := availability.NewGoogle(ctx)
+		if err != nil {
+			log.Error("availability_calendar_failed", "error", err.Error())
+			return nil
+		}
+		opts.Source = google
+		// Connect while Cloud Run still gives the starting instance CPU.
+		go func() {
+			warmCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+			defer cancel()
+			if err := google.Warm(warmCtx); err != nil {
+				log.Warn("availability_warm_failed", "error", err.Error())
+			}
+		}()
+	default:
+		log.Info("availability_not_configured")
+		return nil
+	}
+	log.Info("availability_on", "calendars", len(calendars))
+	return availability.NewFinder(opts)
 }

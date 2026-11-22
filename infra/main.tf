@@ -15,6 +15,7 @@ locals {
   }
 
   required_apis = toset([
+    "aiplatform.googleapis.com",
     "artifactregistry.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "firestore.googleapis.com",
@@ -234,6 +235,16 @@ resource "google_project_iam_member" "runtime_firestore_reader" {
   }
 }
 
+# The chat assistant calls Gemini on Vertex AI (plans/ai-salon-assistant.md),
+# only in the environments where it runs.
+resource "google_project_iam_member" "runtime_vertex_user" {
+  for_each = { for name, service in local.services : name => service if contains(var.chat_environments, name) }
+
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.runtime[each.key].email}"
+}
+
 resource "google_service_account_iam_member" "github_wif" {
   for_each = local.services
 
@@ -361,6 +372,32 @@ resource "google_cloud_run_v2_service" "web" {
         value = var.project_id
       }
 
+      # The chat assistant (plans/ai-salon-assistant.md). Staff calendars are
+      # shared with this service account at "See only free/busy"; their IDs
+      # come from a GitHub secret, never from the repository.
+      env {
+        name  = "CHAT_ENABLED"
+        value = contains(var.chat_environments, each.key) ? "true" : "false"
+      }
+
+      env {
+        name  = "CHAT_MODEL"
+        value = var.chat_model
+      }
+
+      env {
+        name  = "CHAT_LOCATION"
+        value = var.chat_location
+      }
+
+      dynamic "env" {
+        for_each = contains(var.chat_environments, each.key) && var.availability_calendars != "" ? [var.availability_calendars] : []
+        content {
+          name  = "AVAILABILITY_CALENDARS"
+          value = env.value
+        }
+      }
+
       # Cloud Run's default TCP startup probe: one attempt that waits up to 240 s
       # for the port, so a cold start is routed as soon as the server listens. The
       # 1 s HTTP probe it replaces missed the port on its first attempt and added
@@ -406,6 +443,7 @@ resource "google_cloud_run_v2_service" "web" {
   depends_on = [
     google_project_service.required,
     google_project_iam_member.runtime_firestore_reader,
+    google_project_iam_member.runtime_vertex_user,
     google_service_account_iam_member.iac_act_as,
   ]
 }

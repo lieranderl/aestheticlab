@@ -56,7 +56,7 @@
 				"question": "Как записаться на процедуру?"
 			},
 			"cancellation": {
-				"answer_direct": "Да, не позднее чем за 24 часа в системе записи, или напишите нам в <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> или на <a href='mailto:aestheticlabbe@gmail.com'>почту</a>. За позднюю отмену может взиматься плата.",
+				"answer_direct": "Да, не позднее чем за 24 часа до визита — в системе записи или сообщением в <a href='https://www.instagram.com/aestheticlabbe' target='_blank' rel='noopener noreferrer'>Instagram</a> или на <a href='mailto:aestheticlabbe@gmail.com'>почту</a>. Менее чем за 24 часа до записи отмена и перенос невозможны.",
 				"question_short": "Можно ли отменить или перенести запись?"
 			},
 			"consultation": {
@@ -80,7 +80,12 @@
 			},
 			"message_instagram": "Напишите нам в Instagram",
 			"still_question": "Остались вопросы?",
-			"still_question_body": "Напишите нам в Instagram или на {{email}}."
+			"still_question_body": "Напишите нам в Instagram или на {{email}}.",
+			"payment": {
+				"answer_direct": "Наличными или переводом по QR-коду. Оплату картой мы не принимаем.",
+				"question_short": "Как можно оплатить?"
+			},
+			"ask_assistant": "Спросите нашего ассистента"
 		},
 		"footer": {
 			"explore": "Навигация",
@@ -223,7 +228,10 @@
 			"use": "2. Как мы используем вашу информацию",
 			"use_text": "мы используем вашу информацию для:",
 			"who": "Кто мы",
-			"who_text": "Aesthetic Lab, {{address}}. По любым вопросам о ваших данных пишите на {{email}}."
+			"who_text": "Aesthetic Lab, {{address}}. По любым вопросам о ваших данных пишите на {{email}}.",
+			"chat_messages": "Сообщения, которые вы отправляете в чат на нашем сайте",
+			"chat_answer": "Отвечать на ваши вопросы в чате на сайте",
+			"chat_processor": "Google Cloud (Vertex AI, в ЕС), на котором работает чат-ассистент нашего сайта. Сообщения используются только для ответа вам; наши серверы их не хранят, а ваш браузер сохраняет переписку только до закрытия вкладки."
 		},
 		"services": {
 			"add_on_note": "Цены указаны за саму процедуру. Ремонт, дизайн и снятие — дополнительно, от {{price}}.",
@@ -296,6 +304,21 @@
 			"kicker": "Из нашего ателье",
 			"lightbox_label": "Просмотр изображений галереи",
 			"more_on_instagram": "Больше в Instagram"
+		},
+		"chat": {
+			"open": "Чат с нашим ассистентом",
+			"title": "Спросите Aesthetic Lab",
+			"close": "Закрыть чат",
+			"disclaimer": "ИИ-ассистент: может ошибаться. Пожалуйста, не сообщайте данные о здоровье.",
+			"greeting": "Здравствуйте! Спросите меня о процедурах, ценах, мастерах или свободном времени.",
+			"thinking": "Думаю…",
+			"input_label": "Ваш вопрос",
+			"placeholder": "Процедуры, цены или свободное время",
+			"send": "Отправить",
+			"book": "Записаться: {{service}}",
+			"book_with": "Записаться: {{service}}, мастер {{name}}",
+			"unavailable": "Извините, сейчас не могу ответить. Напишите нам в Instagram или на почту.",
+			"too_fast": "Вы отправляете сообщения слишком часто. Подождите минуту и попробуйте снова."
 		}
 	}
 }

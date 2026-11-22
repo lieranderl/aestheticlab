@@ -17,6 +17,9 @@ require (
 	github.com/starfederation/datastar-go v1.2.2
 	golang.org/x/image v0.48.0
 	golang.org/x/sync v0.25.0
+	golang.org/x/time v0.16.0
+	google.golang.org/api v0.304.0
+	google.golang.org/genai v1.69.0
 	google.golang.org/grpc v1.85.0
 )
 
@@ -267,11 +270,8 @@ require (
 	golang.org/x/sys v0.50.0 // indirect
 	golang.org/x/telemetry v0.0.0-20261009151841-97e8ea77aa2a // indirect
 	golang.org/x/text v0.44.0 // indirect
-	golang.org/x/time v0.16.0 // indirect
 	golang.org/x/tools v0.52.0 // indirect
 	golang.org/x/vuln v1.8.0 // indirect
-	google.golang.org/api v0.304.0 // indirect
-	google.golang.org/genai v1.69.0 // indirect
 	google.golang.org/genproto v0.0.0-20261012220534-4341edf3f941 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20261012220534-4341edf3f941 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261012220534-4341edf3f941 // indirect
