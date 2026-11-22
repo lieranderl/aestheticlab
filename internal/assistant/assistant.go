@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"google.golang.org/genai"
 
@@ -100,8 +101,9 @@ const (
 	maxOffers = 3
 	// defaultDays is how far find_free_slots looks without dates.
 	defaultDays = 7
-	// maxOutputTokens keeps replies short and cheap.
-	maxOutputTokens = 1024
+	// maxOutputTokens bounds one model call's output, Gemini's thinking
+	// included: 1024 cut Russian answers off mid-word.
+	maxOutputTokens = 2048
 )
 
 // Options configure an Assistant.
@@ -162,7 +164,11 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 			break
 		}
 		calls := resp.FunctionCalls()
-		said = append(said, replyText(resp.Candidates[0].Content))
+		reply := replyText(resp.Candidates[0].Content)
+		if resp.Candidates[0].FinishReason == genai.FinishReasonMaxTokens {
+			reply = wholeSentences(reply)
+		}
+		said = append(said, reply)
 		if len(calls) == 0 {
 			text := finalAnswer(said)
 			if text == "" {
@@ -254,6 +260,16 @@ func rewrites(a, b string) bool {
 	}
 	// At least half of all their words are shared.
 	return shared*2 >= len(wa)+len(wb)-shared
+}
+
+// wholeSentences is s up to its last whole sentence: a reply cut off by
+// the token limit must not end mid-word. Empty if none ended.
+func wholeSentences(s string) string {
+	if i := strings.LastIndexAny(s, ".!?…\n"); i >= 0 {
+		_, size := utf8.DecodeRuneInString(s[i:])
+		return strings.TrimSpace(s[:i+size])
+	}
+	return ""
 }
 
 // replyText is the answer to the visitor: the last text part that isn't a

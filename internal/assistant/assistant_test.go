@@ -397,6 +397,24 @@ func TestAnswersFromSeveralToolRoundsAreAllKept(t *testing.T) {
 	}
 }
 
+// A reply that ran out of output tokens (Gemini's thinking counts too)
+// ends at its last whole sentence, never mid-word.
+func TestAReplyCutByTheTokenLimitEndsAtASentence(t *testing.T) {
+	cut := text("Ламинирование бровей держится до 3 месяцев. Процедура фиксирует форму волосков, делая брови более густыми и ухожен")
+	cut.Candidates[0].FinishReason = genai.FinishReasonMaxTokens
+	m := &scripted{replies: []*genai.GenerateContentResponse{cut}}
+	got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Text != "Ламинирование бровей держится до 3 месяцев." {
+		t.Errorf("reply = %q, want only the whole sentence", got.Text)
+	}
+	if m.configs[0].MaxOutputTokens < 2048 {
+		t.Errorf("max output tokens = %d; thinking and a Russian answer need more than 1024", m.configs[0].MaxOutputTokens)
+	}
+}
+
 // Text written with a find_free_slots call comes before the times are
 // known, so any times in it are guesses: never shown.
 func TestTextWrittenBeforeFreeTimesAreKnownIsDropped(t *testing.T) {
