@@ -201,3 +201,38 @@ func TestGoodToKnowCoversPaymentAndTheCancellationPolicy(t *testing.T) {
 		t.Error("Good to know still has the old cancellation answer")
 	}
 }
+
+// The back-to-top arrow sits bottom right; where the chat assistant runs,
+// it moves up above the chat button instead of covering it.
+func TestTheBackToTopArrowMakesRoomForTheChat(t *testing.T) {
+	render := func(ctx context.Context) string {
+		var buf bytes.Buffer
+		if err := home(content.Snapshot().In(i18n.EnBE)).Render(ctx, &buf); err != nil {
+			t.Fatal(err)
+		}
+		return buf.String()
+	}
+	u, _ := url.Parse("/en-BE/")
+	ctx := views.WithRequest(i18n.WithLocale(context.Background(), i18n.EnBE), u)
+	if html := render(ctx); !strings.Contains(html, "lg:right-6 lg:bottom-6") || strings.Contains(html, "lg:bottom-23") {
+		t.Error("without the chat, the arrow left its place at the bottom right")
+	}
+	if html := render(views.WithChat(ctx)); !strings.Contains(html, "lg:right-7 lg:bottom-23") {
+		t.Error("with the chat, the arrow does not sit above the chat button")
+	}
+}
+
+// While the assistant answers, "Thinking…" shimmers (daisyUI skeleton-text)
+// and is read out once.
+func TestTheChatShowsThinkingAsShimmeringText(t *testing.T) {
+	var buf bytes.Buffer
+	u, _ := url.Parse("/en-BE/")
+	ctx := views.WithChat(views.WithRequest(i18n.WithLocale(context.Background(), i18n.EnBE), u))
+	if err := home(content.Snapshot().In(i18n.EnBE)).Render(ctx, &buf); err != nil {
+		t.Fatal(err)
+	}
+	html := buf.String()
+	if !strings.Contains(html, `class="skeleton skeleton-text`) || strings.Count(html, "Thinking…") != 1 {
+		t.Error("the chat's busy bubble is not a single shimmering \"Thinking…\"")
+	}
+}

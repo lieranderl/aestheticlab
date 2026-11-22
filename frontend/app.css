@@ -144,6 +144,20 @@
 /* Light only: the Aesthetic theme below is the one theme, for everyone.
    DaisyUI's built-in themes stay off, so dark-mode visitors don't get dark
    base colours under the sage palette. */
+/* The chat button's aura in the studio's colours: daisyUI aura-silver's
+   light and dark bands, in rosewood, blush and sage on cream. */
+@utility aura-brand {
+  background-image: repeating-conic-gradient(
+    from var(--aura-angle),
+    var(--color-rosewood),
+    var(--color-base-100),
+    var(--color-blush),
+    var(--color-base-100),
+    var(--color-sage-400),
+    var(--color-rosewood) 50%
+  );
+}
+
 @plugin "daisyui" {
   themes: false;
   logs: false;

@@ -1,6 +1,7 @@
 package views
 
-// chatWidget is the assistant's launcher and panel. The transcript lives in
+// chatWidget is the assistant's launcher and panel, bottom right, with the
+// back-to-top arrow above it (ScrollToTop). The transcript lives in
 // #chat-log; the server appends each message to it over SSE. Everything
 // starts hidden and Datastar reveals it: without JavaScript the chat cannot
 // send, so it must not cover the page.
@@ -13,26 +14,36 @@ templ chatWidget() {
 		data-attr:hidden="false"
 		data-init="$chatHistory = aesthetic.chatRestore(); $chatOpen = aesthetic.chatWasOpen()"
 		data-effect="aesthetic.chatSave($chatHistory, $chatOpen)"
-		class="fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] left-4 z-40 lg:bottom-6 lg:left-6"
+		class="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-40 lg:right-6 lg:bottom-6"
 	>
-		<button
-			id="chat-open"
-			type="button"
-			class="btn btn-circle btn-accent size-14 shadow-lg"
-			aria-label={ tr(ctx, "Chat with our assistant") }
-			title={ tr(ctx, "Chat with our assistant") }
-			aria-controls="chat-panel"
-			data-attr:aria-expanded="$chatOpen ? 'true' : 'false'"
+		<!-- daisyUI's aura in the studio's colours (aura-brand in app.css): a
+		slowly turning ring that marks the AI assistant; the negative margin keeps
+		the button where it was. Still with reduced motion (the glow layers
+		inherit the animation). -->
+		<div
+			id="chat-aura"
+			class="aura aura-brand -m-0.5 rounded-full [--aura-radius:9999px] motion-reduce:animate-none"
 			data-attr:hidden="$chatOpen"
-			data-on:click="$chatOpen = true; setTimeout(() => document.getElementById('chat-input')?.focus(), 0)"
 		>
-			@Icon("outline/chat-bubble-left-right", "size-6")
-		</button>
+			<button
+				id="chat-open"
+				type="button"
+				class="btn btn-circle btn-accent size-14 shadow-lg"
+				aria-label={ tr(ctx, "Chat with our assistant") }
+				title={ tr(ctx, "Chat with our assistant") }
+				aria-controls="chat-panel"
+				data-attr:aria-expanded="$chatOpen ? 'true' : 'false'"
+				data-attr:hidden="$chatOpen"
+				data-on:click="$chatOpen = true; setTimeout(() => document.getElementById('chat-input')?.focus(), 0)"
+			>
+				@Icon("outline/chat-bubble-left-right", "size-6")
+			</button>
+		</div>
 		<section
 			id="chat-panel"
 			role="dialog"
 			aria-labelledby="chat-title"
-			class="card flex h-[min(36rem,calc(100dvh-8rem))] w-[min(24rem,calc(100vw-2rem))] flex-col border border-base-300 bg-base-100 shadow-xl"
+			class="card flex h-[min(36rem,calc(100dvh-8rem))] w-[min(24rem,calc(100vw-2rem))] flex-col lg:h-[min(44rem,calc(100dvh-7.5rem))] lg:w-md border border-base-300 bg-base-100 shadow-xl"
 			hidden
 			data-attr:hidden="!$chatOpen"
 			data-on:keydown__window="evt.key === 'Escape' && $chatOpen && ($chatOpen = false)"
@@ -53,25 +64,45 @@ templ chatWidget() {
 						@ChatMessage(false, tr(ctx, "Hi! Ask me about our treatments, prices, team or free times."), nil, 0)
 					</div>
 					<div class="chat chat-start" hidden data-attr:hidden="!$chatBusy">
-						<div class="chat-bubble bg-base-200 text-base-content">
-							<span class="loading loading-dots loading-sm" aria-hidden="true"></span>
-							<span class="sr-only">{ tr(ctx, "Thinking…") }</span>
+						<div class="chat-bubble bg-base-200 font-main text-sm">
+							<span class="skeleton skeleton-text bg-transparent">{ tr(ctx, "Thinking…") }</span>
 						</div>
 					</div>
 				</div>
 			</div>
+			<!-- Common questions, one tap to ask, until the conversation starts. -->
+			<div
+				id="chat-suggestions"
+				role="group"
+				aria-label={ tr(ctx, "Suggested questions") }
+				class="flex flex-wrap justify-end gap-2 px-3 pb-3"
+				hidden
+				data-attr:hidden="$chatHistory.length > 0 || $chatBusy"
+			>
+				for _, q := range chatSuggestions(ctx) {
+					<button
+						type="button"
+						class="btn btn-outline btn-sm h-auto min-h-8 rounded-full border-base-300 py-1.5 font-main text-xs font-normal normal-case"
+						data-on:click={ "$chatInput = " + jsString(q) + "; @post('" + href(ctx, "chat") + "')" }
+					>{ q }</button>
+				}
+			</div>
 			<form class="flex items-end gap-2 border-t border-base-300 p-3" data-on:submit={ "$chatInput.trim() && !$chatBusy && @post('" + href(ctx, "chat") + "')" }>
 				<label for="chat-input" class="sr-only">{ tr(ctx, "Your question") }</label>
-				<input
+				<!-- Enter sends, Shift+Enter adds a line. Typed text stays 16px (phones
+				zoom into smaller fields); only the hint is smaller, on two lines
+				where the field can't grow with its content. -->
+				<textarea
 					id="chat-input"
-					type="text"
+					rows="2"
 					maxlength="500"
 					autocomplete="off"
-					class="input input-bordered grow font-main text-base"
+					class="textarea textarea-bordered max-h-32 min-h-11 grow resize-none field-sizing-content font-main text-base leading-snug placeholder:text-sm"
 					placeholder={ tr(ctx, "Ask about treatments, prices or free times") }
 					data-bind:chat-input
 					data-attr:disabled="$chatBusy"
-				/>
+					data-on:keydown="evt.key === 'Enter' && !evt.shiftKey && !evt.isComposing && (evt.preventDefault(), el.form.requestSubmit())"
+				></textarea>
 				<button id="chat-send" type="submit" class="btn btn-primary btn-square" aria-label={ tr(ctx, "Send") } data-attr:disabled="$chatBusy || !$chatInput.trim()">
 					@Icon("mini/paper-airplane", "size-5")
 				</button>

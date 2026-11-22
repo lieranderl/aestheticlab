@@ -192,3 +192,146 @@ test("starts fresh in a new tab", async ({ page, context }) => {
 	await expect(other.locator("#chat-log .chat-end")).toHaveCount(0);
 	await other.close();
 });
+
+test("suggests common questions until the first message", async ({ page }) => {
+	await page.goto("/en-BE/");
+	await page.getByRole("button", { name: "Chat with our assistant" }).click();
+	const panel = page.getByRole("dialog", { name: "Ask Aesthetic Lab" });
+	const suggestions = panel.getByRole("group", { name: "Suggested questions" });
+	await expect(suggestions.getByRole("button")).toHaveText([
+		"What do your treatments cost?",
+		"When is the next free time?",
+		"Tell me about the studio",
+		"How does laser hair removal work?",
+	]);
+
+	await suggestions
+		.getByRole("button", { name: "When is the next free time?" })
+		.click();
+	await expect(panel.locator("#chat-log .chat-end")).toHaveText(
+		"When is the next free time?",
+	);
+	await expect(panel.locator("#chat-log .chat-start")).toHaveCount(2);
+	await expect(suggestions).toBeHidden();
+
+	// A conversation that is under way keeps them hidden after a reload.
+	await page.reload();
+	await expect(panel).toBeVisible();
+	await expect(panel.locator("#chat-log .chat-end")).toHaveCount(1);
+	await expect(suggestions).toBeHidden();
+});
+
+test("writes several lines with Shift+Enter and sends with Enter", async ({
+	page,
+}) => {
+	await page.goto("/en-BE/");
+	await page.getByRole("button", { name: "Chat with our assistant" }).click();
+	const panel = page.getByRole("dialog", { name: "Ask Aesthetic Lab" });
+	const input = panel.getByRole("textbox", { name: "Your question" });
+	await input.pressSequentially("Two questions:");
+	await input.press("Shift+Enter");
+	await input.pressSequentially("price and time");
+	await expect(input).toHaveValue("Two questions:\nprice and time");
+	await expect(panel.locator("#chat-log .chat-end")).toHaveCount(0);
+
+	await input.press("Enter");
+	await expect(panel.locator("#chat-log .chat-end")).toHaveText(
+		"Two questions:\nprice and time",
+	);
+	await expect(input).toHaveValue("");
+});
+
+// The hint wraps in a text area in a smaller size; typed text stays 16px,
+// since phones zoom into smaller fields.
+test("shows the whole hint in a smaller size than typed text", async ({
+	page,
+}) => {
+	await page.goto("/en-BE/");
+	await page.getByRole("button", { name: "Chat with our assistant" }).click();
+	const input = page.getByRole("textbox", { name: "Your question" });
+	const sizes = await input.evaluate((el) => ({
+		tag: el.tagName,
+		text: Number.parseFloat(getComputedStyle(el).fontSize),
+		hint: Number.parseFloat(getComputedStyle(el, "::placeholder").fontSize),
+	}));
+	expect(sizes.tag).toBe("TEXTAREA");
+	expect(sizes.text).toBe(16);
+	expect(sizes.hint).toBeLessThan(16);
+});
+
+for (const [width, height] of [
+	[375, 812],
+	[1440, 900],
+]) {
+	test(`sits bottom right with the back-to-top arrow above it (${width}px)`, async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width, height });
+		await page.goto("/en-BE/");
+		await page.mouse.wheel(0, 3000);
+		const chat = page.getByRole("button", { name: "Chat with our assistant" });
+		const top = page.locator("button[data-signals\\:to-top]");
+		await expect(top).toHaveCSS("opacity", "1");
+		await expect(top).toHaveCSS("translate", "0px");
+		const [c, t] = [await chat.boundingBox(), await top.boundingBox()];
+		expect(c && t).toBeTruthy();
+		if (c && t) {
+			const edge = width < 1024 ? 16 : 24;
+			expect(Math.round(width - (c.x + c.width))).toBe(edge);
+			// Centred over the chat button, 12px above it.
+			expect(Math.abs(t.x + t.width / 2 - (c.x + c.width / 2))).toBeLessThan(1);
+			expect(Math.round(c.y - (t.y + t.height))).toBe(12);
+		}
+	});
+}
+
+test("glows with an aura that marks the AI assistant", async ({ page }) => {
+	await page.goto("/en-BE/");
+	const aura = page.locator("#chat-aura");
+	await expect(aura).toHaveClass(/\baura\b/);
+	await expect(aura).toHaveCSS("animation-name", "aura");
+	// In the studio's colours: rosewood, blush and sage.
+	const ring = await aura.evaluate(
+		(el) => getComputedStyle(el).backgroundImage,
+	);
+	for (const colour of [
+		"rgb(142, 90, 76)",
+		"rgb(217, 179, 166)",
+		"rgb(139, 150, 135)",
+	]) {
+		expect(ring).toContain(colour);
+	}
+	await page.getByRole("button", { name: "Chat with our assistant" }).click();
+	await expect(aura).toBeHidden();
+	await page.getByRole("button", { name: "Close chat" }).click();
+	await expect(aura).toBeVisible();
+});
+
+test("keeps the aura still with reduced motion", async ({ page }) => {
+	await page.emulateMedia({ reducedMotion: "reduce" });
+	await page.goto("/en-BE/");
+	const still = await page
+		.locator("#chat-aura")
+		.evaluate((el) => [
+			getComputedStyle(el).animationName,
+			getComputedStyle(el, "::before").animationName,
+			getComputedStyle(el, "::after").animationName,
+		]);
+	expect(still).toEqual(["none", "none", "none"]);
+});
+
+test("is larger on a desktop screen and still fits it", async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	await page.goto("/en-BE/");
+	await page.getByRole("button", { name: "Chat with our assistant" }).click();
+	const box = await page
+		.getByRole("dialog", { name: "Ask Aesthetic Lab" })
+		.boundingBox();
+	expect(box).not.toBeNull();
+	if (box) {
+		expect(box.width).toBeGreaterThanOrEqual(440);
+		expect(box.height).toBeGreaterThanOrEqual(640);
+		expect(box.y).toBeGreaterThanOrEqual(0);
+		expect(box.y + box.height).toBeLessThanOrEqual(900);
+	}
+});
