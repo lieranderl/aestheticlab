@@ -31,10 +31,11 @@ type Store interface {
 	// Spent is what day ("2026-11-22") and month ("2026-11") have spent.
 	Spent(ctx context.Context, day, month string) (dayEUR, monthEUR float64, err error)
 	// Reserve adds eur to day and month (and env's share) in one atomic
-	// step, only if both are still under their caps: ErrMonthCap or
+	// step, only if both stay within their caps with it: ErrMonthCap or
 	// ErrDayCap otherwise, and nothing is added.
 	Reserve(ctx context.Context, day, month, env string, eur float64, caps Caps) error
-	// Add adds eur (negative to give back) to day, month and env's share.
+	// Add adds eur (negative to give back) to day, month and env's share,
+	// all or none of them, once.
 	Add(ctx context.Context, day, month, env string, eur float64) error
 }
 
@@ -72,8 +73,9 @@ type Reservation struct {
 }
 
 // Reserve holds eur, the most one reply can cost, before the model is
-// called: atomically, and only while today and this month are under their
-// caps, so concurrent replies near a cap can't all get through. It returns
+// called: atomically, and only if today and this month stay within their
+// caps with it, so neither a reply nor concurrent replies near a cap can
+// spend past it. It returns
 // ErrMonthCap or ErrDayCap at a cap, or the store's error, so spending the
 // ledger can't see never happens.
 func (l *Ledger) Reserve(ctx context.Context, eur float64) (Reservation, error) {
@@ -106,15 +108,26 @@ func (l *Ledger) Allow(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("read chat spending: %w", err)
 	}
-	return l.opts.Caps.check(dayEUR, monthEUR)
+	return l.opts.Caps.check(dayEUR, monthEUR, 0)
 }
 
-// check is ErrMonthCap or ErrDayCap once spending reached a cap.
-func (c Caps) check(dayEUR, monthEUR float64) error {
+// tolerance absorbs float sums such as 0.45 + 0.05, which comes to a hair
+// over 0.5: a ten-millionth of a cent, far below any reply's cost.
+const tolerance = 1e-9
+
+// check is ErrMonthCap or ErrDayCap when adding eur to what the day and
+// month spent would pass a cap; with eur 0, once spending reached one.
+func (c Caps) check(dayEUR, monthEUR, eur float64) error {
+	over := func(spent, limit float64) bool {
+		if eur <= 0 {
+			return spent+tolerance >= limit
+		}
+		return spent+eur > limit+tolerance
+	}
 	switch {
-	case monthEUR >= c.MonthEUR:
+	case over(monthEUR, c.MonthEUR):
 		return ErrMonthCap
-	case dayEUR >= c.DayEUR:
+	case over(dayEUR, c.DayEUR):
 		return ErrDayCap
 	}
 	return nil
@@ -180,7 +193,7 @@ func (m *Memory) Spent(_ context.Context, day, month string) (float64, float64, 
 func (m *Memory) Reserve(_ context.Context, day, month, _ string, eur float64, caps Caps) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if err := caps.check(m.spent[day], m.spent[month]); err != nil {
+	if err := caps.check(m.spent[day], m.spent[month], eur); err != nil {
 		return err
 	}
 	m.spent[day] += eur

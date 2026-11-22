@@ -86,10 +86,13 @@ func (Fake) Generate(_ context.Context, contents []*genai.Content, cfg *genai.Ge
 	return reply("I'm Aesthetic Lab's test assistant, without AI. Ask me for free times or to book, to try the tools."), nil
 }
 
+// noTokens is the Fake's usage: known, and nothing billed.
+var noTokens = &genai.GenerateContentResponseUsageMetadata{}
+
 func reply(text string) *genai.GenerateContentResponse {
 	return &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{
 		Content: genai.NewContentFromText(text, genai.RoleModel), FinishReason: genai.FinishReasonStop,
-	}}}
+	}}, UsageMetadata: noTokens}
 }
 
 func fakeCall(name, service string) *genai.GenerateContentResponse {
@@ -98,7 +101,7 @@ func fakeCall(name, service string) *genai.GenerateContentResponse {
 			ID: "fake-1", Name: name, Args: map[string]any{"service_id": service},
 		}}}, genai.RoleModel),
 		FinishReason: genai.FinishReasonStop,
-	}}}
+	}}, UsageMetadata: noTokens}
 }
 
 func fakeSummary(fr *genai.FunctionResponse) string {

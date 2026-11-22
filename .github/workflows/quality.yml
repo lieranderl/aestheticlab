@@ -168,9 +168,11 @@ jobs:
       - name: Go quality gate
         run: make ci
 
-      # The content store against Firestore's emulator as well as stand-ins
-      # (make firestore, make test-content): import, export and fetch.
-      - name: Content works with Firestore
+      # The content store and the chat's spending ledger against Firestore's
+      # emulator as well as stand-ins (make firestore, make test-content):
+      # import, export and fetch; spending across instances and concurrent
+      # reservations near a cap.
+      - name: Content and chat spending work with Firestore
         env:
           FIRESTORE_EMULATOR_IMAGE: gcr.io/google.com/cloudsdktool/google-cloud-cli:587.0.0-emulators@sha256:8d8573471c489a409f03891d2c24d177fa531276184f7002b9a2d853d1b3ed54
         run: |
@@ -179,8 +181,9 @@ jobs:
             gcloud emulators firestore start --host-port=0.0.0.0:8087
           trap 'docker rm -f firestore >/dev/null 2>&1 || true' EXIT
           timeout 120 bash -c 'until curl -fsS localhost:8087 >/dev/null; do sleep 1; done'
-          FIRESTORE_EMULATOR_HOST=localhost:8087 go test -count=1 -race -v ./internal/content/ | tee content.log
-          grep -q -- '--- PASS: TestFirestoreKeepsTheImportedContent' content.log
+          FIRESTORE_EMULATOR_HOST=localhost:8087 go test -count=1 -race -v ./internal/content/ ./internal/usage/ | tee firestore.log
+          grep -q -- '--- PASS: TestFirestoreKeepsTheImportedContent' firestore.log
+          grep -q -- '--- PASS: TestFirestoreKeepsSpendingAcrossLedgers' firestore.log
 
   secrets:
     runs-on: ubuntu-24.04

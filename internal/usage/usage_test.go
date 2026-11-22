@@ -80,15 +80,54 @@ func TestTheMonthlyCapHoldsAcrossDays(t *testing.T) {
 	}
 }
 
+// A reservation is admitted only if it fits under the cap whole: one
+// that would pass the cap is refused, even with budget left.
+func TestAReservationMustFitUnderTheCap(t *testing.T) {
+	ctx := context.Background()
+	for name, tc := range map[string]struct {
+		spent float64
+		want  error
+	}{
+		"exact fit":       {spent: 0.45, want: nil},
+		"one cent short":  {spent: 0.46, want: usage.ErrDayCap},
+		"a cent left":     {spent: 0.49, want: usage.ErrDayCap},
+		"plenty left":     {spent: 0.10, want: nil},
+		"already reached": {spent: 0.50, want: usage.ErrDayCap},
+	} {
+		now := time.Date(2026, 11, 22, 10, 0, 0, 0, brussels)
+		l := ledger(usage.NewMemory(), &now)
+		r, err := l.Reserve(ctx, 0.05)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = l.Settle(ctx, r, tc.spent)
+		if _, err := l.Reserve(ctx, 0.05); !errors.Is(err, tc.want) {
+			t.Errorf("%s: Reserve(€0.05) at €%.2f of €0.50 = %v, want %v", name, tc.spent, err, tc.want)
+		}
+	}
+	// The month cap is checked the same way.
+	now := time.Date(2026, 11, 22, 10, 0, 0, 0, brussels)
+	l := usage.NewLedger(usage.Options{
+		Store: usage.NewMemory(), Caps: usage.Caps{MonthEUR: 0.1, DayEUR: 0.5}, Environment: "staging",
+		Location: brussels, Now: func() time.Time { return now },
+	})
+	r, _ := l.Reserve(ctx, 0.05)
+	_ = l.Settle(ctx, r, 0.06)
+	if _, err := l.Reserve(ctx, 0.05); !errors.Is(err, usage.ErrMonthCap) {
+		t.Errorf("Reserve(€0.05) at €0.06 of a €0.10 month = %v, want ErrMonthCap", err)
+	}
+}
+
 // Near a cap, replies arriving at once can't all pass a check made before
-// any of them is recorded: the reservation admits one, which then counts.
+// any of them is recorded: the reservation admits only those that fit,
+// which then count.
 func TestConcurrentRepliesNearTheCapAdmitOnlyWhatFits(t *testing.T) {
 	now := time.Date(2026, 11, 22, 10, 0, 0, 0, brussels)
 	store := usage.NewMemory()
 	l := ledger(store, &now)
 	ctx := context.Background()
 	r, _ := l.Reserve(ctx, 0.05)
-	_ = l.Settle(ctx, r, 0.49)
+	_ = l.Settle(ctx, r, 0.40)
 	var admitted atomic.Int32
 	var wg sync.WaitGroup
 	for range 30 {
@@ -99,8 +138,11 @@ func TestConcurrentRepliesNearTheCapAdmitOnlyWhatFits(t *testing.T) {
 		})
 	}
 	wg.Wait()
-	if got := admitted.Load(); got != 1 {
-		t.Errorf("%d of 30 concurrent replies admitted at €0.49 of €0.50, want 1", got)
+	if got := admitted.Load(); got != 2 {
+		t.Errorf("%d of 30 concurrent €0.05 replies admitted at €0.40 of €0.50, want 2", got)
+	}
+	if day, _, _ := store.Spent(ctx, "2026-11-22", "2026-11"); day > 0.5+1e-9 {
+		t.Errorf("€%v held today, past the €0.50 cap", day)
 	}
 }
 
@@ -184,7 +226,7 @@ func TestFirestoreKeepsSpendingAcrossLedgers(t *testing.T) {
 	// Reservations near the cap are serialized by the transaction.
 	now = now.AddDate(0, 0, 1)
 	r, _ = other.Reserve(ctx, 0.05)
-	_ = other.Settle(ctx, r, 0.49)
+	_ = other.Settle(ctx, r, 0.40)
 	var admitted atomic.Int32
 	var wg sync.WaitGroup
 	for range 10 {
@@ -195,7 +237,16 @@ func TestFirestoreKeepsSpendingAcrossLedgers(t *testing.T) {
 		})
 	}
 	wg.Wait()
-	if got := admitted.Load(); got != 1 {
-		t.Errorf("%d of 10 concurrent reservations admitted near the cap, want 1", got)
+	if got := admitted.Load(); got != 2 {
+		t.Errorf("%d of 10 concurrent €0.05 reservations admitted at €0.40 of €0.50, want 2", got)
+	}
+	// Settling moves the day and the month together.
+	day := now.Format(time.DateOnly)
+	dayEUR, monthEUR, err := store.Spent(ctx, day, now.Format("2006-01"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := 0.55 + 0.5; math.Abs(dayEUR-0.5) > 1e-9 || math.Abs(monthEUR-want) > 1e-9 {
+		t.Errorf("spent €%v today and €%v this month, want €0.50 and €%v", dayEUR, monthEUR, want)
 	}
 }

@@ -155,8 +155,8 @@ firestore: ## Go: start the Firestore emulator on localhost:8087
 		gcloud emulators firestore start --host-port=0.0.0.0:$(FIRESTORE_EMULATOR_PORT)
 	@echo "Firestore emulator on localhost:$(FIRESTORE_EMULATOR_PORT); stop it with: $(notdir $(CONTAINER_TOOL)) stop aestheticlab-firestore"
 
-test-content: ## Go: the content tests against the Firestore emulator (make firestore first)
-	FIRESTORE_EMULATOR_HOST=localhost:$(FIRESTORE_EMULATOR_PORT) $(GO) test -race -count=1 ./internal/content/
+test-content: ## Go: the content and chat spending tests against the Firestore emulator (make firestore first)
+	FIRESTORE_EMULATOR_HOST=localhost:$(FIRESTORE_EMULATOR_PORT) $(GO) test -race -count=1 ./internal/content/ ./internal/usage/
 
 # The production content the site renders when Firestore does not answer in
 # time, refreshed with your application default credentials.

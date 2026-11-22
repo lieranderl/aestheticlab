@@ -180,6 +180,7 @@ func TestChatSettingsThatCannotBeCappedKeepTheChatOff(t *testing.T) {
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	for name, vars := range map[string]map[string]string{
 		"unknown model":    {"CHAT_ENABLED": "true", "CHAT_MODEL": "some-new-model", "GOOGLE_CLOUD_PROJECT": "p"},
+		"no shared ledger": {"CHAT_ENABLED": "true", "CHAT_MODEL": "gemini-3.1-flash-lite", "GOOGLE_CLOUD_PROJECT": "p"},
 		"zero budget":      {"CHAT_ENABLED": "true", "CHAT_MODEL": "fake", "CHAT_MONTHLY_BUDGET_EUR": "0"},
 		"bad daily budget": {"CHAT_ENABLED": "true", "CHAT_MODEL": "fake", "CHAT_DAILY_BUDGET_EUR": "ten"},
 		"NaN budget":       {"CHAT_ENABLED": "true", "CHAT_MODEL": "fake", "CHAT_MONTHLY_BUDGET_EUR": "NaN"},

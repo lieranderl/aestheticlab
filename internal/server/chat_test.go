@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"google.golang.org/genai"
 
@@ -64,10 +65,15 @@ type spending struct {
 	reserved   []float64
 	recorded   []float64
 	liveSettle []bool
+	// reserveDeadline is how long Reserve's context had left; 0 for none.
+	reserveDeadline time.Duration
 }
 
-func (s *spending) Reserve(_ context.Context, eur float64) (usage.Reservation, error) {
+func (s *spending) Reserve(ctx context.Context, eur float64) (usage.Reservation, error) {
 	s.reserved = append(s.reserved, eur)
+	if d, ok := ctx.Deadline(); ok {
+		s.reserveDeadline = time.Until(d)
+	}
 	return usage.Reservation{}, s.allow
 }
 
@@ -273,6 +279,16 @@ func TestTheWorstCaseIsReservedBeforeTheModelIsCalled(t *testing.T) {
 	want := testPrice.Cost(assistant.WorstCaseTokens)
 	if len(spend.reserved) != 1 || spend.reserved[0] != want || want < 0.01 {
 		t.Errorf("reserved %v, want [%v] (the worst case, at least a cent)", spend.reserved, want)
+	}
+}
+
+// A slow ledger can't hold a request past the reply timeout: the deadline
+// starts before the reservation.
+func TestTheReplyDeadlineCoversTheReservation(t *testing.T) {
+	spend := &spending{}
+	_ = post(t, chatSiteWith(t, &counting{}, spend), "/en-BE/chat", `{"chatInput":"hi"}`, nil)
+	if spend.reserveDeadline <= 0 || spend.reserveDeadline > 30*time.Second {
+		t.Errorf("Reserve ran with %v left, want the 30s reply deadline", spend.reserveDeadline)
 	}
 }
 

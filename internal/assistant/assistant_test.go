@@ -513,3 +513,44 @@ func TestARepliesTokensAreSummedOverItsModelCalls(t *testing.T) {
 		t.Errorf("a blocked reply = %+v, %v; want its tokens with ErrNoAnswer", got.Tokens, err)
 	}
 }
+
+// A model call whose usage is unknown is billed at its worst case: a
+// response without usage, or a call cut off after Vertex AI may have
+// processed it. A request Vertex AI itself refused is not billed.
+func TestAModelCallOfUnknownUsageCountsAtItsWorstCase(t *testing.T) {
+	worstRound := usage.Tokens{Prompt: assistant.WorstCaseTokens.Prompt / 4, Output: assistant.WorstCaseTokens.Output / 4}
+	m := &scripted{replies: []*genai.GenerateContentResponse{
+		withUsage(call("offer_booking", map[string]any{"service_id": "4847871"}), 9000, 8000, 40, 100),
+		text("Tap the button."),
+	}}
+	got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := usage.Tokens{Prompt: 9000 + worstRound.Prompt, Cached: 8000, Output: 140 + worstRound.Output}
+	if got.Tokens != want || got.Unmetered != 1 {
+		t.Errorf("a reply without usage = %+v, %d unmetered; want %+v, 1", got.Tokens, got.Unmetered, want)
+	}
+
+	for name, tc := range map[string]struct {
+		err       error
+		unmetered int
+	}{
+		"timed out":       {err: context.DeadlineExceeded, unmetered: 1},
+		"visitor left":    {err: context.Canceled, unmetered: 1},
+		"connection lost": {err: errors.New("unexpected EOF"), unmetered: 1},
+		"refused":         {err: genai.APIError{Code: 429, Status: "RESOURCE_EXHAUSTED"}, unmetered: 0},
+	} {
+		got, err := newAssistant(&scripted{err: tc.err}).Reply(context.Background(), knowledge(), nil, "?")
+		if err == nil {
+			t.Fatalf("%s: no error", name)
+		}
+		want := usage.Tokens{}
+		if tc.unmetered > 0 {
+			want = worstRound
+		}
+		if got.Tokens != want || got.Unmetered != tc.unmetered {
+			t.Errorf("%s: %+v, %d unmetered; want %+v, %d", name, got.Tokens, got.Unmetered, want, tc.unmetered)
+		}
+	}
+}
