@@ -62,9 +62,14 @@ func clockTimes(s string) []string {
 }
 
 // showTimes keeps ft for the visitor: a later lookup for the same
-// treatment replaces an earlier one, and at most maxOffers treatments
-// show times.
+// treatment replaces an earlier one, and one that found nothing clears it,
+// since the earlier times don't fit what was asked now. At most maxOffers
+// treatments show times.
 func (r *toolRun) showTimes(ft FreeTimes) {
+	if len(ft.Slots) == 0 {
+		r.times = slices.DeleteFunc(r.times, func(t FreeTimes) bool { return t.ServiceID == ft.ServiceID })
+		return
+	}
 	if i := slices.IndexFunc(r.times, func(t FreeTimes) bool { return t.ServiceID == ft.ServiceID }); i >= 0 {
 		r.times[i] = ft
 		return

@@ -100,6 +100,21 @@ func TestALaterLookupForATreatmentReplacesTheEarlierOne(t *testing.T) {
 	if want := []assistant.Offer{{ServiceID: "4847871", Service: "Pedicure", StaffID: 642297, Staff: "Zara"}}; !slices.Equal(got.Offers, want) {
 		t.Errorf("offers = %+v, want %+v", got.Offers, want)
 	}
+
+	// A narrower lookup that finds nothing clears the earlier times: they
+	// don't fit what the visitor asked for now.
+	m = &scripted{replies: []*genai.GenerateContentResponse{
+		call("find_free_slots", monday(nil)),
+		call("find_free_slots", monday(map[string]any{"from_time": "18:00"})),
+		text("Nothing starts that late on Monday."),
+	}}
+	got, err = newAssistant(m).Reply(context.Background(), knowledge(), nil, "Monday evening?")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Times) != 0 || len(got.Offers) != 0 {
+		t.Errorf("after an empty lookup: times %+v, offers %+v; want none", got.Times, got.Offers)
+	}
 }
 
 // The model's text may name a time only if it is one of the shown times,

@@ -496,9 +496,7 @@ func (r *toolRun) findFreeSlots(ctx context.Context, args map[string]any) map[st
 		})
 		shown.Slots = append(shown.Slots, Slot{Start: t, StaffID: sl.StaffID, Staff: sl.Name})
 	}
-	if len(picked) > 0 {
-		r.showTimes(shown)
-	}
+	r.showTimes(shown)
 	note := "These times are shown to the visitor under your reply, with a Book button: don't list them again. They look free now; the booking page confirms them."
 	if more {
 		note += " Only each person's first free time per day is listed; later times that day may be free too: call again with from_time to see them."
