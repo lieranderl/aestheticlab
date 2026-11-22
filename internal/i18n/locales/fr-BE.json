@@ -324,7 +324,20 @@
 			"suggest_prices": "Combien coûtent vos soins ?",
 			"suggest_free": "Quel est le prochain créneau libre ?",
 			"suggest_studio": "Parlez-moi du studio",
-			"suggest_laser": "Comment fonctionne l’épilation laser ?"
+			"suggest_laser": "Comment fonctionne l’épilation laser ?",
+			"times": "Créneaux libres : {{service}}",
+			"times_with": "Créneaux libres : {{service}} avec {{name}}",
+			"times_note": "Ces créneaux semblent libres pour l'instant ; la page de réservation les confirme.",
+			"times_unchecked": "Impossible de vérifier les créneaux de {{names}} : la page de réservation les affiche.",
+			"weekday_short": {
+				"mon": "lun.",
+				"tue": "mar.",
+				"wed": "mer.",
+				"thu": "jeu.",
+				"fri": "ven.",
+				"sat": "sam.",
+				"sun": "dim."
+			}
 		}
 	}
 }

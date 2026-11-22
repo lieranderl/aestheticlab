@@ -1,8 +1,10 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "./fixtures";
 
-// The chat assistant runs with the scripted fake model (e2e/serve-go.ts):
-// no network, no cost. Its tool calls and Book buttons are covered by the
-// Go tests (internal/server/chat_test.go); these check the widget itself.
+// The chat assistant runs with the scripted fake model and the made-up dev
+// calendar (e2e/serve-go.ts): no network, no cost. Its tool calls and Book
+// buttons are covered by the Go tests (internal/server/chat_test.go); these
+// check the widget itself.
 
 const consentStorageKey = "aestheticlab_cookie_consent_v2";
 
@@ -346,4 +348,58 @@ test("is larger on a desktop screen and still fits it", async ({ page }) => {
 		expect(box.y).toBeGreaterThanOrEqual(0);
 		expect(box.y + box.height).toBeLessThanOrEqual(900);
 	}
+});
+
+// The fake model looks up times for the first treatment someone does; the
+// site serves the embedded content snapshot (e2e/serve-go.ts).
+const snapshot: { services: { staff_ids?: number[] }[] } = JSON.parse(
+	readFileSync("internal/content/snapshot.json", "utf8"),
+);
+const bookable = snapshot.services.some((s) => s.staff_ids?.length);
+
+// Free times are listed from the lookup itself, never from the model's
+// text, with a Book button, and the transcript keeps them for a reload.
+test("lists the free times it found with a Book button", async ({ page }) => {
+	// biome-ignore lint/suspicious/noSkippedTests: runs once the snapshot has bookable treatments.
+	test.skip(
+		!bookable,
+		"the content snapshot has no bookable treatment (staff_ids) until production is seeded and make snapshot refreshes it",
+	);
+	await page.goto("/en-BE/");
+	await page.getByRole("button", { name: "Chat with our assistant" }).click();
+	const panel = page.getByRole("dialog", { name: "Ask Aesthetic Lab" });
+	await panel
+		.getByRole("group", { name: "Suggested questions" })
+		.getByRole("button", { name: "When is the next free time?" })
+		.click();
+
+	const reply = panel.locator("#chat-log .chat-start").last();
+	const heading = reply.getByText(/^Free times for /);
+	await expect(heading).toBeVisible();
+	const list = reply.getByRole("list", {
+		name: (await heading.textContent()) ?? "",
+	});
+	const times = list.locator("time");
+	await expect(times.first()).toBeVisible();
+	const count = await times.count();
+	expect(count).toBeGreaterThan(0);
+	expect(count).toBeLessThanOrEqual(12);
+	for (const time of await times.all()) {
+		const [, hhmm] =
+			(await time.getAttribute("datetime"))?.match(/T(\d\d:\d\d)$/) ?? [];
+		await expect(time).toHaveText(
+			new RegExp(`^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) \\d\\d/\\d\\d · ${hhmm}$`),
+		);
+	}
+	await expect(reply).toContainText(
+		"These times look free now; the booking page confirms them.",
+	);
+	await expect(reply.locator('button[id^="chat-book-"]')).toHaveCount(1);
+
+	// Restored after a reload as text, times included.
+	const first = (await times.first().textContent()) ?? "";
+	await page.reload();
+	await expect(panel.locator("#chat-log .chat-start").last()).toContainText(
+		first,
+	);
 });

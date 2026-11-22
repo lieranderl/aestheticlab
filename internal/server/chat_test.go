@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"google.golang.org/genai"
 
 	"github.com/lieranderl/aestheticlab/internal/assistant"
+	"github.com/lieranderl/aestheticlab/internal/availability"
 	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/server"
 	"github.com/lieranderl/aestheticlab/internal/usage"
@@ -308,5 +310,61 @@ func TestAReplyIsSettledEvenIfTheVisitorLeaves(t *testing.T) {
 	}
 	if want := testPrice.Cost(usage.Tokens{Prompt: 10000, Cached: 8000, Output: 100}); len(spend.recorded) != 1 || spend.recorded[0] != want {
 		t.Errorf("recorded %v, want [%v]", spend.recorded, want)
+	}
+}
+
+// timesOnly is a model that looks up Pedicure's free times with
+// only_times, as for a plain availability question.
+type timesOnly struct{}
+
+func (timesOnly) Generate(context.Context, []*genai.Content, *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error) {
+	return &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{
+		Content: genai.NewContentFromParts([]*genai.Part{{FunctionCall: &genai.FunctionCall{
+			ID: "1", Name: "find_free_slots", Args: map[string]any{"service_id": "4847871", "only_times": true},
+		}}}, genai.RoleModel),
+		FinishReason: genai.FinishReasonStop,
+	}}}, nil
+}
+
+var slotTime = regexp.MustCompile(`<time datetime="(\d{4}-\d\d-\d\dT\d\d:\d\d)">([^<]+)</time>`)
+
+// The chat bubble lists the free times from the lookup itself, with a Book
+// button, and the transcript keeps them as text for the next turn and a
+// restored chat.
+func TestFreeTimesAreShownFromTheLookupWithABookButton(t *testing.T) {
+	brussels, err := time.LoadLocation("Europe/Brussels")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := server.New(server.Config{
+		Content: bookableContent(t),
+		Assistant: assistant.New(assistant.Options{Model: timesOnly{}, Location: brussels, Finder: availability.NewFinder(availability.FinderOptions{
+			Source: availability.DevSource{Location: brussels}, EveryStaff: true, DevHours: true, Location: brussels,
+		})}),
+		Spending: &spending{}, ChatPrice: testPrice,
+	})
+	body := post(t, h, "/en-BE/chat", `{"chatInput":"When is the next free time?"}`, nil).Body.String()
+	times := slotTime.FindAllStringSubmatch(body, -1)
+	if len(times) == 0 {
+		t.Fatalf("no free times shown:\n%s", body)
+	}
+	for _, want := range []string{"Free times for Pedicure", "the booking page confirms them", `id="chat-book-1-4847871"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the reply lacks %q", want)
+		}
+	}
+	i := strings.Index(body, `"chatHistory"`)
+	if i < 0 {
+		t.Fatal("no transcript")
+	}
+	transcript := body[i:]
+	if !strings.Contains(transcript, `"text":"Free times for Pedicure:\n• `) {
+		t.Errorf("the transcript does not keep the times as text: %s", transcript)
+	}
+	for _, m := range times {
+		label := strings.ReplaceAll(m[2], "&middot;", "·")
+		if !strings.Contains(transcript, label) || !strings.HasSuffix(m[1], label[len(label)-5:]) {
+			t.Errorf("shown %q (%s) is not in the transcript", label, m[1])
+		}
 	}
 }

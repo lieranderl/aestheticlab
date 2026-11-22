@@ -211,3 +211,35 @@ func TestTheDevSourceIsStableAndBusySomeOfTheTime(t *testing.T) {
 		t.Errorf("dev busy times = %d then %d, want the same non-empty set", len(a["zara"]), len(b["zara"]))
 	}
 }
+
+// For local work and the browser tests, made-up hours stand in for staff
+// without their own (the content snapshot has none), so the chat can show
+// times. Staff with hours keep theirs.
+func TestDevHoursStandInForStaffWithoutTheirOwn(t *testing.T) {
+	r := rubina(t)
+	f := availability.NewFinder(availability.FinderOptions{
+		Source: availability.DevSource{Location: brussels}, EveryStaff: true, DevHours: true,
+		Location: brussels, Now: func() time.Time { return at(monday.AddDays(-1), 20, 0) },
+	})
+	staff := []availability.Person{{ID: 642297, Name: "Zara"}, {ID: 642296, Name: "Rubina", Schedule: &r}}
+	got, err := f.Find(context.Background(), staff, time.Hour, monday, monday.AddDays(5), 1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Unavailable) != 0 {
+		t.Errorf("unavailable = %v, want everyone checked", got.Unavailable)
+	}
+	saturday := map[string]bool{}
+	for _, s := range got.Slots {
+		at := s.Start.In(brussels)
+		if s.StaffID == 642296 && (at.Hour() < 12 || at.Weekday() == time.Saturday) {
+			t.Errorf("Rubina offered %v, outside her own hours", at)
+		}
+		if at.Weekday() == time.Saturday {
+			saturday[s.Name] = true
+		}
+	}
+	if !saturday["Zara"] {
+		t.Error("Zara has no made-up times on Saturday")
+	}
+}

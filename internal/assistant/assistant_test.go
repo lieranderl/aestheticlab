@@ -309,8 +309,8 @@ func TestBlockedOrEmptyAnswersAreErrors(t *testing.T) {
 func TestTheFakeModelLooksUpTimesAndOffersBooking(t *testing.T) {
 	a := newAssistant(assistant.Fake{})
 	got, err := a.Reply(context.Background(), knowledge(), nil, "When are you free?")
-	if err != nil || !strings.Contains(got.Text, "Zara") {
-		t.Errorf("times reply = %q, %v", got.Text, err)
+	if err != nil || len(got.Times) != 1 || len(got.Times[0].Slots) == 0 || got.Times[0].Slots[0].Staff != "Zara" || len(got.Offers) != 1 {
+		t.Errorf("times reply = %+v, %v; want Zara's times and a Book button", got, err)
 	}
 	got, err = a.Reply(context.Background(), knowledge(), nil, "I want to book")
 	if err != nil || len(got.Offers) != 1 {
@@ -359,6 +359,8 @@ func TestThePromptKeepsTimesAndCareAdviceHonest(t *testing.T) {
 	for _, want := range []string{
 		"where the visitor chooses the time: never say you booked, reserved or selected a time",
 		"mention the Book button only when you called offer_booking",
+		"never list dates or times yourself",
+		"only_times",
 		"how-we-do-it details only as the information below states them",
 		"If a note from the owner and a treatment's description disagree, follow the note",
 	} {
@@ -396,8 +398,8 @@ func textAndCall(text, name string, args map[string]any) *genai.GenerateContentR
 // The visitor sees one answer: the model's last, or the one it wrote with
 // a Book button when it then says nothing or only adds a closing line.
 func TestAnAnswerWrittenWithAToolCallIsKept(t *testing.T) {
-	const times = "Zara is free on Monday at 12:15, 12:30 and 12:45, and on Tuesday at 10:00. These times look free now; the booking page confirms them."
-	const rewritten = "Zara has free times on Monday at 12:15, 12:30 and 12:45, and on Tuesday at 10:00. The booking page confirms them when you tap Book."
+	const times = "Zara does pedicures on weekdays, and Rubina on Saturdays. A pedicure takes an hour and costs 70 euros."
+	const rewritten = "Zara does pedicures on weekdays and Rubina on Saturdays. A pedicure takes one hour and costs 70 euros."
 	book := map[string]any{"service_id": "4847871"}
 	empty := &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{Content: &genai.Content{Role: genai.RoleModel}, FinishReason: genai.FinishReasonStop}}}
 	for name, tc := range map[string]struct {
@@ -478,9 +480,10 @@ func TestTextWrittenBeforeFreeTimesAreKnownIsDropped(t *testing.T) {
 	}
 
 	empty := &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{Content: &genai.Content{Role: genai.RoleModel}, FinishReason: genai.FinishReasonStop}}}
+	// The times found stand alone.
 	m = &scripted{replies: []*genai.GenerateContentResponse{textAndCall(guess, "find_free_slots", find), empty}}
-	if got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?"); !errors.Is(err, assistant.ErrNoAnswer) {
-		t.Errorf("only a guess = %q, %v; want ErrNoAnswer", got.Text, err)
+	if got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?"); err != nil || got.Text != "" || len(got.Times) != 1 {
+		t.Errorf("only a guess = %+v, %v; want only the times found", got, err)
 	}
 }
 

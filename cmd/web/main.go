@@ -175,7 +175,7 @@ type chat struct {
 // it in memory) at CHAT_MONTHLY_BUDGET_EUR and
 // CHAT_DAILY_BUDGET_EUR. Free times come from the calendars
 // AVAILABILITY_CALENDARS maps to staff, or, with AVAILABILITY_DEV "true",
-// from a made-up calendar. Anything it cannot set up leaves the chat off.
+// from a made-up calendar, with made-up hours for staff without their own. Anything it cannot set up leaves the chat off.
 func openChat(ctx context.Context, getenv func(string) string, log *slog.Logger) chat {
 	off := chat{close: func() {}}
 	if getenv("CHAT_ENABLED") != "true" {
@@ -272,7 +272,7 @@ func openFinder(ctx context.Context, getenv func(string) string, loc *time.Locat
 	opts := availability.FinderOptions{Calendars: calendars, Location: loc, Lead: bookingLead}
 	switch {
 	case getenv("AVAILABILITY_DEV") == "true":
-		opts.Source, opts.EveryStaff = availability.DevSource{Location: loc}, true
+		opts.Source, opts.EveryStaff, opts.DevHours = availability.DevSource{Location: loc}, true, true
 		log.Warn("availability_dev_calendar")
 	case len(calendars) > 0:
 		google, err := availability.NewGoogle(ctx)

@@ -92,7 +92,11 @@ type FinderOptions struct {
 	// EveryStaff gives each member of staff a calendar named after their ID
 	// when Calendars has none: for DevSource, which answers any name.
 	EveryStaff bool
-	Location   *time.Location
+	// DevHours gives staff without hours of their own made-up ones (Monday
+	// to Saturday, 10:00 to 18:30): for local work and the browser tests,
+	// whose content snapshot has no hours.
+	DevHours bool
+	Location *time.Location
 	// Now is the clock; nil is time.Now.
 	Now func() time.Time
 	// Lead is how far ahead the first offered start must be.
@@ -141,6 +145,9 @@ func (f *Finder) Find(ctx context.Context, staff []Person, duration time.Duratio
 	var calendars []string
 	for _, p := range staff {
 		cal := f.calendar(p.ID)
+		if p.Schedule == nil && f.opts.DevHours {
+			p.Schedule = &devHours
+		}
 		if p.Schedule == nil || cal == "" {
 			res.Unavailable = append(res.Unavailable, p.Name)
 			continue
@@ -234,6 +241,15 @@ func (g *Google) Warm(ctx context.Context) error {
 	}).Context(ctx).Do()
 	return err
 }
+
+// devHours are FinderOptions.DevHours' made-up hours.
+var devHours = func() Schedule {
+	var w Week
+	for d := time.Monday; d <= time.Saturday; d++ {
+		w[d] = []Shift{{From: 10 * 60, To: 18*60 + 30}}
+	}
+	return Schedule{Week: w, Step: 15 * time.Minute}
+}()
 
 // DevSource is a made-up calendar for local development: each calendar is
 // busy for two stretches a day, the same on every run.

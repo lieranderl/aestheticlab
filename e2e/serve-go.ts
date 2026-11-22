@@ -6,13 +6,15 @@ import { createServer } from "node:https";
 import { localCertificate } from "./local-tls";
 
 const child = spawn("./bin/web", [], {
-	// The chat runs on the scripted fake model: no network, no cost.
+	// The chat runs on the scripted fake model: no network, no cost. Free
+	// times come from the made-up dev calendar and hours.
 	env: {
 		...process.env,
 		PORT: "43122",
 		FIRESTORE_DATABASE: "",
 		CHAT_ENABLED: "true",
 		CHAT_MODEL: "fake",
+		AVAILABILITY_DEV: "true",
 	},
 	stdio: "inherit",
 });
