@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -135,7 +136,7 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		}
 		calls := resp.FunctionCalls()
 		if len(calls) == 0 {
-			text := strings.TrimSpace(resp.Text())
+			text := replyText(resp.Candidates[0].Content)
 			if text == "" {
 				return Answer{}, ErrNoAnswer
 			}
@@ -152,6 +153,33 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		contents = append(contents, genai.NewContentFromParts(parts, genai.RoleUser))
 	}
 	return Answer{}, ErrNoAnswer
+}
+
+// replyText is the answer to the visitor: the last text part that isn't a
+// thought. Gemini sometimes writes a note to itself ("The user is asking…")
+// as an ordinary text part before the answer; joining the parts, as
+// GenerateContentResponse.Text does, would show it to the visitor.
+func replyText(c *genai.Content) string {
+	for _, p := range slices.Backward(c.Parts) {
+		if text := strings.TrimSpace(p.Text); text != "" && !p.Thought {
+			return plainText(text)
+		}
+	}
+	return ""
+}
+
+var (
+	// bullet is a Markdown list marker at the start of a line.
+	bullet = regexp.MustCompile(`(?m)^[ \t]*[*-][ \t]+`)
+	// bold is Markdown **bold** or __bold__.
+	bold = regexp.MustCompile(`\*\*(.+?)\*\*|__(.+?)__`)
+)
+
+// plainText turns the Markdown Gemini writes despite the rules into what
+// the chat bubble shows as text: "• " bullets and no bold markers.
+func plainText(s string) string {
+	s = bold.ReplaceAllString(s, "$1$2")
+	return bullet.ReplaceAllString(s, "• ")
 }
 
 // visitorMessage is the transcript, today's date and the new message.
