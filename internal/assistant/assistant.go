@@ -20,6 +20,7 @@ import (
 	"github.com/lieranderl/aestheticlab/internal/availability"
 	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/i18n"
+	"github.com/lieranderl/aestheticlab/internal/usage"
 )
 
 // Model is a generative model: Gemini in production, Fake for local
@@ -63,10 +64,12 @@ type Offer struct {
 	Staff     string
 }
 
-// Answer is the assistant's reply and the Book buttons it offers.
+// Answer is the assistant's reply, the Book buttons it offers, and the
+// tokens its model calls were billed for.
 type Answer struct {
 	Text   string
 	Offers []Offer
+	Tokens usage.Tokens
 }
 
 // ErrNoAnswer is a reply the model did not give: blocked, empty, or still
@@ -126,6 +129,7 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 	}
 	contents := []*genai.Content{genai.NewContentFromText(a.visitorMessage(history, message), genai.RoleUser)}
 	run := &toolRun{a: a, k: k}
+	var tokens usage.Tokens
 	// said is the visitor-facing text of each round: Gemini often writes
 	// the answer in the same response as a tool call, then sends nothing,
 	// a closing line or the answer again once it has the tool's result.
@@ -133,8 +137,9 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 	for range maxRounds {
 		resp, err := a.opts.Model.Generate(ctx, contents, cfg)
 		if err != nil {
-			return Answer{}, fmt.Errorf("model: %w", err)
+			return Answer{Tokens: tokens}, fmt.Errorf("model: %w", err)
 		}
+		tokens = addTokens(tokens, resp)
 		// A response without content (blocked, or nothing more to say) ends
 		// the reply with whatever was already said.
 		if resp == nil || len(resp.Candidates) == 0 || resp.Candidates[0].Content == nil {
@@ -145,9 +150,9 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		if len(calls) == 0 {
 			text := joinAnswer(said)
 			if text == "" {
-				return Answer{}, ErrNoAnswer
+				return Answer{Tokens: tokens}, ErrNoAnswer
 			}
-			return Answer{Text: text, Offers: run.offers}, nil
+			return Answer{Text: text, Offers: run.offers, Tokens: tokens}, nil
 		}
 		// Gemini needs its own message back unchanged (thought signatures).
 		contents = append(contents, resp.Candidates[0].Content)
@@ -160,9 +165,22 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		contents = append(contents, genai.NewContentFromParts(parts, genai.RoleUser))
 	}
 	if text := joinAnswer(said); text != "" {
-		return Answer{Text: text, Offers: run.offers}, nil
+		return Answer{Text: text, Offers: run.offers, Tokens: tokens}, nil
 	}
-	return Answer{}, ErrNoAnswer
+	return Answer{Tokens: tokens}, ErrNoAnswer
+}
+
+// addTokens adds resp's billed tokens to t: the prompt with any tool-use
+// prompt, and the reply with the model's thinking, which bills as output.
+func addTokens(t usage.Tokens, resp *genai.GenerateContentResponse) usage.Tokens {
+	if resp == nil || resp.UsageMetadata == nil {
+		return t
+	}
+	u := resp.UsageMetadata
+	t.Prompt += int64(u.PromptTokenCount) + int64(u.ToolUsePromptTokenCount)
+	t.Cached += int64(u.CachedContentTokenCount)
+	t.Output += int64(u.CandidatesTokenCount) + int64(u.ThoughtsTokenCount)
+	return t
 }
 
 // joinAnswer is the rounds' texts in order, without empty ones and without

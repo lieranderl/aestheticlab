@@ -318,7 +318,8 @@
 			"book": "Book {{service}}",
 			"book_with": "Book {{service}} with {{name}}",
 			"unavailable": "Sorry, I can't answer right now. Please message us on Instagram or by email.",
-			"too_fast": "You're sending messages too quickly. Please wait a minute and try again."
+			"too_fast": "You're sending messages too quickly. Please wait a minute and try again.",
+			"daily_limit": "You've reached today's message limit for the assistant. Please message us on Instagram or by email."
 		}
 	}
 }

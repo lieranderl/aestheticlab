@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/lieranderl/aestheticlab/internal/assistant"
 	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/server"
+	"github.com/lieranderl/aestheticlab/internal/usage"
 )
 
 // docsSource serves the embedded snapshot's documents, with Pedicure
@@ -55,9 +57,32 @@ func (a answers) Generate(_ context.Context, contents []*genai.Content, _ *genai
 	return &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{Content: content, FinishReason: genai.FinishReasonStop}}}, nil
 }
 
+// spending is a Spending with fixed answers that records what it is told.
+type spending struct {
+	allow    error
+	recorded []float64
+}
+
+func (s *spending) Allow(context.Context) error { return s.allow }
+
+func (s *spending) Record(_ context.Context, eur float64) error {
+	s.recorded = append(s.recorded, eur)
+	return nil
+}
+
+var testPrice = usage.Price{InputPerM: 0.275, CachedPerM: 0.0275, OutputPerM: 1.65, Margin: 1.25}
+
+func chatSiteWith(t *testing.T, m assistant.Model, spend server.Spending) http.Handler {
+	t.Helper()
+	return server.New(server.Config{
+		Content: bookableContent(t), Assistant: assistant.New(assistant.Options{Model: m}),
+		Spending: spend, ChatPrice: testPrice,
+	})
+}
+
 func chatSite(t *testing.T, m assistant.Model) http.Handler {
 	t.Helper()
-	return server.New(server.Config{Content: bookableContent(t), Assistant: assistant.New(assistant.Options{Model: m})})
+	return chatSiteWith(t, m, &spending{})
 }
 
 func post(t *testing.T, h http.Handler, path, signals string, headers map[string]string) *httptest.ResponseRecorder {
@@ -184,5 +209,53 @@ func TestGoodToKnowOffersTheAssistantOnlyWhereTheChatRuns(t *testing.T) {
 	}
 	if body := get(t, server.New(server.Config{}), "/fr-BE/").Body.String(); strings.Contains(body, `id="faq-ask-assistant"`) {
 		t.Error("with the chat off, Good to know shows the assistant button")
+	}
+}
+
+// counting is a model that counts its calls and bills each one.
+type counting struct{ calls int }
+
+func (c *counting) Generate(context.Context, []*genai.Content, *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error) {
+	c.calls++
+	return &genai.GenerateContentResponse{
+		Candidates:    []*genai.Candidate{{Content: genai.NewContentFromText("ok", genai.RoleModel), FinishReason: genai.FinishReasonStop}},
+		UsageMetadata: &genai.GenerateContentResponseUsageMetadata{PromptTokenCount: 10000, CachedContentTokenCount: 8000, CandidatesTokenCount: 100},
+	}, nil
+}
+
+func TestEachReplysCostIsRecorded(t *testing.T) {
+	spend := &spending{}
+	if res := post(t, chatSiteWith(t, &counting{}, spend), "/en-BE/chat", `{"chatInput":"hi"}`, nil); res.Code != http.StatusOK {
+		t.Fatalf("status %d", res.Code)
+	}
+	want := testPrice.Cost(usage.Tokens{Prompt: 10000, Cached: 8000, Output: 100})
+	if len(spend.recorded) != 1 || spend.recorded[0] != want {
+		t.Errorf("recorded %v, want [%v]", spend.recorded, want)
+	}
+}
+
+// Once a cap is reached, or the ledger can't be read, the model is never
+// called: the chat answers with the fixed reply instead.
+func TestNoModelCallWithoutBudget(t *testing.T) {
+	for name, err := range map[string]error{
+		"month cap":  usage.ErrMonthCap,
+		"day cap":    usage.ErrDayCap,
+		"unreadable": errors.New("firestore unreachable"),
+	} {
+		model := &counting{}
+		body := post(t, chatSiteWith(t, model, &spending{allow: err}), "/en-BE/chat", `{"chatInput":"hi"}`, nil).Body.String()
+		if model.calls != 0 {
+			t.Errorf("%s: the model was called %d times", name, model.calls)
+		}
+		if !strings.Contains(body, "Sorry, I can't answer right now.") {
+			t.Errorf("%s: no fixed reply:\n%s", name, body)
+		}
+	}
+}
+
+func TestWithoutSpendingThereIsNoChat(t *testing.T) {
+	h := server.New(server.Config{Content: bookableContent(t), Assistant: assistant.New(assistant.Options{Model: &counting{}})})
+	if body := get(t, h, "/en-BE/").Body.String(); strings.Contains(body, `id="chat"`) {
+		t.Error("the chat is shown without a spending ledger")
 	}
 }

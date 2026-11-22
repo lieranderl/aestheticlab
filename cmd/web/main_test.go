@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"strconv"
@@ -171,5 +172,25 @@ func TestWithoutAContentDatabaseTheServerStartsAndSaysSo(t *testing.T) {
 	}
 	if !strings.Contains(logs.String(), `"message":"content_database_not_configured"`) {
 		t.Errorf("log lacks content_database_not_configured: %s", logs.String())
+	}
+}
+
+// Settings the chat can't cap keep it off: never an uncapped chat.
+func TestChatSettingsThatCannotBeCappedKeepTheChatOff(t *testing.T) {
+	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
+	for name, vars := range map[string]map[string]string{
+		"unknown model":    {"CHAT_ENABLED": "true", "CHAT_MODEL": "some-new-model", "GOOGLE_CLOUD_PROJECT": "p"},
+		"zero budget":      {"CHAT_ENABLED": "true", "CHAT_MODEL": "fake", "CHAT_MONTHLY_BUDGET_EUR": "0"},
+		"bad daily budget": {"CHAT_ENABLED": "true", "CHAT_MODEL": "fake", "CHAT_DAILY_BUDGET_EUR": "ten"},
+		"switched off":     {"CHAT_ENABLED": "false", "CHAT_MODEL": "fake"},
+	} {
+		if c := openChat(context.Background(), env(vars), quiet); c.assistant != nil || c.spending != nil {
+			t.Errorf("%s: the chat is on", name)
+		}
+	}
+	c := openChat(context.Background(), env(map[string]string{"CHAT_ENABLED": "true", "CHAT_MODEL": "fake"}), quiet)
+	defer c.close()
+	if c.assistant == nil || c.spending == nil {
+		t.Error("the fake chat with default budgets is off")
 	}
 }

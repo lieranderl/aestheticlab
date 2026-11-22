@@ -11,6 +11,7 @@ import (
 	"github.com/lieranderl/aestheticlab/internal/assistant"
 	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/i18n"
+	"github.com/lieranderl/aestheticlab/internal/usage"
 	"github.com/lieranderl/aestheticlab/internal/views"
 )
 
@@ -29,9 +30,12 @@ type Config struct {
 	// Content-Security-Policy, for a server reached without TLS (off Cloud
 	// Run). Every other directive stays.
 	PlainHTTP bool
-	// Assistant answers the chat; nil leaves the chat off: no widget on the
-	// pages and no chat route.
+	// Assistant answers the chat; nil, or no Spending, leaves the chat off:
+	// no widget on the pages and no chat route.
 	Assistant *assistant.Assistant
+	// Spending caps the chat's model spending; ChatPrice prices its tokens.
+	Spending  Spending
+	ChatPrice usage.Price
 }
 
 // New returns the site's HTTP handler, wrapped in Middleware.
@@ -74,13 +78,13 @@ func New(cfg Config) http.Handler {
 		mux.HandleFunc("GET /"+string(l)+"/notice", pages)
 	}
 	var site http.Handler = mux
-	if cfg.Assistant != nil {
+	if cfg.Assistant != nil && cfg.Spending != nil {
 		// Only the site's own pages may post to the chat (Sec-Fetch-Site and
 		// Origin checks), so other sites cannot spend its model budget.
 		guard := http.NewCrossOriginProtection()
 		limit := newLimiter()
 		for _, l := range i18n.Supported() {
-			mux.Handle("POST /"+string(l)+"/chat", guard.Handler(chat(l, store, cfg.Assistant, limit, log)))
+			mux.Handle("POST /"+string(l)+"/chat", guard.Handler(chat(l, store, cfg.Assistant, cfg.Spending, cfg.ChatPrice, limit, log)))
 		}
 		site = withChat(mux)
 	}

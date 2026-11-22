@@ -17,6 +17,7 @@ import (
 	"github.com/lieranderl/aestheticlab/internal/assistant"
 	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/i18n"
+	"github.com/lieranderl/aestheticlab/internal/usage"
 	"github.com/lieranderl/aestheticlab/internal/views"
 )
 
@@ -40,31 +41,73 @@ type chatSignals struct {
 	ChatHistory []assistant.Turn `json:"chatHistory"`
 }
 
-// limiter allows each visitor a few messages in a burst, then one every
-// ten seconds, and all visitors together a bounded rate, so no one can
-// run up the model bill.
+// Rate limits (plans/ai-salon-assistant.md). The spending ledger is the
+// real cap on the bill; these keep one visitor or a flood from using it up.
+const (
+	// visitorBurst messages at once, then one every visitorEvery.
+	visitorBurst = 6
+	visitorEvery = 10 * time.Second
+	// visitorDaily messages per visitor and day.
+	visitorDaily = 40
+	// instanceBurst messages at once per instance, then one every
+	// instanceEvery: 30 a minute.
+	instanceBurst = 30
+	instanceEvery = 2 * time.Second
+	// maxVisitors bounds the limiter's memory; it starts over beyond it.
+	maxVisitors = 10000
+)
+
+// visitor is one visitor's rate and today's count.
+type visitor struct {
+	rate  *rate.Limiter
+	day   string
+	count int
+}
+
+// limiter is the chat's per-visitor and per-instance message limits. It
+// lives in this instance's memory: it bounds a flood while the instance
+// runs, and the ledger bounds spending across instances and restarts.
 type limiter struct {
-	mu     sync.Mutex
-	perIP  map[string]*rate.Limiter
-	global *rate.Limiter
+	mu       sync.Mutex
+	visitors map[string]*visitor
+	instance *rate.Limiter
 }
 
 func newLimiter() *limiter {
-	return &limiter{perIP: map[string]*rate.Limiter{}, global: rate.NewLimiter(2, 30)}
+	return &limiter{visitors: map[string]*visitor{}, instance: rate.NewLimiter(rate.Every(instanceEvery), instanceBurst)}
 }
 
-func (l *limiter) allow(ip string) bool {
+// limitReason says why a message was refused: "" when it is allowed.
+type limitReason string
+
+const (
+	tooFast    limitReason = "rate_limited"
+	dailyLimit limitReason = "visitor_daily_limit"
+)
+
+// allow counts a message from ip at now.
+func (l *limiter) allow(ip string, now time.Time) limitReason {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if len(l.perIP) > 10000 {
-		clear(l.perIP)
+	if len(l.visitors) > maxVisitors {
+		clear(l.visitors)
 	}
-	v, ok := l.perIP[ip]
+	v, ok := l.visitors[ip]
 	if !ok {
-		v = rate.NewLimiter(rate.Every(10*time.Second), 6)
-		l.perIP[ip] = v
+		v = &visitor{rate: rate.NewLimiter(rate.Every(visitorEvery), visitorBurst)}
+		l.visitors[ip] = v
 	}
-	return v.Allow() && l.global.Allow()
+	if day := now.UTC().Format(time.DateOnly); v.day != day {
+		v.day, v.count = day, 0
+	}
+	switch {
+	case v.count >= visitorDaily:
+		return dailyLimit
+	case !v.rate.AllowN(now, 1) || !l.instance.AllowN(now, 1):
+		return tooFast
+	}
+	v.count++
+	return ""
 }
 
 // clientIP is the visitor's address: the last X-Forwarded-For entry, which
@@ -104,7 +147,13 @@ func cleanHistory(turns []assistant.Turn) []assistant.Turn {
 // chat answers one visitor message over SSE: it appends the message to the
 // log at once, then the assistant's reply with its Book buttons, and
 // returns the transcript in chatHistory. Any failure becomes a fixed reply.
-func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, limit *limiter, log *slog.Logger) http.HandlerFunc {
+// Spending checks and records the chat's model spending (usage.Ledger).
+type Spending interface {
+	Allow(ctx context.Context) error
+	Record(ctx context.Context, eur float64) error
+}
+
+func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spending, price usage.Price, limit *limiter, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := views.WithRequest(r.Context(), r.URL)
 		r.Body = http.MaxBytesReader(w, r.Body, maxChatBody)
@@ -126,10 +175,29 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, limit *li
 
 		start := time.Now()
 		var answer assistant.Answer
+		var cost float64
 		outcome := "answered"
-		if !limit.allow(clientIP(r)) {
-			answer.Text, outcome = views.ChatTooFast(ctx), "rate_limited"
-		} else {
+		reason := limit.allow(clientIP(r), start)
+		budget := error(nil)
+		if reason == "" {
+			// Checked before every model call: no spending the ledger can't see.
+			budget = spend.Allow(ctx)
+		}
+		switch {
+		case reason == tooFast:
+			answer.Text, outcome = views.ChatTooFast(ctx), string(reason)
+		case reason == dailyLimit:
+			answer.Text, outcome = views.ChatDailyLimit(ctx), string(reason)
+		case errors.Is(budget, usage.ErrMonthCap):
+			answer.Text, outcome = views.ChatUnavailable(ctx), "budget_month"
+			log.WarnContext(ctx, "chat_budget_reached", "cap", "month")
+		case errors.Is(budget, usage.ErrDayCap):
+			answer.Text, outcome = views.ChatUnavailable(ctx), "budget_day"
+			log.WarnContext(ctx, "chat_budget_reached", "cap", "day")
+		case budget != nil:
+			answer.Text, outcome = views.ChatUnavailable(ctx), "budget_unreadable"
+			log.ErrorContext(ctx, "chat_budget_unreadable", "error", budget.Error())
+		default:
 			loc := store.Content(ctx).In(l)
 			k := assistant.Knowledge{Locale: l, Content: loc, Facts: views.AssistantFacts(ctx, loc), CareNotes: views.AssistantCareNotes(ctx)}
 			for _, qa := range views.AssistantFAQ(ctx, loc) {
@@ -139,13 +207,18 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, limit *li
 			var err error
 			answer, err = a.Reply(replyCtx, k, history, message)
 			cancel()
+			// A failed reply is billed too: record whatever it used.
+			cost = price.Cost(answer.Tokens)
+			if recErr := spend.Record(ctx, cost); recErr != nil {
+				log.ErrorContext(ctx, "chat_spending_not_recorded", "eur", cost, "error", recErr.Error())
+			}
 			if err != nil {
 				outcome = "no_answer"
 				if !errors.Is(err, assistant.ErrNoAnswer) {
 					outcome = "failed"
 					log.ErrorContext(ctx, "chat_failed", "locale", string(l), "error", err.Error())
 				}
-				answer = assistant.Answer{Text: views.ChatUnavailable(ctx)}
+				answer = assistant.Answer{Text: views.ChatUnavailable(ctx), Tokens: answer.Tokens}
 			}
 		}
 		offers := make([]views.ChatOffer, 0, len(answer.Offers))
@@ -154,7 +227,8 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, limit *li
 		}
 		// Visitors' messages and replies are never logged: only counts.
 		log.InfoContext(ctx, "chat_reply", "locale", string(l), "outcome", outcome, "turns", n+1,
-			"offers", len(offers), "duration_ms", time.Since(start).Milliseconds())
+			"offers", len(offers), "duration_ms", time.Since(start).Milliseconds(), "cost_eur", cost,
+			"prompt_tokens", answer.Tokens.Prompt, "cached_tokens", answer.Tokens.Cached, "output_tokens", answer.Tokens.Output)
 		_ = sse.PatchElementTempl(views.ChatMessage(false, answer.Text, offers, n+1), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
 		history = append(history,
 			assistant.Turn{Role: assistant.RoleVisitor, Text: message},

@@ -22,8 +22,9 @@ var messages = []string{
 	"Book %v",               // app.chat.book
 	"Book %[1]v with %[2]v", // app.chat.book_with
 	"Close chat",            // app.chat.close
-	"AI assistant: it can make mistakes. Please don't share health details.", // app.chat.disclaimer
-	"Hi! Ask me about our treatments, prices, team or free times.",           // app.chat.greeting
+	"You've reached today's message limit for the assistant. Please message us on Instagram or by email.", // app.chat.daily_limit
+	"AI assistant: it can make mistakes. Please don't share health details.",                              // app.chat.disclaimer
+	"Hi! Ask me about our treatments, prices, team or free times.",                                        // app.chat.greeting
 	"Your question",                              // app.chat.input_label
 	"Chat with our assistant",                    // app.chat.open
 	"Ask about treatments, prices or free times", // app.chat.placeholder
@@ -269,8 +270,9 @@ var translations = map[Locale]map[string]string{
 		"Book %v":               "%v boeken",
 		"Book %[1]v with %[2]v": "%[1]v boeken bij %[2]v",
 		"Close chat":            "Chat sluiten",
-		"AI assistant: it can make mistakes. Please don't share health details.": "AI-assistent: kan fouten maken. Deel geen gezondheidsgegevens.",
-		"Hi! Ask me about our treatments, prices, team or free times.":           "Hallo! Vraag me naar onze behandelingen, prijzen, team of vrije tijden.",
+		"You've reached today's message limit for the assistant. Please message us on Instagram or by email.": "Je hebt het berichtenlimiet van vandaag voor de assistent bereikt. Stuur ons een bericht op Instagram of per e-mail.",
+		"AI assistant: it can make mistakes. Please don't share health details.":                              "AI-assistent: kan fouten maken. Deel geen gezondheidsgegevens.",
+		"Hi! Ask me about our treatments, prices, team or free times.":                                        "Hallo! Vraag me naar onze behandelingen, prijzen, team of vrije tijden.",
 		"Your question":                              "Je vraag",
 		"Chat with our assistant":                    "Chat met onze assistent",
 		"Ask about treatments, prices or free times": "Vraag naar behandelingen, prijzen of vrije tijden",
@@ -513,8 +515,9 @@ var translations = map[Locale]map[string]string{
 		"Book %v":               "Réserver : %v",
 		"Book %[1]v with %[2]v": "Réserver %[1]v avec %[2]v",
 		"Close chat":            "Fermer la discussion",
-		"AI assistant: it can make mistakes. Please don't share health details.": "Assistant IA : il peut se tromper. Ne partagez pas d’informations de santé.",
-		"Hi! Ask me about our treatments, prices, team or free times.":           "Bonjour ! Posez-moi vos questions sur nos soins, nos prix, notre équipe ou les créneaux libres.",
+		"You've reached today's message limit for the assistant. Please message us on Instagram or by email.": "Vous avez atteint la limite de messages du jour pour l’assistant. Écrivez-nous sur Instagram ou par e-mail.",
+		"AI assistant: it can make mistakes. Please don't share health details.":                              "Assistant IA : il peut se tromper. Ne partagez pas d’informations de santé.",
+		"Hi! Ask me about our treatments, prices, team or free times.":                                        "Bonjour ! Posez-moi vos questions sur nos soins, nos prix, notre équipe ou les créneaux libres.",
 		"Your question":                              "Votre question",
 		"Chat with our assistant":                    "Discuter avec notre assistant",
 		"Ask about treatments, prices or free times": "Soins, prix ou créneaux libres",
@@ -757,8 +760,9 @@ var translations = map[Locale]map[string]string{
 		"Book %v":               "Записаться: %v",
 		"Book %[1]v with %[2]v": "Записаться: %[1]v, мастер %[2]v",
 		"Close chat":            "Закрыть чат",
-		"AI assistant: it can make mistakes. Please don't share health details.": "ИИ-ассистент: может ошибаться. Пожалуйста, не сообщайте данные о здоровье.",
-		"Hi! Ask me about our treatments, prices, team or free times.":           "Здравствуйте! Спросите меня о процедурах, ценах, мастерах или свободном времени.",
+		"You've reached today's message limit for the assistant. Please message us on Instagram or by email.": "Вы достигли дневного лимита сообщений для ассистента. Напишите нам в Instagram или на почту.",
+		"AI assistant: it can make mistakes. Please don't share health details.":                              "ИИ-ассистент: может ошибаться. Пожалуйста, не сообщайте данные о здоровье.",
+		"Hi! Ask me about our treatments, prices, team or free times.":                                        "Здравствуйте! Спросите меня о процедурах, ценах, мастерах или свободном времени.",
 		"Your question":                              "Ваш вопрос",
 		"Chat with our assistant":                    "Чат с нашим ассистентом",
 		"Ask about treatments, prices or free times": "Процедуры, цены или свободное время",
@@ -1001,8 +1005,9 @@ var translations = map[Locale]map[string]string{
 		"Book %v":               "Записатися: %v",
 		"Book %[1]v with %[2]v": "Записатися: %[1]v, майстер %[2]v",
 		"Close chat":            "Закрити чат",
-		"AI assistant: it can make mistakes. Please don't share health details.": "ШІ-асистент: може помилятися. Будь ласка, не діліться даними про здоров’я.",
-		"Hi! Ask me about our treatments, prices, team or free times.":           "Вітаю! Запитайте мене про процедури, ціни, майстрів або вільний час.",
+		"You've reached today's message limit for the assistant. Please message us on Instagram or by email.": "Ви досягли денного ліміту повідомлень для асистента. Напишіть нам в Instagram або на пошту.",
+		"AI assistant: it can make mistakes. Please don't share health details.":                              "ШІ-асистент: може помилятися. Будь ласка, не діліться даними про здоров’я.",
+		"Hi! Ask me about our treatments, prices, team or free times.":                                        "Вітаю! Запитайте мене про процедури, ціни, майстрів або вільний час.",
 		"Your question":                              "Ваше запитання",
 		"Chat with our assistant":                    "Чат з нашим асистентом",
 		"Ask about treatments, prices or free times": "Процедури, ціни або вільний час",

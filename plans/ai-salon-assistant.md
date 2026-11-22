@@ -77,6 +77,8 @@ Before staging (2026-11-22, done): `e2e/chat.spec.ts` with the fake model (the w
 
 Assistant notes (2026-11-22): the owner's facts live in the `assistant_notes` collection (English; `topic`, `text`, `active`), with optional `assistant_note` fields on services and service groups; the bot also reads the care notes page (`/notice/`). Staging has `cancellation`, `payment` and `late-arrival`. Days off come through the calendars (owner: Timely writes them there), so `days_off` stays empty. Everything stays in staging until it is tested there.
 
+Spending caps (2026-11-22): `internal/usage` prices every reply's tokens (Vertex AI prices + 25%) into a `chat-usage` Firestore ledger shared by all environments, and the chat stops at €9 a month or €0.50 a day; an unreadable ledger or an unpriced model keeps it off. Per visitor: 6 at once, one every 10 s, 40 a day; per instance: 30 a minute. A €10 Google Cloud budget on Vertex AI and the Gemini API (AestheticLab billing account) alerts at 50/90/100% and on forecast, and two alert policies cover cap events and volume spikes. Measured locally with real Gemini: about €0.001 a reply once the prompt is cached (€0.003 for the first).
+
 Still to do: ~~create the `AVAILABILITY_CALENDARS` repository secret~~ (done); review and apply the infrastructure plan; PR to `staging`; check real calendars and Gemini on staging; the 60-question test set; update the privacy policy's "Last updated" date when the chat reaches production; seed production Firestore.
 
 ## Phases

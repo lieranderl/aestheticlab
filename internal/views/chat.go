@@ -53,3 +53,8 @@ func ChatUnavailable(ctx context.Context) string {
 func ChatTooFast(ctx context.Context) string {
 	return tr(ctx, "You're sending messages too quickly. Please wait a minute and try again.")
 }
+
+// ChatDailyLimit is the reply when a visitor has sent today's messages.
+func ChatDailyLimit(ctx context.Context) string {
+	return tr(ctx, "You've reached today's message limit for the assistant. Please message us on Instagram or by email.")
+}

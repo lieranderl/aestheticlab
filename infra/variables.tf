@@ -216,3 +216,48 @@ variable "availability_calendars" {
     error_message = "availability_calendars must be <calendarId>|<staffId> pairs separated by semicolons."
   }
 }
+
+variable "chat_monthly_budget_eur" {
+  description = "The chat's monthly spending cap in euros, shared by every environment: the app stops calling models at it. Keep it under chat_budget_eur."
+  type        = number
+  default     = 9
+
+  validation {
+    condition     = var.chat_monthly_budget_eur > 0
+    error_message = "chat_monthly_budget_eur must be positive."
+  }
+}
+
+variable "chat_daily_budget_eur" {
+  description = "The chat's daily spending cap in euros, shared by every environment, so one day can't use up the month."
+  type        = number
+  default     = 0.5
+
+  validation {
+    condition     = var.chat_daily_budget_eur > 0 && var.chat_daily_budget_eur <= var.chat_monthly_budget_eur
+    error_message = "chat_daily_budget_eur must be positive and at most chat_monthly_budget_eur."
+  }
+}
+
+variable "chat_budget_eur" {
+  description = "Google Cloud budget in euros for the project's AI models (Vertex AI, Gemini) per month: alerts at 50%, 90% and 100% and on a forecast of 100%."
+  type        = number
+  default     = 10
+}
+
+variable "billing_account_id" {
+  description = "Billing account ID (XXXXXX-XXXXXX-XXXXXX) for the chat's budget; empty skips the budget. The IaC identities need access to it first (infra/README.md)."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.billing_account_id == "" || can(regex("^[0-9A-F]{6}-[0-9A-F]{6}-[0-9A-F]{6}$", var.billing_account_id))
+    error_message = "billing_account_id must look like 012345-6789AB-CDEF01."
+  }
+}
+
+variable "chat_replies_alert_per_hour" {
+  description = "Chat replies in one hour, across environments, before alerting on a possible flood."
+  type        = number
+  default     = 200
+}

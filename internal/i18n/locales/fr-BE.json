@@ -318,7 +318,8 @@
 			"book": "Réserver : {{service}}",
 			"book_with": "Réserver {{service}} avec {{name}}",
 			"unavailable": "Désolé, je ne peux pas répondre pour le moment. Écrivez-nous sur Instagram ou par e-mail.",
-			"too_fast": "Vous envoyez des messages trop vite. Patientez une minute puis réessayez."
+			"too_fast": "Vous envoyez des messages trop vite. Patientez une minute puis réessayez.",
+			"daily_limit": "Vous avez atteint la limite de messages du jour pour l’assistant. Écrivez-nous sur Instagram ou par e-mail."
 		}
 	}
 }

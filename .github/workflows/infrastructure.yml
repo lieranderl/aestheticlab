@@ -35,6 +35,8 @@ jobs:
       # Staff calendar IDs for the chat assistant: a secret so they stay out
       # of the repository and the logs. Optional; empty turns free times off.
       TF_VAR_availability_calendars: ${{ secrets.AVAILABILITY_CALENDARS }}
+      # The AestheticLab billing account, for the chat models' budget.
+      TF_VAR_billing_account_id: ${{ vars.GCP_BILLING_ACCOUNT }}
     steps:
       - name: Require staging workflow ref and complete inputs
         env:
@@ -98,6 +100,8 @@ jobs:
       # Staff calendar IDs for the chat assistant: a secret so they stay out
       # of the repository and the logs. Optional; empty turns free times off.
       TF_VAR_availability_calendars: ${{ secrets.AVAILABILITY_CALENDARS }}
+      # The AestheticLab billing account, for the chat models' budget.
+      TF_VAR_billing_account_id: ${{ vars.GCP_BILLING_ACCOUNT }}
     steps:
       - name: Checkout exact planned revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

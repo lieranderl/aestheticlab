@@ -14,6 +14,10 @@ locals {
     }
   }
 
+  # Cloud Billing service IDs the chat's models bill under: Vertex AI and the
+  # Gemini API (cloudbilling.googleapis.com/v1/services, 2026-11-22).
+  ai_billing_services = ["C7E2-9256-1C43", "AEFD-7695-64FA"]
+
   required_apis = toset([
     "aiplatform.googleapis.com",
     "artifactregistry.googleapis.com",
@@ -235,6 +239,37 @@ resource "google_project_iam_member" "runtime_firestore_reader" {
   }
 }
 
+# The chat assistant's spending ledger (internal/usage): one database for
+# every environment, so the monthly cap is shared. It is the only database
+# the site's runtime may write.
+resource "google_firestore_database" "chat_usage" {
+  name                        = "chat-usage"
+  location_id                 = var.region
+  type                        = "FIRESTORE_NATIVE"
+  concurrency_mode            = "OPTIMISTIC"
+  app_engine_integration_mode = "DISABLED"
+  delete_protection_state     = "DELETE_PROTECTION_ENABLED"
+  deletion_policy             = "ABANDON"
+
+  depends_on = [google_project_service.required, google_project_iam_member.iac]
+}
+
+# Read and write the chat-usage database only, in the environments where the
+# chat runs.
+resource "google_project_iam_member" "runtime_chat_usage" {
+  for_each = { for name, service in local.services : name => service if contains(var.chat_environments, name) }
+
+  project = var.project_id
+  role    = "roles/datastore.user"
+  member  = "serviceAccount:${google_service_account.runtime[each.key].email}"
+
+  condition {
+    title       = "${each.key}-chat-usage-only"
+    description = "Read and write the ${google_firestore_database.chat_usage.name} database only."
+    expression  = "resource.name == \"projects/${var.project_id}/databases/${google_firestore_database.chat_usage.name}\""
+  }
+}
+
 # The chat assistant calls Gemini on Vertex AI (plans/ai-salon-assistant.md),
 # only in the environments where it runs.
 resource "google_project_iam_member" "runtime_vertex_user" {
@@ -390,6 +425,28 @@ resource "google_cloud_run_v2_service" "web" {
         value = var.chat_location
       }
 
+      # The spending ledger and its caps (internal/usage): the chat stops at
+      # either cap, whatever Google's billing data says yet.
+      env {
+        name  = "CHAT_USAGE_DATABASE"
+        value = google_firestore_database.chat_usage.name
+      }
+
+      env {
+        name  = "CHAT_MONTHLY_BUDGET_EUR"
+        value = tostring(var.chat_monthly_budget_eur)
+      }
+
+      env {
+        name  = "CHAT_DAILY_BUDGET_EUR"
+        value = tostring(var.chat_daily_budget_eur)
+      }
+
+      env {
+        name  = "CHAT_ENVIRONMENT"
+        value = each.key
+      }
+
       dynamic "env" {
         for_each = contains(var.chat_environments, each.key) && var.availability_calendars != "" ? [var.availability_calendars] : []
         content {
@@ -444,6 +501,7 @@ resource "google_cloud_run_v2_service" "web" {
     google_project_service.required,
     google_project_iam_member.runtime_firestore_reader,
     google_project_iam_member.runtime_vertex_user,
+    google_project_iam_member.runtime_chat_usage,
     google_service_account_iam_member.iac_act_as,
   ]
 }
@@ -722,5 +780,143 @@ resource "google_monitoring_alert_policy" "unexpected_production_mutation" {
       period = "300s"
     }
     auto_close = "604800s"
+  }
+}
+
+# Google's side of the chat's spending cap. A budget only alerts (billing
+# data arrives hours late, and nothing stops at it); the app's ledger is what
+# stops the chat. This catches anything the ledger misses: a price change,
+# another use of Gemini in the project. The budget lives on the billing
+# account, which the IaC identities can reach only once the owner grants them
+# access there (infra/README.md); until billing_account_id is set it is skipped.
+data "google_project" "this" {
+  project_id = var.project_id
+}
+
+resource "google_billing_budget" "chat_models" {
+  count = var.billing_account_id == "" ? 0 : 1
+
+  billing_account = var.billing_account_id
+  display_name    = "Aesthetic Lab chat AI models (Vertex AI, Gemini)"
+
+  budget_filter {
+    projects        = ["projects/${data.google_project.this.number}"]
+    services        = [for id in local.ai_billing_services : "services/${id}"]
+    calendar_period = "MONTH"
+  }
+
+  amount {
+    specified_amount {
+      currency_code = "EUR"
+      units         = tostring(var.chat_budget_eur)
+    }
+  }
+
+  dynamic "threshold_rules" {
+    for_each = [0.5, 0.9, 1.0]
+    content {
+      threshold_percent = threshold_rules.value
+      spend_basis       = "CURRENT_SPEND"
+    }
+  }
+
+  threshold_rules {
+    threshold_percent = 1.0
+    spend_basis       = "FORECASTED_SPEND"
+  }
+
+  all_updates_rule {
+    monitoring_notification_channels = var.notification_channel_ids
+    disable_default_iam_recipients   = false
+  }
+}
+
+# The chat stopped at a cap, or could not read or record its spending.
+resource "google_logging_metric" "chat_budget_events" {
+  name        = "aestheticlab_chat_budget_events"
+  description = "Chat budget events: a spending cap reached, or the ledger unreadable or not recorded."
+  filter      = "resource.type=\"cloud_run_revision\" AND (jsonPayload.message=\"chat_budget_reached\" OR jsonPayload.message=\"chat_budget_unreadable\" OR jsonPayload.message=\"chat_spending_not_recorded\")"
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+    unit        = "1"
+  }
+
+  depends_on = [google_project_service.required]
+}
+
+resource "google_monitoring_alert_policy" "chat_budget" {
+  display_name          = "Aesthetic Lab chat budget reached or ledger failing"
+  combiner              = "OR"
+  notification_channels = var.notification_channel_ids
+
+  conditions {
+    display_name = "Chat budget events in 5 minutes"
+    condition_threshold {
+      filter          = "resource.type = \"cloud_run_revision\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.chat_budget_events.name}\""
+      comparison      = "COMPARISON_GT"
+      threshold_value = 0
+      duration        = "0s"
+
+      aggregations {
+        alignment_period     = "300s"
+        per_series_aligner   = "ALIGN_SUM"
+        cross_series_reducer = "REDUCE_SUM"
+      }
+
+      trigger {
+        count = 1
+      }
+    }
+  }
+
+  alert_strategy {
+    auto_close = "86400s"
+  }
+}
+
+# Every chat reply, refused or answered: a flood shows here first.
+resource "google_logging_metric" "chat_replies" {
+  name        = "aestheticlab_chat_replies"
+  description = "Chat replies, answered or refused."
+  filter      = "resource.type=\"cloud_run_revision\" AND jsonPayload.message=\"chat_reply\""
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+    unit        = "1"
+  }
+
+  depends_on = [google_project_service.required]
+}
+
+resource "google_monitoring_alert_policy" "chat_volume" {
+  display_name          = "Aesthetic Lab chat volume spike"
+  combiner              = "OR"
+  notification_channels = var.notification_channel_ids
+
+  conditions {
+    display_name = "Chat replies above the hourly threshold"
+    condition_threshold {
+      filter          = "resource.type = \"cloud_run_revision\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.chat_replies.name}\""
+      comparison      = "COMPARISON_GT"
+      threshold_value = var.chat_replies_alert_per_hour
+      duration        = "0s"
+
+      aggregations {
+        alignment_period     = "3600s"
+        per_series_aligner   = "ALIGN_SUM"
+        cross_series_reducer = "REDUCE_SUM"
+      }
+
+      trigger {
+        count = 1
+      }
+    }
+  }
+
+  alert_strategy {
+    auto_close = "86400s"
   }
 }
