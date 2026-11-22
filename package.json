@@ -19,6 +19,7 @@
 		"test.frontend": "bun test frontend scripts",
 		"test.e2e": "playwright test",
 		"share-images": "bun scripts/share-images.ts",
+		"chat-test-set": "bun scripts/chat-test-set.ts",
 		"biome": "biome check --fix",
 		"precommit": "lint-staged --concurrent false",
 		"prepush": "make ci",

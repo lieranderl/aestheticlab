@@ -8,20 +8,21 @@
 
 ## Commands
 
-| Task                                   | Command                                                                                                           |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Install local deps                     | `bun install`                                                                                                     |
-| Install CI deps                        | `bun ci`                                                                                                          |
-| Local dev (Air)                        | `make dev`                                                                                                        |
-| Format/lint fix (JS, CSS, JSON, MD)    | `bun run biome`                                                                                                   |
-| Format/lint check                      | `bunx --bun biome ci .`                                                                                           |
-| Main local verification                | `make ci` (also the pre-push hook)                                                                                |
-| Browser tests                          | `make test-e2e` (Chromium, Firefox and WebKit; embedded snapshot, local HTTPS)                                    |
-| Build the binary                       | `make build` (`bin/web`)                                                                                          |
-| Assets (CSS, fonts, icons, images)     | `make assets` (`bun run assets`), then commit `internal/assets/manifest_gen.go` and `internal/views/icons_gen.go` |
-| Texts (`internal/i18n/locales/*.json`) | `make i18n`, then commit `internal/i18n/messages_gen.go`                                                          |
-| Content tests (Firestore emulator)     | `make firestore`, then `make test-content`                                                                        |
-| Content snapshot (from production)     | `make snapshot`, then commit `internal/content/snapshot.json`; see `docs/CONTENT.md`                              |
+| Task                                   | Command                                                                                                                            |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Install local deps                     | `bun install`                                                                                                                      |
+| Install CI deps                        | `bun ci`                                                                                                                           |
+| Local dev (Air)                        | `make dev`                                                                                                                         |
+| Format/lint fix (JS, CSS, JSON, MD)    | `bun run biome`                                                                                                                    |
+| Format/lint check                      | `bunx --bun biome ci .`                                                                                                            |
+| Main local verification                | `make ci` (also the pre-push hook)                                                                                                 |
+| Browser tests                          | `make test-e2e` (Chromium, Firefox and WebKit; embedded snapshot, local HTTPS)                                                     |
+| Build the binary                       | `make build` (`bin/web`)                                                                                                           |
+| Assets (CSS, fonts, icons, images)     | `make assets` (`bun run assets`), then commit `internal/assets/manifest_gen.go` and `internal/views/icons_gen.go`                  |
+| Texts (`internal/i18n/locales/*.json`) | `make i18n`, then commit `internal/i18n/messages_gen.go`                                                                           |
+| Content tests (Firestore emulator)     | `make firestore`, then `make test-content`                                                                                         |
+| Content snapshot (from production)     | `make snapshot`, then commit `internal/content/snapshot.json`; see `docs/CONTENT.md`                                               |
+| Chat test set (real model, billed)     | Start a local server with a real model (launch config `go-web-chat`), then `bun run chat-test-set`; see `scripts/chat-test-set.ts` |
 
 ## File-Scoped Commands
 

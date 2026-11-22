@@ -316,6 +316,7 @@ func TestThePromptKeepsTimesAndCareAdviceHonest(t *testing.T) {
 		"where the visitor chooses the time: never say you booked, reserved or selected a time",
 		"mention the Book button only when you called offer_booking",
 		"how-we-do-it details only as the information below states them",
+		"If a note from the owner and a treatment's description disagree, follow the note",
 	} {
 		if !strings.Contains(prompt, want) {
 			t.Errorf("the prompt lacks %q", want)
