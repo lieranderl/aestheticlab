@@ -48,9 +48,15 @@ func TestCalendarConfigMapsCalendarsToStaff(t *testing.T) {
 	if len(got) != 2 || got[642297] != want[642297] || got[642296] != want[642296] {
 		t.Errorf("ParseCalendars = %v, want %v", got, want)
 	}
-	for _, bad := range []string{"cal", "cal|x", "|1", "a|1;b|1", "a|1;a|2"} {
-		if _, err := availability.ParseCalendars(bad); err == nil {
+	for _, bad := range []string{"secretcal", "secretcal|x", "|1", "secretcal|1;othercal|1", "secretcal|1;secretcal|2"} {
+		_, err := availability.ParseCalendars(bad)
+		if err == nil {
 			t.Errorf("ParseCalendars(%q) accepted", bad)
+			continue
+		}
+		// The error is logged: it names the pair's position, never a calendar ID.
+		if strings.Contains(err.Error(), "secretcal") || strings.Contains(err.Error(), "othercal") {
+			t.Errorf("ParseCalendars(%q) error %q shows a calendar ID", bad, err)
 		}
 	}
 	if got, err := availability.ParseCalendars(""); err != nil || len(got) != 0 {

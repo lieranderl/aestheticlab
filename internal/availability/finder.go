@@ -36,23 +36,27 @@ const MaxDays = 14
 const readTimeout = 3 * time.Second
 
 // ParseCalendars reads "<calendarId>|<staffId>;…": the calendar Timely
-// syncs each member of staff to. Empty is no calendars.
+// syncs each member of staff to. Empty is no calendars. Errors name a pair
+// by its position, never its contents: they are logged, and calendar IDs
+// stay out of logs.
 func ParseCalendars(config string) (map[int64]string, error) {
 	out := map[int64]string{}
 	seen := map[string]bool{}
+	n := 0
 	for pair := range strings.SplitSeq(config, ";") {
 		pair = strings.TrimSpace(pair)
 		if pair == "" {
 			continue
 		}
+		n++
 		cal, staff, ok := strings.Cut(pair, "|")
 		cal, staff = strings.TrimSpace(cal), strings.TrimSpace(staff)
 		id, err := strconv.ParseInt(staff, 10, 64)
 		if !ok || cal == "" || err != nil {
-			return nil, fmt.Errorf("availability calendars: %q is not <calendarId>|<staffId>", pair)
+			return nil, fmt.Errorf("availability calendars: pair %d is not <calendarId>|<staffId>", n)
 		}
 		if seen[cal] || out[id] != "" {
-			return nil, fmt.Errorf("availability calendars: %q repeats a calendar or a member of staff", pair)
+			return nil, fmt.Errorf("availability calendars: pair %d repeats a calendar or a member of staff", n)
 		}
 		seen[cal], out[id] = true, cal
 	}
@@ -212,7 +216,7 @@ func (g *Google) Busy(ctx context.Context, calendars []string, from, to time.Tim
 			start, errStart := time.Parse(time.RFC3339, p.Start)
 			end, errEnd := time.Parse(time.RFC3339, p.End)
 			if errStart != nil || errEnd != nil {
-				return nil, fmt.Errorf("calendar %q: unreadable busy time %q–%q", c, p.Start, p.End)
+				return nil, fmt.Errorf("a calendar returned an unreadable busy time %q–%q", p.Start, p.End)
 			}
 			intervals = append(intervals, Interval{Start: start, End: end})
 		}
