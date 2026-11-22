@@ -316,3 +316,39 @@ func TestMarkdownInTheReplyBecomesPlainText(t *testing.T) {
 		t.Errorf("reply = %q, want %q", got.Text, want)
 	}
 }
+
+// textAndCall is a response that writes the answer and calls a tool at once,
+// as Gemini often does before showing a Book button.
+func textAndCall(text, name string, args map[string]any) *genai.GenerateContentResponse {
+	return &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{
+		Content: &genai.Content{Role: genai.RoleModel, Parts: []*genai.Part{
+			{Text: text},
+			{FunctionCall: &genai.FunctionCall{ID: "call-1", Name: name, Args: args}},
+		}},
+		FinishReason: genai.FinishReasonStop,
+	}}}
+}
+
+func TestAnAnswerWrittenWithAToolCallIsKept(t *testing.T) {
+	const times = "Zara is free on Monday at 12:15 and 12:30."
+	book := map[string]any{"service_id": "4847871"}
+	empty := &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{Content: &genai.Content{Role: genai.RoleModel}, FinishReason: genai.FinishReasonStop}}}
+	for name, tc := range map[string]struct {
+		final *genai.GenerateContentResponse
+		want  string
+	}{
+		"empty final":     {empty, times},
+		"no content":      {&genai.GenerateContentResponse{Candidates: []*genai.Candidate{{FinishReason: genai.FinishReasonStop}}}, times},
+		"closing line":    {text("These times look free now."), times + "\n\nThese times look free now."},
+		"repeated answer": {text(times + "\nTap the button to book."), times + "\nTap the button to book."},
+	} {
+		m := &scripted{replies: []*genai.GenerateContentResponse{textAndCall(times, "offer_booking", book), tc.final}}
+		got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if got.Text != tc.want || len(got.Offers) != 1 {
+			t.Errorf("%s: reply = %q (%d offers), want %q", name, got.Text, len(got.Offers), tc.want)
+		}
+	}
+}

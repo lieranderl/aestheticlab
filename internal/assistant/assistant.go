@@ -126,17 +126,24 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 	}
 	contents := []*genai.Content{genai.NewContentFromText(a.visitorMessage(history, message), genai.RoleUser)}
 	run := &toolRun{a: a, k: k}
+	// said is the visitor-facing text of each round: Gemini often writes
+	// the answer in the same response as a tool call, then sends nothing,
+	// a closing line or the answer again once it has the tool's result.
+	var said []string
 	for range maxRounds {
 		resp, err := a.opts.Model.Generate(ctx, contents, cfg)
 		if err != nil {
 			return Answer{}, fmt.Errorf("model: %w", err)
 		}
+		// A response without content (blocked, or nothing more to say) ends
+		// the reply with whatever was already said.
 		if resp == nil || len(resp.Candidates) == 0 || resp.Candidates[0].Content == nil {
-			return Answer{}, ErrNoAnswer
+			break
 		}
 		calls := resp.FunctionCalls()
+		said = append(said, replyText(resp.Candidates[0].Content))
 		if len(calls) == 0 {
-			text := replyText(resp.Candidates[0].Content)
+			text := joinAnswer(said)
 			if text == "" {
 				return Answer{}, ErrNoAnswer
 			}
@@ -152,7 +159,24 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		}
 		contents = append(contents, genai.NewContentFromParts(parts, genai.RoleUser))
 	}
+	if text := joinAnswer(said); text != "" {
+		return Answer{Text: text, Offers: run.offers}, nil
+	}
 	return Answer{}, ErrNoAnswer
+}
+
+// joinAnswer is the rounds' texts in order, without empty ones and without
+// any text another one repeats (the model often restates its answer).
+func joinAnswer(said []string) string {
+	var out []string
+	for i, t := range said {
+		repeated := slices.ContainsFunc(said, func(u string) bool { return u != t && strings.Contains(u, t) }) ||
+			slices.Contains(said[:i], t)
+		if t != "" && !repeated {
+			out = append(out, t)
+		}
+	}
+	return strings.Join(out, "\n\n")
 }
 
 // replyText is the answer to the visitor: the last text part that isn't a
