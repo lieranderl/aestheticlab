@@ -150,3 +150,19 @@ func TestSectionRequestsCancelEachOther(t *testing.T) {
 		t.Errorf("%d section requests, %d sharing the abort signal; want all of several", gets, shared)
 	}
 }
+
+func TestTheAssistantReadsTheCareNotesInThePageLanguage(t *testing.T) {
+	en := views.AssistantCareNotes(i18n.WithLocale(context.Background(), i18n.EnBE))
+	for _, want := range []string{"[Nails]", "[Laser]", "Complimentary Fix Policy", "Shave the area 24 hours before your session."} {
+		if !strings.Contains(en, want) {
+			t.Errorf("care notes lack %q:\n%.600s", want, en)
+		}
+	}
+	if strings.ContainsAny(en, "<>") {
+		t.Errorf("care notes still hold markup:\n%.600s", en)
+	}
+	nl := views.AssistantCareNotes(i18n.WithLocale(context.Background(), i18n.NlBE))
+	if nl == "" || nl == en {
+		t.Error("the Dutch care notes are missing or English")
+	}
+}

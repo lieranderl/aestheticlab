@@ -75,7 +75,9 @@ All four staff calendars are shared with the runtime accounts; their IDs are kep
 
 Before staging (2026-11-22, done): `e2e/chat.spec.ts` with the fake model (the widget stays hidden without JavaScript); privacy-policy lines shown only where the chat runs; `infra/` adds the Vertex AI API, `roles/aiplatform.user` for `chat_environments` (default staging), the chat env vars and the sensitive `availability_calendars` variable from the `AVAILABILITY_CALENDARS` GitHub secret; `AGENTS.md` and `infra/README.md` updated.
 
-Still to do: create the `AVAILABILITY_CALENDARS` repository secret; review and apply the infrastructure plan; PR to `staging`; check real calendars and Gemini on staging; the 60-question test set; update the privacy policy's "Last updated" date when the chat reaches production; seed production Firestore.
+Assistant notes (2026-11-22): the owner's facts live in the `assistant_notes` collection (English; `topic`, `text`, `active`), with optional `assistant_note` fields on services and service groups; the bot also reads the care notes page (`/notice/`). Staging has `cancellation`, `payment` and `late-arrival`. Days off come through the calendars (owner: Timely writes them there), so `days_off` stays empty. Everything stays in staging until it is tested there.
+
+Still to do: ~~create the `AVAILABILITY_CALENDARS` repository secret~~ (done); review and apply the infrastructure plan; PR to `staging`; check real calendars and Gemini on staging; the 60-question test set; update the privacy policy's "Last updated" date when the chat reaches production; seed production Firestore.
 
 ## Phases
 

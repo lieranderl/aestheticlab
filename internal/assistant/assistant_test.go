@@ -76,9 +76,9 @@ func knowledge() assistant.Knowledge {
 	return assistant.Knowledge{
 		Locale: i18n.EnBE,
 		Content: &content.Localized{
-			ServiceGroups: []content.ServiceGroup{{ID: "1", Name: "Pedicure", NameEN: "Pedicure"}},
+			ServiceGroups: []content.ServiceGroup{{ID: "1", Name: "Pedicure", NameEN: "Pedicure", AssistantNote: "Book 90 minutes for gel."}},
 			Services: []content.Service{
-				{ID: "4847871", GroupID: "1", Name: "Pedicure", NameEN: "Pedicure", Description: "Classic pedicure.", Duration: 60, Price: 70, StaffIDs: []int64{642297, 642296}},
+				{ID: "4847871", GroupID: "1", Name: "Pedicure", NameEN: "Pedicure", Description: "Classic pedicure.", Duration: 60, Price: 70, StaffIDs: []int64{642297, 642296}, AssistantNote: "Bring open shoes."},
 				{ID: "4884910", GroupID: "1", Name: "Coating removal", NameEN: "Coating removal", Duration: 15, Price: 10},
 			},
 			Staff: []content.Member{
@@ -86,9 +86,11 @@ func knowledge() assistant.Knowledge {
 				{ID: 642296, Name: "Rubina", Role: "Nail Technician"},
 			},
 			Contact: content.Contact{Email: "studio@example.com"},
+			Notes:   []content.Note{{ID: "payment", Topic: "Payment", Text: "Cash or QR code transfer only; no card payments."}},
 		},
-		Facts: []string{"Aesthetic Lab, Diestsestraat 174, 3000 Leuven, Belgium"},
-		FAQ:   []assistant.QA{{Question: "Can I cancel?", Answer: "Yes, 24 hours ahead."}},
+		Facts:     []string{"Aesthetic Lab, Diestsestraat 174, 3000 Leuven, Belgium"},
+		FAQ:       []assistant.QA{{Question: "Can I cancel?", Answer: "Yes, 24 hours ahead."}},
+		CareNotes: "[Laser]\nShave the area 24 hours before your session.",
 	}
 }
 
@@ -124,6 +126,8 @@ func TestTheSystemPromptCarriesTheSalonAndTheRules(t *testing.T) {
 	for _, want := range []string{
 		"only", "Aesthetic Lab", "service_id=4847871", "Pedicure", "€70", "60 min", "Zara", "Rubina",
 		"Diestsestraat 174", "Can I cancel?", "medical", "studio@example.com",
+		"Payment: Cash or QR code transfer only; no card payments.", "Shave the area 24 hours before your session.",
+		"About this category: Book 90 minutes for gel.", "Note: Bring open shoes.",
 	} {
 		if !strings.Contains(prompt, want) {
 			t.Errorf("system prompt lacks %q", want)

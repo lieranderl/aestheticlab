@@ -1,6 +1,7 @@
 package views
 
 import (
+	"bytes"
 	"context"
 	"html"
 	"regexp"
@@ -45,4 +46,38 @@ func AssistantFacts(ctx context.Context, loc *content.Localized) []string {
 		facts = append(facts, tr(ctx, "Parking")+": "+p.Name)
 	}
 	return facts
+}
+
+var (
+	// tabLabel is a care-notes tab's radio, whose aria-label names it.
+	tabLabel = regexp.MustCompile(`<input[^>]*aria-label="([^"]+)"[^>]*>`)
+	// blockEnd ends a line of text.
+	blockEnd = regexp.MustCompile(`(?i)</(p|li|h[1-6])>|<br\s*/?>`)
+)
+
+const careStart, careEnd = "<!-- assistant:care-notes -->", "<!-- /assistant:care-notes -->"
+
+// AssistantCareNotes is the care notes page's text (preparation and
+// aftercare) as plain text in the page's language, one line per paragraph,
+// so the chat assistant answers what the page says. Empty if the page
+// cannot be read.
+func AssistantCareNotes(ctx context.Context) string {
+	var buf bytes.Buffer
+	if err := Care().Render(ctx, &buf); err != nil {
+		return ""
+	}
+	page := buf.String()
+	start, end := strings.Index(page, careStart), strings.Index(page, careEnd)
+	if start < 0 || end < start {
+		return ""
+	}
+	section := tabLabel.ReplaceAllString(page[start+len(careStart):end], "\n[$1]\n")
+	section = blockEnd.ReplaceAllString(section, "\n")
+	var lines []string
+	for line := range strings.SplitSeq(plain(section), "\n") {
+		if line = strings.Join(strings.Fields(line), " "); line != "" {
+			lines = append(lines, line)
+		}
+	}
+	return strings.Join(lines, "\n")
 }

@@ -294,3 +294,36 @@ func TestServicesListTheStaffWhoDoThem(t *testing.T) {
 		t.Errorf("staff IDs = %v, want %v", got, want)
 	}
 }
+
+// assistant_notes are the owner's facts for the chat assistant, in English:
+// active ones with text, in ID order.
+func TestAssistantNotesAreReadInIDOrder(t *testing.T) {
+	d := docs()
+	d.AssistantNotes = []content.Document{
+		{"id": "payment", "active": true, "topic": "Payment", "text": " Cash or QR code transfer; no cards. "},
+		{"id": "cancellation", "active": true, "topic": "Cancellation policy", "text": "No cancellations or changes within 24 hours of the appointment."},
+		{"id": "draft", "active": false, "topic": "Draft", "text": "Not yet."},
+		{"id": "empty", "active": true, "topic": "Empty", "text": "  "},
+	}
+	got := parse(t, d).In(i18n.NlBE).Notes
+	want := []content.Note{
+		{ID: "cancellation", Topic: "Cancellation policy", Text: "No cancellations or changes within 24 hours of the appointment."},
+		{ID: "payment", Topic: "Payment", Text: "Cash or QR code transfer; no cards."},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("notes = %+v, want %+v", got, want)
+	}
+}
+
+func TestTreatmentsAndCategoriesCarryAssistantNotes(t *testing.T) {
+	d := docs()
+	d.ServiceGroups[0]["assistant_note"] = "Usually 6–8 sessions, 4–6 weeks apart."
+	d.Services[0]["assistant_note"] = "Patch test 48 hours before."
+	loc := parse(t, d).In(i18n.FrBE)
+	if got := loc.ServiceGroups[0].AssistantNote; got != "Usually 6–8 sessions, 4–6 weeks apart." {
+		t.Errorf("group note = %q", got)
+	}
+	if got := loc.Services[0].AssistantNote; got != "Patch test 48 hours before." {
+		t.Errorf("service note = %q", got)
+	}
+}

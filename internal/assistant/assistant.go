@@ -49,6 +49,9 @@ type Knowledge struct {
 	// Facts are the studio's fixed facts (address, hours, contact).
 	Facts []string
 	FAQ   []QA
+	// CareNotes is the care notes page as plain text (preparation and
+	// aftercare).
+	CareNotes string
 }
 
 // Offer is a Book button for a treatment, with one person or anyone.

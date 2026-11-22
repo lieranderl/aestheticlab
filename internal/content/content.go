@@ -27,6 +27,8 @@ type Documents struct {
 	Services      []Document `json:"services"`
 	Staff         []Document `json:"staff"`
 	Contact       Document   `json:"contact"`
+	// AssistantNotes are the owner's facts for the chat assistant.
+	AssistantNotes []Document `json:"assistant_notes,omitempty"`
 }
 
 // ServiceGroup is a treatment category in one locale.
@@ -38,6 +40,9 @@ type ServiceGroup struct {
 	// classification (laser, add-ons) key on it.
 	NameEN   string
 	Priority float64
+	// AssistantNote is an optional fact for the chat assistant about the
+	// whole category, in English.
+	AssistantNote string
 }
 
 // Service is a treatment in one locale.
@@ -55,6 +60,9 @@ type Service struct {
 	// StaffIDs are the members of staff who do the treatment, as Timely
 	// assigns them; empty when the content doesn't say.
 	StaffIDs []int64
+	// AssistantNote is an optional fact for the chat assistant about this
+	// treatment, in English.
+	AssistantNote string
 }
 
 // Member is a member of staff in one locale.
@@ -86,6 +94,12 @@ type OpenHours struct {
 	From, To                 string
 }
 
+// Note is one of the owner's facts for the chat assistant (payment,
+// policies), in English: the assistant answers in the visitor's language.
+type Note struct {
+	ID, Topic, Text string
+}
+
 // Place is a named location with a maps link. Address is empty for parking.
 type Place struct {
 	Name    string
@@ -100,6 +114,8 @@ type Localized struct {
 	Services      []Service
 	Staff         []Member
 	Contact       Contact
+	// Notes are the same in every locale.
+	Notes []Note
 }
 
 // Content is the checked content in every supported locale.
@@ -127,6 +143,7 @@ func Parse(docs Documents) (*Content, error) {
 	groups := parseAll(docs.ServiceGroups, parseServiceGroup)
 	services := parseAll(docs.Services, parseService)
 	staff := parseAll(docs.Staff, parseMember)
+	notes := parseAll(docs.AssistantNotes, parseNote)
 	contact, ok := parseContact(docs.Contact)
 	if len(groups) == 0 || len(services) == 0 || !ok {
 		return nil, ErrIncomplete
@@ -139,7 +156,7 @@ func Parse(docs Documents) (*Content, error) {
 
 	c := &Content{locales: map[i18n.Locale]*Localized{}}
 	for _, l := range i18n.Supported() {
-		loc := &Localized{Contact: contact}
+		loc := &Localized{Contact: contact, Notes: notes}
 		for _, g := range groups {
 			loc.ServiceGroups = append(loc.ServiceGroups, g.in(l))
 		}
@@ -212,6 +229,7 @@ type storedGroup struct {
 	id       string
 	name     translated
 	priority float64
+	note     string
 }
 
 func parseServiceGroup(doc Document) (storedGroup, bool) {
@@ -220,11 +238,14 @@ func parseServiceGroup(doc Document) (storedGroup, bool) {
 	if id == "" || name == "" || !ok {
 		return storedGroup{}, false
 	}
-	return storedGroup{id: id, name: readTranslated(doc, "name", cmp.Or(readString(doc, "name_en"), name)), priority: priority}, true
+	return storedGroup{
+		id: id, name: readTranslated(doc, "name", cmp.Or(readString(doc, "name_en"), name)), priority: priority,
+		note: readString(doc, "assistant_note"),
+	}, true
 }
 
 func (g storedGroup) in(l i18n.Locale) ServiceGroup {
-	return ServiceGroup{ID: g.id, Name: g.name.in(l), NameEN: g.name.english, Priority: g.priority}
+	return ServiceGroup{ID: g.id, Name: g.name.in(l), NameEN: g.name.english, Priority: g.priority, AssistantNote: g.note}
 }
 
 type storedService struct {
@@ -233,6 +254,7 @@ type storedService struct {
 	duration, price   float64
 	priority          float64
 	staffIDs          []int64
+	note              string
 }
 
 func parseService(doc Document) (storedService, bool) {
@@ -249,6 +271,7 @@ func parseService(doc Document) (storedService, bool) {
 		description: readTranslated(doc, "description", readString(doc, "description")),
 		duration:    duration, price: price, priority: priority,
 		staffIDs: readIDList(doc, "staff_ids"),
+		note:     readString(doc, "assistant_note"),
 	}, true
 }
 
@@ -256,6 +279,7 @@ func (s storedService) in(l i18n.Locale) Service {
 	return Service{
 		ID: s.id, GroupID: s.groupID, Name: s.name.in(l), NameEN: s.name.english,
 		Description: s.description.in(l), Duration: s.duration, Price: s.price, StaffIDs: s.staffIDs,
+		AssistantNote: s.note,
 	}
 }
 
@@ -342,6 +366,11 @@ func readSchedule(doc Document) *availability.Schedule {
 		return nil
 	}
 	return &s
+}
+
+func parseNote(doc Document) (Note, bool) {
+	n := Note{ID: readID(doc, "id"), Topic: readString(doc, "topic"), Text: readString(doc, "text")}
+	return n, n.ID != "" && n.Text != ""
 }
 
 func parseContact(doc Document) (Contact, bool) {

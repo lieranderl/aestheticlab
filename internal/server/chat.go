@@ -131,7 +131,7 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, limit *li
 			answer.Text, outcome = views.ChatTooFast(ctx), "rate_limited"
 		} else {
 			loc := store.Content(ctx).In(l)
-			k := assistant.Knowledge{Locale: l, Content: loc, Facts: views.AssistantFacts(ctx, loc)}
+			k := assistant.Knowledge{Locale: l, Content: loc, Facts: views.AssistantFacts(ctx, loc), CareNotes: views.AssistantCareNotes(ctx)}
 			for _, qa := range views.AssistantFAQ(ctx, loc) {
 				k.FAQ = append(k.FAQ, assistant.QA{Question: qa.Question, Answer: qa.Answer})
 			}

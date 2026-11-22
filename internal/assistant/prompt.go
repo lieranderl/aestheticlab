@@ -40,6 +40,13 @@ func systemPrompt(k Knowledge) string {
 		fmt.Fprintf(&b, "- Email: %s\n", k.Content.Contact.Email)
 	}
 
+	if len(k.Content.Notes) > 0 {
+		b.WriteString("\nStudio policies and notes from the owner (in English; answer in the visitor's language):\n")
+		for _, n := range k.Content.Notes {
+			fmt.Fprintf(&b, "- %s: %s\n", n.Topic, n.Text)
+		}
+	}
+
 	b.WriteString("\nFrequently asked questions:\n")
 	for _, qa := range k.FAQ {
 		fmt.Fprintf(&b, "Q: %s\nA: %s\n", qa.Question, qa.Answer)
@@ -55,6 +62,9 @@ func systemPrompt(k Knowledge) string {
 	b.WriteString("\nTreatments by category (service_id | name | price | duration | who does it | description):\n")
 	for _, g := range k.Content.ServiceGroups {
 		fmt.Fprintf(&b, "\n%s:\n", g.Name)
+		if g.AssistantNote != "" {
+			fmt.Fprintf(&b, "(About this category: %s)\n", g.AssistantNote)
+		}
 		for _, s := range k.Content.Services {
 			if s.GroupID != g.ID {
 				continue
@@ -71,7 +81,15 @@ func systemPrompt(k Knowledge) string {
 				who = strings.Join(people, ", ")
 			}
 			fmt.Fprintf(&b, "- service_id=%s | %s | €%s | %d min | %s | %s\n", s.ID, s.Name, euros(s.Price), int(s.Duration), who, clip(s.Description, 240))
+			if s.AssistantNote != "" {
+				fmt.Fprintf(&b, "  Note: %s\n", s.AssistantNote)
+			}
 		}
+	}
+	if k.CareNotes != "" {
+		b.WriteString("\nCare notes page (preparation, aftercare, durability and the free fix policy):\n")
+		b.WriteString(k.CareNotes)
+		b.WriteString("\n")
 	}
 	return b.String()
 }
