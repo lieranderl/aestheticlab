@@ -275,3 +275,44 @@ func TestTheFakeModelLooksUpTimesAndOffersBooking(t *testing.T) {
 		t.Errorf("other reply = %q, %v", got.Text, err)
 	}
 }
+
+// Gemini sometimes writes a note to itself as an ordinary text part before
+// the answer: only the last text part is the reply to the visitor.
+func TestOnlyTheLastTextPartIsTheReply(t *testing.T) {
+	leaky := &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{
+		Content: &genai.Content{Role: genai.RoleModel, Parts: []*genai.Part{
+			{Text: "The user is asking for general beauty advice. I provided a summary, which I have done."},
+			{Text: "Вы можете выбрать любую процедуру из нашего списка."},
+		}},
+		FinishReason: genai.FinishReasonStop,
+	}}}
+	m := &scripted{replies: []*genai.GenerateContentResponse{leaky}}
+	got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Text != "Вы можете выбрать любую процедуру из нашего списка." {
+		t.Errorf("reply = %q, want only the answer", got.Text)
+	}
+}
+
+func TestThePromptForbidsReasoningInTheReply(t *testing.T) {
+	m := &scripted{replies: []*genai.GenerateContentResponse{text("ok")}}
+	_, _ = newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
+	if prompt := m.configs[0].SystemInstruction.Parts[0].Text; !strings.Contains(prompt, "Write only the message to the visitor") {
+		t.Error("the prompt does not forbid notes about reasoning in the reply")
+	}
+}
+
+// The chat shows plain text: Markdown bullets and bold become plain.
+func TestMarkdownInTheReplyBecomesPlainText(t *testing.T) {
+	md := "Prices:\n\n*   Manicure + gel: **€60**\n- Pedicure: €70\n* Brows: €25\nA*B stays."
+	m := &scripted{replies: []*genai.GenerateContentResponse{text(md)}}
+	got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "?")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "Prices:\n\n• Manicure + gel: €60\n• Pedicure: €70\n• Brows: €25\nA*B stays."; got.Text != want {
+		t.Errorf("reply = %q, want %q", got.Text, want)
+	}
+}
