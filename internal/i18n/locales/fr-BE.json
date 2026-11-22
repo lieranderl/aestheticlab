@@ -326,6 +326,8 @@
 			"suggest_studio": "Parlez-moi du studio",
 			"suggest_laser": "Comment fonctionne l’épilation laser ?",
 			"times": "Créneaux libres : {{service}}",
+			"times_empty": "Aucun créneau libre trouvé pour cette recherche.",
+			"times_failed": "Nous n’avons pas pu vérifier les disponibilités. Consultez la page de réservation.",
 			"times_with": "Créneaux libres : {{service}} avec {{name}}",
 			"times_note": "Ces créneaux semblent libres pour l'instant ; la page de réservation les confirme.",
 			"times_unchecked": "Impossible de vérifier les créneaux de {{names}} : la page de réservation les affiche.",

@@ -24,6 +24,7 @@ type FreeTimes struct {
 	StaffID int64
 	Staff   string
 	Slots   []Slot
+	Failed  bool
 	// Unchecked are the people whose times could not be checked.
 	Unchecked []string
 }
@@ -61,16 +62,16 @@ func clockTimes(s string) []string {
 	return out
 }
 
-// showTimes keeps ft for the visitor: a later lookup for the same
-// treatment replaces an earlier one, and one that found nothing clears it,
-// since the earlier times don't fit what was asked now. At most maxOffers
-// treatments show times.
+// showTimes replaces a refinement of the same search and keeps independent
+// searches for different staff. Switching to or from all staff supersedes
+// earlier results for that treatment with the other staff scope.
 func (r *toolRun) showTimes(ft FreeTimes) {
-	if len(ft.Slots) == 0 {
-		r.times = slices.DeleteFunc(r.times, func(t FreeTimes) bool { return t.ServiceID == ft.ServiceID })
-		return
-	}
-	if i := slices.IndexFunc(r.times, func(t FreeTimes) bool { return t.ServiceID == ft.ServiceID }); i >= 0 {
+	r.times = slices.DeleteFunc(r.times, func(t FreeTimes) bool {
+		return t.ServiceID == ft.ServiceID && t.StaffID != ft.StaffID && (t.StaffID == 0 || ft.StaffID == 0)
+	})
+	if i := slices.IndexFunc(r.times, func(t FreeTimes) bool {
+		return t.ServiceID == ft.ServiceID && t.StaffID == ft.StaffID
+	}); i >= 0 {
 		r.times[i] = ft
 		return
 	}
@@ -79,37 +80,33 @@ func (r *toolRun) showTimes(ft FreeTimes) {
 	}
 }
 
-// answer is the reply from the rounds' texts and the tools' results. A
-// text that names a time of day the visitor can't trust is dropped: every
-// time in it must be a shown free time, one the visitor or a lookup
-// named, or one in known (the system prompt and the visitor's message:
-// opening hours, the transcript). Shown times come with a Book button for
-// their treatment if the model offered none.
+// answer uses the recorded lookup outcomes as the entire availability reply.
+// Clock text cannot validate the date, staff, or whether a slot is free.
 func (r *toolRun) answer(said []string, known string, tokens usage.Tokens, unmetered int) (Answer, error) {
-	trusted := map[string]bool{}
-	for _, c := range append(clockTimes(known), r.asked...) {
-		trusted[c] = true
-	}
-	for _, ft := range r.times {
-		for _, s := range ft.Slots {
-			trusted[s.Start.In(r.a.opts.Location).Format("15:04")] = true
+	var text string
+	if len(r.times) == 0 {
+		trusted := map[string]bool{}
+		for _, c := range clockTimes(known) {
+			trusted[c] = true
 		}
-	}
-	checked := make([]string, 0, len(said))
-	for _, t := range said {
-		if slices.ContainsFunc(clockTimes(t), func(c string) bool { return !trusted[c] }) {
-			continue
+		checked := make([]string, 0, len(said))
+		for _, t := range said {
+			if !slices.ContainsFunc(clockTimes(t), func(c string) bool { return !trusted[c] }) {
+				checked = append(checked, t)
+			}
 		}
-		checked = append(checked, t)
+		text = finalAnswer(checked)
 	}
-	text := finalAnswer(checked)
 	if text == "" && len(r.times) == 0 {
 		return Answer{Tokens: tokens, Unmetered: unmetered}, ErrNoAnswer
 	}
-	offers := slices.Clone(r.offers)
+	var offers []Offer
 	for _, ft := range r.times {
-		if len(offers) < maxOffers && !slices.ContainsFunc(offers, func(o Offer) bool { return o.ServiceID == ft.ServiceID }) {
-			offers = append(offers, Offer{ServiceID: ft.ServiceID, Service: ft.Service, StaffID: ft.StaffID, Staff: ft.Staff})
+		offers = append(offers, Offer{ServiceID: ft.ServiceID, Service: ft.Service, StaffID: ft.StaffID, Staff: ft.Staff})
+	}
+	for _, offer := range r.offers {
+		if len(offers) < maxOffers && !slices.Contains(offers, offer) {
+			offers = append(offers, offer)
 		}
 	}
 	return Answer{Text: text, Offers: offers, Times: r.times, Tokens: tokens, Unmetered: unmetered}, nil

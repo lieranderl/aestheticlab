@@ -188,7 +188,7 @@ func TestFindFreeSlotsAnswersFromHoursAndCalendars(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Text != "Zara is free at 10:00." {
+	if got.Text != "" {
 		t.Errorf("text = %q", got.Text)
 	}
 	second := m.requests[1]
@@ -475,8 +475,8 @@ func TestTextWrittenBeforeFreeTimesAreKnownIsDropped(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Text != "Zara is free on Monday at 10:00." {
-		t.Errorf("reply = %q, want only the answer written after the lookup", got.Text)
+	if got.Text != "" {
+		t.Errorf("reply = %q, want the structured lookup without model prose", got.Text)
 	}
 
 	empty := &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{Content: &genai.Content{Role: genai.RoleModel}, FinishReason: genai.FinishReasonStop}}}

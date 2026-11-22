@@ -91,7 +91,9 @@ type Answer struct {
 // worstRoundTokens bounds what one model call can be billed: a long prompt
 // (the salon, 20 turns of transcript, tool results) and the most output
 // and thinking.
-var worstRoundTokens = usage.Tokens{Prompt: 30_000, Output: maxOutputTokens + 3_000}
+const maxInputTokens = 30_000
+
+var worstRoundTokens = usage.Tokens{Prompt: maxInputTokens, Output: maxOutputTokens + 3_000}
 
 // WorstCaseTokens bounds what one reply can be billed: maxRounds model
 // calls at worstRoundTokens. The spending ledger holds its price before
@@ -171,10 +173,23 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 	// result (finalAnswer).
 	var said []string
 	for range maxRounds {
+		if model, ok := a.opts.Model.(interface {
+			checkInput(context.Context, []*genai.Content, *genai.GenerateContentConfig) error
+		}); ok {
+			if err := model.checkInput(ctx, contents, cfg); err != nil {
+				if len(run.times) > 0 {
+					return run.answer(said, "", tokens, unmetered)
+				}
+				return Answer{Tokens: tokens, Unmetered: unmetered}, err
+			}
+		}
 		resp, err := a.opts.Model.Generate(ctx, contents, cfg)
 		if err != nil {
 			if !rejected(err) {
 				tokens, unmetered = addTokens(tokens, worstRoundTokens), unmetered+1
+			}
+			if len(run.times) > 0 {
+				return run.answer(said, "", tokens, unmetered)
 			}
 			return Answer{Tokens: tokens, Unmetered: unmetered}, fmt.Errorf("model: %w", err)
 		}
@@ -383,10 +398,8 @@ type toolRun struct {
 	a      *Assistant
 	k      Knowledge
 	offers []Offer
-	// times are the free times to show (showTimes); asked the times of day
-	// the lookups were asked for, which the reply may name.
+	// times are the calendar outcomes to show.
 	times []FreeTimes
-	asked []string
 }
 
 func (r *toolRun) call(ctx context.Context, c *genai.FunctionCall) map[string]any {
@@ -435,6 +448,13 @@ func (r *toolRun) findFreeSlots(ctx context.Context, args map[string]any) map[st
 	if problem != "" {
 		return failure(problem)
 	}
+	shown := FreeTimes{ServiceID: s.ID, Service: s.Name, Failed: true}
+	if args["staff_id"] != nil && len(staff) == 1 {
+		shown.StaffID, shown.Staff = staff[0].ID, staff[0].Name
+	}
+	// Record every outcome, including validation errors and failed reads,
+	// so a refinement cannot leave its earlier slots in the reply.
+	defer func() { r.showTimes(shown) }()
 	if !r.a.opts.Finder.Enabled() {
 		return failure("free times cannot be checked online right now; offer the Book button so the visitor sees live times in the booking page")
 	}
@@ -459,7 +479,6 @@ func (r *toolRun) findFreeSlots(ctx context.Context, args map[string]any) map[st
 		first = today
 	}
 	window := [2]availability.Clock{0, 24 * 60}
-	var asked []string
 	for i, name := range []string{"from_time", "to_time"} {
 		if v, ok := args[name].(string); ok && v != "" {
 			c, okClock := availability.ParseClock(v)
@@ -467,8 +486,10 @@ func (r *toolRun) findFreeSlots(ctx context.Context, args map[string]any) map[st
 				return failure(name + " must be HH:MM")
 			}
 			window[i] = c
-			asked = append(asked, fmt.Sprintf("%02d:%02d", c/60, c%60))
 		}
+	}
+	if window[0] > window[1] {
+		return failure("from_time must be at or before to_time")
 	}
 	people := make([]availability.Person, 0, len(staff))
 	for _, m := range staff {
@@ -481,13 +502,10 @@ func (r *toolRun) findFreeSlots(ctx context.Context, args map[string]any) map[st
 	case err != nil:
 		return failure("the calendars did not answer; offer the Book button so the visitor sees live times in the booking page")
 	}
-	r.asked = append(r.asked, asked...)
+	shown.Unchecked = res.Unavailable
+	shown.Failed = len(res.Unavailable) == len(people)
 	picked, more := spreadSlots(res.Slots, loc, window)
 	slots := make([]map[string]any, 0, len(picked))
-	shown := FreeTimes{ServiceID: s.ID, Service: s.Name, Unchecked: res.Unavailable}
-	if _, chosen := args["staff_id"]; chosen && len(staff) == 1 {
-		shown.StaffID, shown.Staff = staff[0].ID, staff[0].Name
-	}
 	for _, sl := range picked {
 		t := sl.Start.In(loc)
 		slots = append(slots, map[string]any{
@@ -496,7 +514,6 @@ func (r *toolRun) findFreeSlots(ctx context.Context, args map[string]any) map[st
 		})
 		shown.Slots = append(shown.Slots, Slot{Start: t, StaffID: sl.StaffID, Staff: sl.Name})
 	}
-	r.showTimes(shown)
 	note := "These times are shown to the visitor under your reply, with a Book button: don't list them again. They look free now; the booking page confirms them."
 	if more {
 		note += " Only each person's first free time per day is listed; later times that day may be free too: call again with from_time to see them."

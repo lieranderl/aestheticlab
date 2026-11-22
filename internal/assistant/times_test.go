@@ -10,6 +10,7 @@ import (
 	"google.golang.org/genai"
 
 	"github.com/lieranderl/aestheticlab/internal/assistant"
+	"github.com/lieranderl/aestheticlab/internal/availability"
 )
 
 // toolSlots are the free times find_free_slots returned to the model in
@@ -54,7 +55,7 @@ func TestTheFreeTimesShownAreTheToolsResult(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Text != "Zara has a free time on Monday morning." {
+	if got.Text != "" {
 		t.Errorf("text = %q", got.Text)
 	}
 	if len(got.Times) != 1 {
@@ -112,14 +113,12 @@ func TestALaterLookupForATreatmentReplacesTheEarlierOne(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Times) != 0 || len(got.Offers) != 0 {
-		t.Errorf("after an empty lookup: times %+v, offers %+v; want none", got.Times, got.Offers)
+	if len(got.Times) != 1 || len(got.Times[0].Slots) != 0 || got.Text != "" {
+		t.Errorf("after an empty lookup: %+v; want only the verified empty result", got)
 	}
 }
 
-// The model's text may name a time only if it is one of the shown times,
-// one the visitor or the lookup named, or one in the studio's information
-// (its hours). Text with any other time is dropped: the times stand alone.
+// Availability prose is suppressed even if it repeats a time in the question.
 func TestAReplyNamingATimeNotFoundIsDropped(t *testing.T) {
 	k := knowledge()
 	k.Facts = append(k.Facts, "Monday – Saturday · 10:00 – 18:30 · By appointment only")
@@ -132,7 +131,7 @@ func TestAReplyNamingATimeNotFoundIsDropped(t *testing.T) {
 	}{
 		"a shown time": {
 			replies:  []*genai.GenerateContentResponse{call("find_free_slots", monday(nil)), text("Zara is free on Monday from 10:00.")},
-			want:     "Zara is free on Monday from 10:00.",
+			want:     "",
 			hasTimes: true,
 		},
 		"an invented time": {
@@ -140,13 +139,13 @@ func TestAReplyNamingATimeNotFoundIsDropped(t *testing.T) {
 			want:     "",
 			hasTimes: true,
 		},
-		"the hour asked and the studio's hours": {
+		"an affirmation of the hour asked after an empty lookup": {
 			replies: []*genai.GenerateContentResponse{
 				call("find_free_slots", monday(map[string]any{"from_time": "18:00"})),
-				text("Nothing starts at 18:00 on Monday: we're open 10:00 – 18:30."),
+				text("Yes, Monday at 18:00 is free."),
 			},
-			message: "Monday at 18:00?",
-			want:    "Nothing starts at 18:00 on Monday: we're open 10:00 – 18:30.",
+			message:  "Monday at 18:00?",
+			hasTimes: true,
 		},
 		"a time without a lookup": {
 			replies: []*genai.GenerateContentResponse{text("Zara is free tomorrow at 14:00.")},
@@ -191,7 +190,63 @@ func TestAPlainAvailabilityQuestionEndsWithTheTimes(t *testing.T) {
 		text("There are no free times that late."),
 	}}
 	got, err = newAssistant(m).Reply(context.Background(), knowledge(), nil, "Monday night?")
-	if err != nil || len(m.requests) != 2 || got.Text != "There are no free times that late." || got.Times != nil {
+	if err != nil || len(m.requests) != 2 || got.Text != "" || len(got.Times) != 1 || len(got.Times[0].Slots) != 0 {
 		t.Errorf("no times found: %+v, %v after %d model calls; want the model's explanation", got, err, len(m.requests))
+	}
+}
+
+func TestIndependentStaffLookupsKeepTheirOwnResults(t *testing.T) {
+	m := &scripted{replies: []*genai.GenerateContentResponse{
+		call("find_free_slots", monday(map[string]any{"staff_id": float64(642297)})),
+		call("find_free_slots", monday(map[string]any{"staff_id": float64(642296)})),
+		text("They are both free."),
+	}}
+	got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "Compare Zara and Rubina")
+	if err != nil || got.Text != "" || len(got.Times) != 2 ||
+		got.Times[0].Staff != "Zara" || len(got.Times[0].Slots) == 0 ||
+		got.Times[1].Staff != "Rubina" || len(got.Times[1].Slots) != 0 || !got.Times[1].Failed {
+		t.Fatalf("want Zara's slots and Rubina's unavailable result, got %+v, %v", got, err)
+	}
+}
+
+type timeoutOnSecondRead struct{ reads int }
+
+func (s *timeoutOnSecondRead) Busy(ctx context.Context, calendars []string, from, to time.Time) (map[string][]availability.Interval, error) {
+	s.reads++
+	if s.reads == 2 {
+		return nil, context.DeadlineExceeded
+	}
+	return (busySource{}).Busy(ctx, calendars, from, to)
+}
+
+func TestFailedRefinementReplacesEarlierSlots(t *testing.T) {
+	m := &scripted{replies: []*genai.GenerateContentResponse{
+		call("find_free_slots", monday(nil)),
+		call("find_free_slots", monday(map[string]any{"from_time": "17:00"})),
+		text("The earlier slots are still available."),
+	}}
+	source := &timeoutOnSecondRead{}
+	a := assistant.New(assistant.Options{Model: m, Location: brussels, Now: func() time.Time { return now },
+		Finder: availability.NewFinder(availability.FinderOptions{Source: source, Calendars: map[int64]string{642297: "zara"},
+			Location: brussels, Now: func() time.Time { return now }}),
+	})
+	got, err := a.Reply(context.Background(), knowledge(), nil, "Check another window")
+	if err != nil || got.Text != "" || len(got.Times) != 1 || len(got.Times[0].Slots) != 0 || !got.Times[0].Failed {
+		t.Fatalf("want only the failed refinement, got %+v, %v", got, err)
+	}
+}
+
+func TestAllStaffRefinementReplacesStaffSpecificResults(t *testing.T) {
+	m := &scripted{replies: []*genai.GenerateContentResponse{
+		call("find_free_slots", monday(map[string]any{"staff_id": float64(642297)})),
+		call("find_free_slots", monday(map[string]any{"staff_id": float64(642296)})),
+		call("find_free_slots", monday(map[string]any{"from_time": "23:00"})),
+		text("There are no free times that late."),
+	}}
+	got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "Check Zara and Rubina, then anyone after 23:00")
+	if err != nil || len(got.Times) != 1 || got.Times[0].StaffID != 0 ||
+		len(got.Times[0].Slots) != 0 || got.Times[0].Failed ||
+		len(got.Offers) != 1 || got.Offers[0].StaffID != 0 {
+		t.Fatalf("want only the empty all-staff result and its booking offer, got %+v, %v", got, err)
 	}
 }

@@ -2,11 +2,15 @@ package assistant
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 
+	"github.com/lieranderl/aestheticlab/internal/content"
 	"google.golang.org/genai"
 )
 
@@ -64,5 +68,69 @@ func TestWholeSentencesIgnoresDecimalPoints(t *testing.T) {
 		if got := wholeSentences(in); got != want {
 			t.Errorf("wholeSentences(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+type tokenTestTransport func(*http.Request) (*http.Response, error)
+
+func (f tokenTestTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func TestVertexChecksTheCompleteInputBeforeEachGeneration(t *testing.T) {
+	for _, followup := range []bool{false, true} {
+		name := "oversized initial prompt"
+		if followup {
+			name = "oversized follow-up with tool results"
+		}
+		t.Run(name, func(t *testing.T) {
+			var calls []string
+			transport := tokenTestTransport(func(req *http.Request) (*http.Response, error) {
+				var body struct {
+					SystemInstruction *genai.Content
+					Tools             []*genai.Tool
+					Contents          []*genai.Content
+				}
+				if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+					return nil, err
+				}
+				var payload string
+				if strings.HasSuffix(req.URL.Path, ":countTokens") {
+					calls = append(calls, "count")
+					if body.SystemInstruction == nil || len(body.Tools) == 0 {
+						t.Error("token count omitted the instructions or tool declarations")
+					}
+					payload = `{"totalTokens":31000}`
+					if followup && len(calls) == 1 {
+						payload = `{"totalTokens":2000}`
+					}
+					if followup && len(calls) == 3 && (len(body.Contents) != 3 || body.Contents[2].Parts[0].FunctionResponse == nil) {
+						t.Error("follow-up count omitted the tool response")
+					}
+				} else {
+					calls = append(calls, "generate")
+					payload = `{"candidates":[{"content":{"role":"model","parts":[{"functionCall":{"name":"offer_booking","args":{}}}]}}],"usageMetadata":{"promptTokenCount":2000}}`
+				}
+				return &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(strings.NewReader(payload))}, nil
+			})
+			ctx := context.Background()
+			cfg := &genai.ClientConfig{Backend: genai.BackendVertexAI, APIKey: "test",
+				HTTPClient: &http.Client{Transport: transport}, HTTPOptions: genai.HTTPOptions{BaseURL: "https://vertex.test"}}
+			client, err := genai.NewClient(ctx, cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			a := New(Options{Model: &Gemini{client: client, model: "gemini-test"}})
+			got, err := a.Reply(ctx, Knowledge{Content: &content.Localized{}}, nil, "Book")
+			wantCalls := "count"
+			var wantPrompt int64
+			if followup {
+				wantCalls, wantPrompt = "count,generate,count", 2000
+			}
+			if err == nil || !strings.Contains(err.Error(), "reserved token allowance") ||
+				strings.Join(calls, ",") != wantCalls || got.Tokens.Prompt != wantPrompt || got.Unmetered != 0 {
+				t.Fatalf("calls %v, answer %+v, err %v; want %s and %d billed input tokens", calls, got, err, wantCalls, wantPrompt)
+			}
+		})
 	}
 }

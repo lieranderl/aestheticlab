@@ -42,8 +42,9 @@ type ChatOffer struct {
 type ChatTimes struct {
 	Service string
 	// Staff is the person the lookup was for; empty for anyone.
-	Staff string
-	Slots []ChatSlot
+	Staff  string
+	Slots  []ChatSlot
+	Failed bool
 	// Unchecked are the people whose times could not be checked.
 	Unchecked []string
 }
@@ -79,6 +80,26 @@ func chatSlotStaff(t ChatTimes, s ChatSlot) string {
 	return " · " + s.Staff
 }
 
+// chatTimesStatus describes a search without any verified slots.
+func chatTimesStatus(ctx context.Context, t ChatTimes) string {
+	if t.Failed {
+		return tr(ctx, "We could not check availability. Please check the booking page.")
+	}
+	if len(t.Slots) == 0 {
+		return tr(ctx, "No free times found for that search.")
+	}
+	return ""
+}
+
+func chatHasSlots(times []ChatTimes) bool {
+	for _, t := range times {
+		if len(t.Slots) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // chatUnchecked says whose times could not be checked; empty if none.
 func chatUnchecked(ctx context.Context, t ChatTimes) string {
 	if len(t.Unchecked) == 0 {
@@ -104,12 +125,15 @@ func ChatTranscript(ctx context.Context, text string, times []ChatTimes) string 
 		for _, s := range t.Slots {
 			lines = append(lines, "• "+chatSlotWhen(ctx, s)+chatSlotStaff(t, s))
 		}
+		if status := chatTimesStatus(ctx, t); status != "" {
+			lines = append(lines, status)
+		}
 		if u := chatUnchecked(ctx, t); u != "" {
 			lines = append(lines, u)
 		}
 		parts = append(parts, strings.Join(lines, "\n"))
 	}
-	if len(times) > 0 {
+	if chatHasSlots(times) {
 		parts = append(parts, chatTimesNote(ctx))
 	}
 	return strings.Join(parts, "\n\n")
