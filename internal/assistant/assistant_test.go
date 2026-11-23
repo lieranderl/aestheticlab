@@ -90,6 +90,7 @@ func knowledge() assistant.Knowledge {
 			Notes:   []content.Note{{ID: "payment", Topic: "Payment", Text: "Cash or QR code transfer only; no card payments."}},
 		},
 		Facts:      []string{"Aesthetic Lab, Diestsestraat 174, 3000 Leuven, Belgium"},
+		Hours:      "Monday – Saturday · 10:00 – 18:30 · By appointment only",
 		FAQ:        []assistant.QA{{Question: "Can I cancel?", Answer: "Yes, 24 hours ahead."}},
 		CareNotes:  "[Laser]\nShave the area 24 hours before your session.",
 		Categories: map[string]string{"1": "Thorough, hygienic pedicures."},
@@ -360,7 +361,7 @@ func TestThePromptKeepsTimesAndCareAdviceHonest(t *testing.T) {
 		"where the visitor chooses the time: never say you booked, reserved or selected a time",
 		"mention the Book button only when you called offer_booking",
 		"never list dates or times yourself",
-		"only_times",
+		"last_lookup",
 		"how-we-do-it details only as the information below states them",
 		"If a note from the owner and a treatment's description disagree, follow the note",
 	} {

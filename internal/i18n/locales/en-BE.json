@@ -330,6 +330,7 @@
 			"times_failed": "We could not check availability. Please check the booking page.",
 			"times_with": "Free times for {{service}} with {{name}}",
 			"times_note": "These times look free now; the booking page confirms them.",
+			"times_unverified": "I can only confirm free times by checking the calendar. Tell me which treatment you'd like and I'll look them up.",
 			"times_unchecked": "{{names}} could not be checked: the booking page shows their times.",
 			"weekday_short": {
 				"mon": "Mon",

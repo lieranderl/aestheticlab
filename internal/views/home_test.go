@@ -178,6 +178,9 @@ func TestTheAssistantKnowsTheStudioAndEachCategory(t *testing.T) {
 	if !strings.Contains(facts, "Opened in 2024 with a simple promise") {
 		t.Errorf("facts lack the studio's story:\n%s", facts)
 	}
+	if hours, nlHours := views.AssistantHours(ctx), views.AssistantHours(i18n.WithLocale(context.Background(), i18n.NlBE)); hours != "Monday – Saturday · 10:00 – 18:00 · By appointment only" || nlHours == hours {
+		t.Errorf("hours = %q, Dutch %q", hours, nlHours)
+	}
 	about := views.AssistantCategories(ctx, loc)
 	if !strings.Contains(about["1"], "diode laser") || !strings.Contains(about["2"], "hygienic pedicure") {
 		t.Errorf("categories = %q", about)

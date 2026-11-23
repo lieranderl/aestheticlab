@@ -51,8 +51,12 @@ type QA struct{ Question, Answer string }
 type Knowledge struct {
 	Locale  i18n.Locale
 	Content *content.Localized
-	// Facts are the studio's fixed facts (address, hours, contact).
+	// Facts are the studio's fixed facts (address, contact).
 	Facts []string
+	// Hours are the published opening hours. The model writes hoursToken
+	// for them and the reply shows these, so a correct answer about the
+	// hours can't read as a free time.
+	Hours string
 	FAQ   []QA
 	// CareNotes is the care notes page as plain text (preparation and
 	// aftercare).
@@ -86,6 +90,10 @@ type Answer struct {
 	// the response, or a call cut off (timeout, the visitor leaving) after
 	// Vertex AI may have processed it.
 	Unmetered int
+	// Unverified says text was withheld for saying when an appointment is
+	// free without a calendar lookup: the chat says it can only confirm
+	// free times from the calendar.
+	Unverified bool
 }
 
 // worstRoundTokens bounds what one model call can be billed: a long prompt
@@ -164,7 +172,7 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		ThinkingConfig:    &genai.ThinkingConfig{ThinkingLevel: genai.ThinkingLevelLow},
 	}
 	contents := []*genai.Content{genai.NewContentFromText(visitor, genai.RoleUser)}
-	run := &toolRun{a: a, k: k}
+	run := &toolRun{a: a, k: k, asksWhen: asksWhen(history, message)}
 	var tokens usage.Tokens
 	unmetered := 0
 	// said is the visitor-facing text of the rounds so far: Gemini often
@@ -220,10 +228,11 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		// Gemini needs its own message back unchanged (thought signatures).
 		contents = append(contents, resp.Candidates[0].Content)
 		parts := make([]*genai.Part, 0, len(calls))
-		// A plain availability question is answered once the model asked
-		// for only_times and every call worked and found times: another
-		// round would only repeat them, so the reply ends here.
-		onlyTimes, worked := false, true
+		// The reply ends once the model marked a lookup as its last and every
+		// call worked and found times: the times (and the price, with
+		// include_price) are the whole answer, and the chat drops any prose
+		// a further round would write next to them.
+		last, worked := false, true
 		for _, c := range calls {
 			res := run.call(ctx, c)
 			_, failed := res["error"]
@@ -231,14 +240,14 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 			if failed || c.Name == toolFindFreeSlots && len(slots) == 0 {
 				worked = false
 			}
-			if c.Name == toolFindFreeSlots && c.Args["only_times"] == true {
-				onlyTimes = true
+			if c.Name == toolFindFreeSlots && c.Args["last_lookup"] == true {
+				last = true
 			}
 			part := genai.NewPartFromFunctionResponse(c.Name, res)
 			part.FunctionResponse.ID = c.ID
 			parts = append(parts, part)
 		}
-		if onlyTimes && worked {
+		if last && worked {
 			return run.answer(said, tokens, unmetered)
 		}
 		contents = append(contents, genai.NewContentFromParts(parts, genai.RoleUser))
@@ -400,6 +409,8 @@ type toolRun struct {
 	offers []Offer
 	// times are the calendar outcomes to show.
 	times []FreeTimes
+	// asksWhen says the visitor asked when they can come.
+	asksWhen bool
 }
 
 func (r *toolRun) call(ctx context.Context, c *genai.FunctionCall) map[string]any {

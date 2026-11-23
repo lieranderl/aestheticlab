@@ -95,8 +95,13 @@ var appointmentClaim = regexp.MustCompile(`(?i)\b(?:free slot|free times? (?:are
 // that also says when.
 var (
 	freeOrAvailable = regexp.MustCompile(`(?i)\b(?:is|are) (?:free|available)\b|\b(?:est|sont) (?:libres?|disponibles?)\b`)
-	when            = regexp.MustCompile(`(?i)\b(?:mon|tues|wednes|thurs|fri|satur|sun)day|\b(?:today|tomorrow|tonight|this week|next week|weekend|morning|afternoon|evening|at [0-9]|from [0-9])\b|\b(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|demain|aujourd'hui|matin|soir|semaine)\b|après-midi|\bà [0-9]`)
-	sentence        = regexp.MustCompile(`[.!?;\n]+`)
+	when            = regexp.MustCompile(`(?i)` +
+		`\b(?:mon|tues|wednes|thurs|fri|satur|sun)day|\b(?:today|tomorrow|tonight|this week|next week|weekend|morning|afternoon|evening|(?:at|from|after|before) [0-9])\b` +
+		`|\b(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|demain|aujourd'hui|matin|soir|semaine|week-end)\b|après-midi|\bà [0-9]` +
+		`|\b(?:maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag|vandaag|morgen|overmorgen|ochtend|voormiddag|middag|namiddag|avond|deze week|volgende week|om [0-9])` +
+		`|понедельник|вторник|среду|среда|четверг|пятниц|суббот|воскресень|сегодня|завтра|утром|утра|днём|днем|вечер|этой неделе|следующей неделе|выходн` +
+		`|понеділ|вівтор|середу|середа|четвер|п['’ʼ]?ятниц|субот|неділ|сьогодні|вранці|вдень|ввечері|цього тижня|наступного тижня|вихідн`)
+	sentence = regexp.MustCompile(`[.!?;\n]+`)
 )
 
 // claimsAvailability reports whether t says when an appointment is free.
@@ -109,20 +114,67 @@ func claimsAvailability(t string) bool {
 	})
 }
 
+// askedWhen are the visitor's words for free times beyond a day or a time.
+var askedWhen = regexp.MustCompile(`(?i)availab|\bfree (?:time|slot|day|spot)|\bslots?\b|\bwhen (?:can|could|are|is)\b` +
+	`|beschikba|\bvrije? (?:plek|tijd|moment)|\bwanneer\b` +
+	`|disponib|créneau|\blibres?\b|\bquand\b` +
+	`|свобод|окошк|окно|окна|когда` +
+	`|вільн|віконц|коли`)
+
+// asksWhen reports whether the visitor's new message, or the one before it
+// (they may name the treatment only once asked), asks when they can come.
+func asksWhen(history []Turn, message string) bool {
+	said := []string{message}
+	for _, t := range slices.Backward(history) {
+		if t.Role == RoleVisitor {
+			said = append(said, t.Text)
+			break
+		}
+	}
+	return slices.ContainsFunc(said, func(s string) bool {
+		return len(clockTimes(s)) > 0 || when.MatchString(s) || askedWhen.MatchString(s)
+	})
+}
+
+// openingWords tell a sentence about the studio's opening days and hours.
+var openingWords = regexp.MustCompile(`(?i)\b(?:open|opens|opened|closed?|opening hours|hours)\b|gesloten|openingsuren|openingstijden|ouvert|fermé|horaires|открыт|закрыт|работаем|часы работы|відчинен|зачинен|працюємо|години роботи`)
+
+// namesWhen reports whether t, asked when the visitor can come, names a
+// day or a part of the day other than in a sentence about opening hours:
+// without a lookup, whatever it says about that day is unchecked.
+func namesWhen(t string) bool {
+	return slices.ContainsFunc(sentence.Split(t, -1), func(s string) bool {
+		return when.MatchString(s) && !openingWords.MatchString(s) && !strings.Contains(s, hoursToken)
+	})
+}
+
+// hoursToken is what the model writes for the published opening hours.
+const hoursToken = "{opening_hours}"
+
 // answer uses the recorded lookup outcomes as the entire availability reply.
-// Published studio facts can be quoted verbatim, including opening hours.
+// Without a lookup, text that says when an appointment is free is withheld,
+// and the visitor told the chat confirms free times only from the calendar.
+// Published studio facts can be quoted verbatim; the opening hours are
+// filled in from the studio's data.
 func (r *toolRun) answer(said []string, tokens usage.Tokens, unmetered int) (Answer, error) {
 	var text string
+	unverified := false
 	if len(r.times) == 0 {
 		checked := make([]string, 0, len(said))
 		for _, t := range said {
-			if slices.Contains(r.k.Facts, t) || !claimsAvailability(t) {
+			switch {
+			case t == "":
+			case slices.Contains(r.k.Facts, t) || t == r.k.Hours:
+				checked = append(checked, t)
+			case claimsAvailability(t) || r.asksWhen && namesWhen(t):
+				unverified = true
+			default:
 				checked = append(checked, t)
 			}
 		}
-		text = finalAnswer(checked)
+		text = strings.ReplaceAll(finalAnswer(checked), hoursToken, r.k.Hours)
 	}
-	if text == "" && len(r.times) == 0 {
+	if text == "" && len(r.times) == 0 && !unverified {
 		return Answer{Tokens: tokens, Unmetered: unmetered}, ErrNoAnswer
 	}
 	var offers []Offer
@@ -134,5 +186,5 @@ func (r *toolRun) answer(said []string, tokens usage.Tokens, unmetered int) (Ans
 			offers = append(offers, offer)
 		}
 	}
-	return Answer{Text: text, Offers: offers, Times: r.times, Tokens: tokens, Unmetered: unmetered}, nil
+	return Answer{Text: text, Offers: offers, Times: r.times, Tokens: tokens, Unmetered: unmetered, Unverified: unverified}, nil
 }
