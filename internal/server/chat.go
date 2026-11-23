@@ -186,15 +186,21 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 		start := time.Now()
 		var answer assistant.Answer
 		var cost float64
+		var err error
 		outcome := "answered"
 		reason := limit.allow(clientIP(r), start)
+		// A choice's button asks for its treatment's free times, which are
+		// looked up without the model: it costs nothing, so it neither touches
+		// the spending ledger nor stops when a cap is reached. The rate limits
+		// still count it.
+		service, search, lookup := decodeLookup(sig.ChatLookup)
 		var budget error
 		var held usage.Reservation
 		// The deadline starts before the reservation, so a slow ledger can't
 		// hold the request past it either.
 		replyCtx, cancel := context.WithTimeout(ctx, replyTimeout)
 		defer cancel()
-		if reason == "" {
+		if reason == "" && !lookup {
 			// Held before every model call, atomically, at the most a reply can
 			// cost: no spending the ledger can't see, even from replies at once.
 			held, budget = spend.Reserve(replyCtx, price.Cost(assistant.WorstCaseTokens))
@@ -204,6 +210,9 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 			answer.Text, outcome = views.ChatTooFast(ctx), string(reason)
 		case reason == dailyLimit:
 			answer.Text, outcome = views.ChatDailyLimit(ctx), string(reason)
+		case lookup:
+			answer, err = a.Times(replyCtx, knowledge(ctx, replyCtx, l, store), service, search)
+			cancel()
 		case errors.Is(budget, usage.ErrMonthCap):
 			answer.Text, outcome = views.ChatUnavailable(ctx), "budget_month"
 			log.WarnContext(ctx, "chat_budget_reached", "cap", "month")
@@ -214,17 +223,7 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 			answer.Text, outcome = views.ChatUnavailable(ctx), "budget_unreadable"
 			log.ErrorContext(ctx, "chat_budget_unreadable", "error", budget.Error())
 		default:
-			loc := store.Content(replyCtx).In(l)
-			k := assistant.Knowledge{Locale: l, Content: loc, Facts: views.AssistantFacts(ctx, loc), Hours: views.AssistantHours(ctx), CareNotes: views.AssistantCareNotes(ctx), Categories: views.AssistantCategories(ctx, loc)}
-			for _, qa := range views.AssistantFAQ(ctx, loc) {
-				k.FAQ = append(k.FAQ, assistant.QA{Question: qa.Question, Answer: qa.Answer})
-			}
-			var err error
-			if service, search, ok := decodeLookup(sig.ChatLookup); ok {
-				answer, err = a.Times(replyCtx, k, service, search)
-			} else {
-				answer, err = a.Reply(replyCtx, k, history, message)
-			}
+			answer, err = a.Reply(replyCtx, knowledge(ctx, replyCtx, l, store), history, message)
 			cancel()
 			// A failed or abandoned reply is billed too: settle whatever it
 			// used, on a context the visitor leaving can't cancel. A model call
@@ -238,18 +237,18 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 				log.ErrorContext(ctx, "chat_spending_not_recorded", "eur", cost, "error", recErr.Error())
 			}
 			cancelSettle()
-			if err != nil {
-				outcome = "no_answer"
-				if !errors.Is(err, assistant.ErrNoAnswer) {
-					outcome = "failed"
-					log.ErrorContext(ctx, "chat_failed", "locale", string(l), "error", err.Error())
-				}
-				answer = assistant.Answer{Text: views.ChatUnavailable(ctx), Tokens: answer.Tokens, Unmetered: answer.Unmetered}
+		}
+		if err != nil {
+			outcome = "no_answer"
+			if !errors.Is(err, assistant.ErrNoAnswer) {
+				outcome = "failed"
+				log.ErrorContext(ctx, "chat_failed", "locale", string(l), "error", err.Error())
 			}
-			if answer.Unverified {
-				outcome = "unverified"
-				answer.Text = strings.TrimSpace(answer.Text + "\n\n" + views.ChatTimesUnverified(ctx))
-			}
+			answer = assistant.Answer{Text: views.ChatUnavailable(ctx), Tokens: answer.Tokens, Unmetered: answer.Unmetered}
+		}
+		if answer.Unverified {
+			outcome = "unverified"
+			answer.Text = strings.TrimSpace(answer.Text + "\n\n" + views.ChatTimesUnverified(ctx))
 		}
 		// A choice of treatments is asked in the chat's words, never the
 		// model's.
@@ -285,6 +284,17 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 			assistant.Turn{Role: assistant.RoleAssistant, Text: views.ChatTranscript(ctx, answer.Text, times, choices)})
 		_ = sse.MarshalAndPatchSignals(map[string]any{"chatHistory": history, "chatBusy": false})
 	}
+}
+
+// knowledge is what the assistant knows of the salon in locale l: ctx
+// carries the request's texts, replyCtx bounds reading the content.
+func knowledge(ctx, replyCtx context.Context, l i18n.Locale, store *content.Store) assistant.Knowledge {
+	loc := store.Content(replyCtx).In(l)
+	k := assistant.Knowledge{Locale: l, Content: loc, Facts: views.AssistantFacts(ctx, loc), Hours: views.AssistantHours(ctx), CareNotes: views.AssistantCareNotes(ctx), Categories: views.AssistantCategories(ctx, loc)}
+	for _, qa := range views.AssistantFAQ(ctx, loc) {
+		k.FAQ = append(k.FAQ, assistant.QA{Question: qa.Question, Answer: qa.Answer})
+	}
+	return k
 }
 
 // encodeLookup is the lookup a choice's button sends back: its treatment

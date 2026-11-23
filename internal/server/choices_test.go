@@ -12,6 +12,7 @@ import (
 	"github.com/lieranderl/aestheticlab/internal/assistant"
 	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/server"
+	"github.com/lieranderl/aestheticlab/internal/usage"
 )
 
 // choosing is a model that offers a choice of the two manicures, writing
@@ -111,5 +112,27 @@ func TestAChoicesButtonKeepsTheSearch(t *testing.T) {
 	body = html.UnescapeString(post(t, h, "/nl-BE/chat", `{"chatInput":"Wanneer kan ik Manicure + lak boeken?","chatLookup":"from_time=17%3A00&service_id=4887841&staff_id=642297"}`, nil).Body.String())
 	if w := "Vrije tijden voor Manicure + lak bij Zara"; !strings.Contains(body, w) {
 		t.Errorf("the reply lacks %q", w)
+	}
+}
+
+// A choice's button costs no model call, so it never touches the spending
+// ledger and still works once a cap is reached; the rate limits count it.
+func TestAChoicesButtonNeedsNoBudget(t *testing.T) {
+	spend := &spending{allow: usage.ErrMonthCap}
+	h := server.New(server.Config{Content: manicureContent(t), Assistant: assistant.New(assistant.Options{Model: &counting{}}), Spending: spend, ChatPrice: testPrice})
+	lookup := `{"chatInput":"When can I book Manicure+polish?","chatLookup":"service_id=4887841"}`
+	ip := map[string]string{"X-Forwarded-For": "203.0.113.9"}
+	if body := html.UnescapeString(post(t, h, "/en-BE/chat", lookup, ip).Body.String()); !strings.Contains(body, "Free times for Manicure+polish") {
+		t.Errorf("the lookup was refused at the cap:\n%s", body)
+	}
+	if len(spend.reserved) != 0 || len(spend.recorded) != 0 {
+		t.Errorf("the ledger was used: reserved %v, recorded %v", spend.reserved, spend.recorded)
+	}
+	var last string
+	for range 6 {
+		last = post(t, h, "/en-BE/chat", lookup, ip).Body.String()
+	}
+	if !strings.Contains(last, "too quickly") {
+		t.Errorf("the 7th lookup in a burst was answered:\n%s", last)
 	}
 }

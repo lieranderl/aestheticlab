@@ -160,12 +160,77 @@ func TestAFailingOrIncompleteSourceFallsBack(t *testing.T) {
 				}
 				return fail(ctx, n)
 			}
+			h.clock.advance(content.DefaultRetryAfter)
 			first := h.store.Content(context.Background())
 			h.clock.advance(content.DefaultTTL)
 			if got := h.store.Content(context.Background()); got != first || firstGroup(got) != "Last good" {
 				t.Errorf("stale content after a failed refresh = %q, want the last good content", firstGroup(got))
 			}
 		})
+	}
+}
+
+// A failing database is not read again on every request: a failed refresh
+// holds the next one off, longer with each failure in a row, and requests
+// meanwhile get the fallback at once. A good refresh ends the backoff.
+func TestAFailedRefreshHoldsOffTheNextOne(t *testing.T) {
+	var fail bool
+	src := &source{fetch: func(_ context.Context, n int) (content.Documents, error) {
+		if n == 1 {
+			return named("Good"), nil
+		}
+		if fail {
+			return content.Documents{}, errors.New("unavailable")
+		}
+		return named("Back"), nil
+	}}
+	h := newStore(src)
+	h.store.Content(context.Background())
+	fail = true
+	h.clock.advance(content.DefaultTTL)
+	h.store.Content(context.Background()) // fetch 2 fails
+
+	for _, step := range []struct {
+		wait    time.Duration
+		fetches int
+	}{
+		{0, 2},
+		{content.DefaultRetryAfter - time.Second, 2},
+		{time.Second, 3}, // fails again: the delay doubles
+		{content.DefaultRetryAfter, 3},
+		{content.DefaultRetryAfter, 4},
+		{3 * content.DefaultRetryAfter, 4},
+		{content.DefaultRetryAfter, 5},
+	} {
+		h.clock.advance(step.wait)
+		start := time.Now()
+		got := h.store.Content(context.Background())
+		if firstGroup(got) != "Good" {
+			t.Errorf("content = %q, want the last good content", firstGroup(got))
+		}
+		if n := src.count(); n != step.fetches {
+			t.Errorf("after %v: fetches = %d, want %d", step.wait, n, step.fetches)
+		}
+		if elapsed := time.Since(start); step.fetches == src.count() && elapsed > 500*time.Millisecond {
+			t.Errorf("waited %v while refreshes are held off", elapsed)
+		}
+	}
+	if !strings.Contains(h.logs.String(), `"retry_in_ms":240000`) {
+		t.Errorf("log lacks the fourth failure's delay: %s", h.logs)
+	}
+
+	fail = false
+	h.clock.advance(8 * content.DefaultRetryAfter)
+	if got := firstGroup(h.store.Content(context.Background())); got != "Back" {
+		t.Errorf("content = %q, want the refresh after the delay", got)
+	}
+	fail = true
+	h.clock.advance(content.DefaultTTL)
+	h.store.Content(context.Background())
+	h.clock.advance(content.DefaultRetryAfter)
+	h.store.Content(context.Background())
+	if n := src.count(); n != 8 {
+		t.Errorf("fetches = %d, want 8: a good refresh resets the delay", n)
 	}
 }
 

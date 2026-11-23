@@ -815,6 +815,8 @@ resource "google_monitoring_alert_policy" "unexpected_production_mutation" {
 # another use of Gemini in the project. The budget lives on the billing
 # account, which the IaC identities can reach only once the owner grants them
 # access there (infra/README.md); until billing_account_id is set it is skipped.
+# The Vertex AI spend cap, which does pause requests, is bootstrapped outside
+# OpenTofu: the provider can't express it (infra/README.md, Spending caps).
 data "google_project" "this" {
   project_id = var.project_id
 }
