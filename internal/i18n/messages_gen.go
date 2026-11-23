@@ -29,7 +29,7 @@ var messages = []string{
 	"Chat with our assistant",                    // app.chat.open
 	"Ask about treatments, prices or free times", // app.chat.placeholder
 	"Send",                                 // app.chat.send
-	"When is the next free time?",          // app.chat.suggest_free
+	"When can I book a manicure?",          // app.chat.suggest_book
 	"How does laser hair removal work?",    // app.chat.suggest_laser
 	"What do your treatments cost?",        // app.chat.suggest_prices
 	"Tell me about the studio",             // app.chat.suggest_studio
@@ -296,7 +296,7 @@ var translations = map[Locale]map[string]string{
 		"Chat with our assistant":                    "Chat met onze assistent",
 		"Ask about treatments, prices or free times": "Vraag naar behandelingen, prijzen of vrije tijden",
 		"Send":                                 "Versturen",
-		"When is the next free time?":          "Wanneer is er een vrij moment?",
+		"When can I book a manicure?":          "Wanneer kan ik een manicure boeken?",
 		"How does laser hair removal work?":    "Hoe werkt laserontharing?",
 		"What do your treatments cost?":        "Wat kosten jullie behandelingen?",
 		"Tell me about the studio":             "Vertel me over de studio",
@@ -560,7 +560,7 @@ var translations = map[Locale]map[string]string{
 		"Chat with our assistant":                    "Discuter avec notre assistant",
 		"Ask about treatments, prices or free times": "Soins, prix ou créneaux libres",
 		"Send":                                 "Envoyer",
-		"When is the next free time?":          "Quel est le prochain créneau libre ?",
+		"When can I book a manicure?":          "Quand puis-je réserver une manucure ?",
 		"How does laser hair removal work?":    "Comment fonctionne l’épilation laser ?",
 		"What do your treatments cost?":        "Combien coûtent vos soins ?",
 		"Tell me about the studio":             "Parlez-moi du studio",
@@ -824,7 +824,7 @@ var translations = map[Locale]map[string]string{
 		"Chat with our assistant":                    "Чат с нашим ассистентом",
 		"Ask about treatments, prices or free times": "Процедуры, цены или свободное время",
 		"Send":                                 "Отправить",
-		"When is the next free time?":          "Когда ближайшее свободное время?",
+		"When can I book a manicure?":          "Когда можно записаться на маникюр?",
 		"How does laser hair removal work?":    "Как проходит лазерная эпиляция?",
 		"What do your treatments cost?":        "Сколько стоят процедуры?",
 		"Tell me about the studio":             "Расскажите о студии",
@@ -1088,7 +1088,7 @@ var translations = map[Locale]map[string]string{
 		"Chat with our assistant":                    "Чат з нашим асистентом",
 		"Ask about treatments, prices or free times": "Процедури, ціни або вільний час",
 		"Send":                                 "Надіслати",
-		"When is the next free time?":          "Коли найближчий вільний час?",
+		"When can I book a manicure?":          "Коли можна записатися на манікюр?",
 		"How does laser hair removal work?":    "Як проходить лазерна епіляція?",
 		"What do your treatments cost?":        "Скільки коштують процедури?",
 		"Tell me about the studio":             "Розкажіть про студію",

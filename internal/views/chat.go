@@ -22,7 +22,7 @@ const chatSignals = `{chatOpen: false, chatInput: '', chatHistory: [], chatBusy:
 func chatSuggestions(ctx context.Context) []string {
 	return []string{
 		tr(ctx, "What do your treatments cost?"),
-		tr(ctx, "When is the next free time?"),
+		tr(ctx, "When can I book a manicure?"),
 		tr(ctx, "Tell me about the studio"),
 		tr(ctx, "How does laser hair removal work?"),
 	}

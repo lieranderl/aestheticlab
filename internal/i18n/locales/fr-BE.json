@@ -322,7 +322,7 @@
 			"daily_limit": "Vous avez atteint la limite de messages du jour pour l’assistant. Écrivez-nous sur Instagram ou par e-mail.",
 			"suggestions": "Questions suggérées",
 			"suggest_prices": "Combien coûtent vos soins ?",
-			"suggest_free": "Quel est le prochain créneau libre ?",
+			"suggest_book": "Quand puis-je réserver une manucure ?",
 			"suggest_studio": "Parlez-moi du studio",
 			"suggest_laser": "Comment fonctionne l’épilation laser ?",
 			"times": "Créneaux libres : {{service}}",
