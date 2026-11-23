@@ -256,51 +256,69 @@ func asksBack(t string, cat *catalog) bool {
 	return !slices.ContainsFunc(sentenceWithEnd.FindAllString(t, -1), func(s string) bool { return !checked(s, cat) })
 }
 
-// catalog is what the chat can name without a lookup: the treatments, as
-// the words of their names, and the staff, whom it can't.
-type catalog struct{ words, staff []string }
+// catalog is what the chat can name without a lookup: the treatments. A
+// clause lists them only if every word in it is a word of their names or
+// one that lists ("we offer", "or", "euros"): anything else may say one
+// can be had ("We can accommodate you for a pedicure").
+type catalog struct {
+	// kinds are the words that name a treatment; names, every word of the
+	// treatments' names.
+	kinds, names []string
+}
 
 // catalogStopWords are words of treatment names that say nothing of the
 // treatment: "Coating removal (other salon)".
 var catalogStopWords = []string{"other", "salon", "using", "with", "from", "short", "long", "extra", "full", "small", "zone", "front", "back", "upper", "lower", "only", "partial", "classic", "express", "male", "combo", "care"}
 
-// newCatalog is k's treatments and staff.
+// listingWords are the words, in the five languages, a list of treatments
+// and prices is written with, and nothing more.
+var listingWords = strings.Fields(`a an the we our offer offers have there are is here or and with plus for of at from between choose choice choices option options kind kinds type types several few two three four these following euro euros eur price prices costs cost minutes min
+	we wij hebben bieden aan er zijn is hier een de het of en onze met voor van keuze opties soorten verschillende euro prijs kost minuten
+	nous proposons avons voici il y a plusieurs un une la le les l d des de du ou et avec à pour entre choix options types sortes euro euros prix coûte minutes
+	у нас есть мы предлагаем вот несколько вариант варианта вариантов варианты вид вида видов виды или и с со за от на выбор евро цена стоит минут
+	ми пропонуємо ось є кілька варіант варіанта варіантів варіанти вид види видів або чи і й та з із за від на вибір євро ціна коштує хвилин`)
+
+// newCatalog is k's treatments.
 func newCatalog(k Knowledge) *catalog {
-	var names []string
-	for _, g := range k.Content.ServiceGroups {
-		names = append(names, g.Name, g.NameEN)
-	}
-	for _, s := range k.Content.Services {
-		names = append(names, s.Name, s.NameEN)
-	}
-	cat := &catalog{staff: firstNames(k.Content.Staff)}
-	for _, n := range names {
-		for _, w := range strings.FieldsFunc(strings.ToLower(n), func(r rune) bool { return !unicode.IsLetter(r) }) {
-			if utf8.RuneCountInString(w) >= 4 && !slices.Contains(catalogStopWords, w) && !slices.Contains(cat.words, w) {
-				cat.words = append(cat.words, w)
+	cat := &catalog{}
+	add := func(name string) {
+		for _, w := range letterWords(name) {
+			if !slices.Contains(cat.names, w) {
+				cat.names = append(cat.names, w)
+			}
+			if utf8.RuneCountInString(w) >= 4 && !slices.Contains(catalogStopWords, w) && !slices.Contains(cat.kinds, w) {
+				cat.kinds = append(cat.kinds, w)
 			}
 		}
+	}
+	for _, g := range k.Content.ServiceGroups {
+		add(g.Name)
+		add(g.NameEN)
+	}
+	for _, s := range k.Content.Services {
+		add(s.Name)
+		add(s.NameEN)
 	}
 	return cat
 }
 
-// confirms are the words that say a treatment can be had, or can't: a
-// clause with one in it is no list of options.
-var confirms = regexp.MustCompile(`(?i)\b(?:yes|sure|of course|okay|ok|fine|works?|possible|fits?|suits?|no problem|welcome|room|space|time|slots?|spots?|fully|booked|open|closed)\b|\bcan (?:come|fit|see|do|take|book|squeeze)|\b(?:have|has|got) (?:time|room|space)` +
-	`|\b(?:ja|lukt|past|mogelijk|kan|plaats|plek|tijd|vrij|volzet|volgeboekt|open|gesloten)\b` +
-	`|\b(?:oui|possible|d'accord|bien sûr|peut|peux|place|temps|libre|complet|ouvert|fermé)` +
-	`|(?:^|[^\p{L}])(?:да|так)(?:[^\p{L}]|$)|конечно|можно|могу|может|подходит|получится|место|время|окн|свобод|занят|звісно|можна|може|підходить|вийде|місце|час|вікн|вільн|зайнят`)
+// letterWords are s's words, lower case, without digits or punctuation.
+func letterWords(s string) []string {
+	return strings.FieldsFunc(strings.ToLower(s), func(r rune) bool { return !unicode.IsLetter(r) })
+}
 
 // lists reports whether clause c only names treatments and their prices:
-// no day, time or person, and nothing that says one can be had.
+// a treatment, and no word but those of treatment names and listing, nor
+// a time of day.
 func (cat *catalog) lists(c string) bool {
-	words := strings.FieldsFunc(strings.ToLower(c), func(r rune) bool { return !unicode.IsLetter(r) })
-	names := slices.ContainsFunc(words, func(w string) bool {
-		return slices.ContainsFunc(cat.words, func(t string) bool { return strings.HasPrefix(w, t) })
-	})
-	return names &&
-		!when.MatchString(c) && len(clockTimes(c)) == 0 && !namesStaff(c, cat.staff) &&
-		!freeOrAvailable.MatchString(c) && !appointmentClaim.MatchString(c) && !confirms.MatchString(c)
+	kind := func(w string) bool {
+		return slices.ContainsFunc(cat.kinds, func(k string) bool { return strings.HasPrefix(w, k) })
+	}
+	words := letterWords(c)
+	return slices.ContainsFunc(words, kind) && len(clockTimes(c)) == 0 &&
+		!slices.ContainsFunc(words, func(w string) bool {
+			return !kind(w) && !slices.Contains(cat.names, w) && !slices.Contains(listingWords, w)
+		})
 }
 
 // hoursToken is what the model writes for the published opening hours.
