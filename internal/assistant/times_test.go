@@ -203,6 +203,7 @@ func TestAReplyNamingATimeNotFoundIsDropped(t *testing.T) {
 // Questions about something else keep their answer.
 func TestAvailabilityIsConfirmedOnlyByALookup(t *testing.T) {
 	asked := []assistant.Turn{{Role: assistant.RoleVisitor, Text: "Can I come tomorrow afternoon?"}, {Role: assistant.RoleAssistant, Text: "Which treatment would you like?"}}
+	comeAsked := []assistant.Turn{{Role: assistant.RoleVisitor, Text: "Can I come tomorrow?"}, {Role: assistant.RoleAssistant, Text: "Which treatment would you like?"}}
 	for name, tc := range map[string]struct {
 		history []assistant.Turn
 		message string
@@ -214,8 +215,33 @@ func TestAvailabilityIsConfirmedOnlyByALookup(t *testing.T) {
 		"in Dutch":                   {message: "Kan ik morgenmiddag komen?", reply: "Morgenmiddag past bij Zara."},
 		"in Russian":                 {message: "Можно прийти завтра?", reply: "Зара может принять вас завтра."},
 		"in Ukrainian":               {message: "Чи є вільний час у п'ятницю?", reply: "У п'ятницю Зара може вас прийняти."},
+		"a yes without a day":        {message: "Can I come tomorrow with Zara?", reply: "Yes, that works for Zara."},
+		"an open appointment":        {message: "Can I come tomorrow with Zara?", reply: "Zara has an open appointment tomorrow."},
+		"a person asked for a day":   {message: "Is Rubina in on Friday?", reply: "Yes, she is."},
+		"a no without a lookup":      {message: "Kan ik morgen langskomen?", reply: "Helaas, Zara is volzet."},
+		"a treatment for a day":      {message: "Pedicure tomorrow?", reply: "Tomorrow afternoon works for Zara."},
+		"a treatment asked when":     {message: "When can I get a pedicure?", reply: "Tomorrow afternoon works for Zara."},
+		"an opening and a claim":     {message: "Can I come tomorrow?", reply: "We're open tomorrow and Zara can fit you in."},
+		"a yes in a question":        {message: "Can I come tomorrow?", reply: "That works, shall I show you the Book button?"},
+		"a question back":            {message: "Can I come tomorrow?", reply: "Which treatment would you like?", want: "Which treatment would you like?"},
+		"a question back on the day": {message: "Can I come tomorrow?", reply: "What treatment would you like tomorrow?", want: "What treatment would you like tomorrow?"},
+		"a two-part question back":   {message: "Can I come tomorrow?", reply: "Which treatment, and with whom?", want: "Which treatment, and with whom?"},
+		"a new question after":       {history: comeAsked, message: "How much is a pedicure?", reply: "A pedicure costs 70 euros.", want: "A pedicure costs 70 euros."},
+		"anything on a day":          {message: "Anything tomorrow?", reply: "Yes, Zara can fit you in."},
+		"a follow-up question":       {history: comeAsked, message: "With Zara?", reply: "Yes, Zara can see you."},
+		"a yes to a treatment ask":   {message: "When can I get a pedicure?", reply: "Yes, any time."},
+		"tonight in Dutch":           {message: "Kan ik vanavond langskomen?", reply: "Ja, dat lukt."},
+		"aftercare without after":    {message: "Can I wear makeup tonight?", reply: "Wait 24 hours before wearing makeup.", want: "Wait 24 hours before wearing makeup."},
+		"redness by a day":           {message: "Will the redness be gone tomorrow?", reply: "Redness usually fades within a day.", want: "Redness usually fades within a day."},
+		"aftercare in Dutch":         {message: "Mag ik vanavond douchen?", reply: "Wacht 24 uur met douchen.", want: "Wacht 24 uur met douchen."},
+		"aftercare of a treatment":   {message: "Can I apply the oil in the evening after lamination?", reply: "Apply the oil every evening.", want: "Apply the oil every evening."},
 		"a closed day":               {message: "Are you open on Sunday?", reply: "We're closed on Sundays.", want: "We're closed on Sundays."},
+		"a closed day asked to come": {message: "Can I come on Sunday?", reply: "We're closed on Sundays.", want: "We're closed on Sundays."},
 		"aftercare in the evening":   {message: "How do I care for my brows?", reply: "Apply the oil every evening.", want: "Apply the oil every evening."},
+		"aftercare asked for a time": {message: "Can I apply the oil in the evening?", reply: "Apply the oil every evening.", want: "Apply the oil every evening."},
+		"aftercare asked when":       {message: "When will the redness come down?", reply: "Redness usually fades by the next morning.", want: "Redness usually fades by the next morning."},
+		"aftercare in French":        {message: "Quand appliquer l'huile ?", reply: "Appliquez l'huile chaque soir.", want: "Appliquez l'huile chaque soir."},
+		"aftercare in Russian":       {message: "Когда наносить масло?", reply: "Наносите масло каждый вечер.", want: "Наносите масло каждый вечер."},
 		"a treatment without a when": {message: "Is there a free slot for a pedicure?", reply: "Pedicure costs 70 euros.", want: "Pedicure costs 70 euros."},
 	} {
 		m := &scripted{replies: []*genai.GenerateContentResponse{text(tc.reply)}}

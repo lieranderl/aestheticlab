@@ -172,7 +172,8 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		ThinkingConfig:    &genai.ThinkingConfig{ThinkingLevel: genai.ThinkingLevelLow},
 	}
 	contents := []*genai.Content{genai.NewContentFromText(visitor, genai.RoleUser)}
-	run := &toolRun{a: a, k: k, asksWhen: asksWhen(history, message)}
+	run := &toolRun{a: a, k: k}
+	run.asksWhen, run.asksToCome = asksWhen(history, message, firstNames(k.Content.Staff))
 	var tokens usage.Tokens
 	unmetered := 0
 	// said is the visitor-facing text of the rounds so far: Gemini often
@@ -409,8 +410,9 @@ type toolRun struct {
 	offers []Offer
 	// times are the calendar outcomes to show.
 	times []FreeTimes
-	// asksWhen says the visitor asked when they can come.
-	asksWhen bool
+	// asksWhen says the visitor asked for free times; asksToCome, that
+	// they asked to come at a day or time.
+	asksWhen, asksToCome bool
 }
 
 func (r *toolRun) call(ctx context.Context, c *genai.FunctionCall) map[string]any {
