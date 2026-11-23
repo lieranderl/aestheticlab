@@ -185,7 +185,7 @@ variable "firestore_read_alert_per_hour" {
 variable "chat_environments" {
   description = "Environments where the chat assistant runs (CHAT_ENABLED). Their runtime accounts may call Gemini on Vertex AI (the custom aestheticLabGeminiCaller role)."
   type        = set(string)
-  default     = ["staging"]
+  default     = ["staging", "production"]
 
   validation {
     condition     = alltrue([for name in var.chat_environments : contains(["staging", "production"], name)])

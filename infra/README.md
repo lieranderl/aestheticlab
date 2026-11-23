@@ -62,7 +62,7 @@ After both environment-scoped deployers have completed a successful deployment:
 
 ## Chat assistant
 
-`chat_environments` (default `["staging"]`) sets `CHAT_ENABLED` and grants those runtime accounts the custom role `aestheticLabGeminiCaller`, which holds only `aiplatform.endpoints.predict`: the permission Google checks for prompt requests (`generateContent`) to Gemini on Vertex AI. Not `roles/aiplatform.user`, which would let the public runtime manage every Vertex AI resource in the project. `chat_model` and `chat_location` (`eu`) choose the model and keep processing in the EU.
+`chat_environments` (default `["staging", "production"]`) sets `CHAT_ENABLED` and grants those runtime accounts the custom role `aestheticLabGeminiCaller`, which holds only `aiplatform.endpoints.predict`: the permission Google checks for prompt requests (`generateContent`) to Gemini on Vertex AI. Not `roles/aiplatform.user`, which would let the public runtime manage every Vertex AI resource in the project. `chat_model` and `chat_location` (`eu`) choose the model and keep processing in the EU.
 
 The infrastructure deployer holds `roles/iam.roleAdmin` to manage that role. The apply that introduces it grants the role to the deployer first; if IAM hasn't propagated yet, creating the custom role fails with a 403 on `iam.roles.create` and the runtime keeps its old binding (the new one is created before the old one is removed). Re-run the infrastructure workflow to finish.
 
