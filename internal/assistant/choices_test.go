@@ -121,3 +121,27 @@ func TestThePromptOffersAChoiceOfTreatments(t *testing.T) {
 		t.Error("the prompt doesn't say when to call choose_treatment")
 	}
 }
+
+// A choice's button looks up its own treatment, without the model: the
+// times shown are always that treatment's, whatever its name in the
+// visitor's language.
+func TestAChoicesButtonLooksUpItsOwnTreatment(t *testing.T) {
+	m := &scripted{}
+	a := newAssistant(m)
+	got, err := a.Times(context.Background(), withManicures(knowledge()), "9001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Times) != 1 || got.Times[0].ServiceID != "9001" || got.Times[0].Service != "Manicure+polish" {
+		t.Errorf("times = %+v, want Manicure+polish's", got.Times)
+	}
+	if len(got.Offers) != 1 || got.Offers[0].ServiceID != "9001" {
+		t.Errorf("offers = %+v, want a Book button for Manicure+polish", got.Offers)
+	}
+	if len(m.requests) != 0 {
+		t.Errorf("%d model calls, want none", len(m.requests))
+	}
+	if _, err := a.Times(context.Background(), withManicures(knowledge()), "nope"); err == nil {
+		t.Error("an unknown treatment gave an answer")
+	}
+}

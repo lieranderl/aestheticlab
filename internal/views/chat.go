@@ -15,8 +15,9 @@ func WithChat(ctx context.Context) context.Context { return context.WithValue(ct
 func chatEnabled(ctx context.Context) bool { on, _ := ctx.Value(chatKey{}).(bool); return on }
 
 // chatSignals are the chat's own signals: the panel is open, the input,
-// the visible transcript the server reads back, and a reply is pending.
-const chatSignals = `{chatOpen: false, chatInput: '', chatHistory: [], chatBusy: false}`
+// the treatment a choice's button asks for, the visible transcript the
+// server reads back, and a reply is pending.
+const chatSignals = `{chatOpen: false, chatInput: '', chatService: '', chatHistory: [], chatBusy: false}`
 
 // chatSuggestions are the common questions the empty chat offers.
 func chatSuggestions(ctx context.Context) []string {

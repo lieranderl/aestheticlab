@@ -38,7 +38,10 @@ const (
 
 // chatSignals are the signals a chat request carries (views.chatSignals).
 type chatSignals struct {
-	ChatInput   string           `json:"chatInput"`
+	ChatInput string `json:"chatInput"`
+	// ChatService is the treatment a choice's button asks for: its free
+	// times are looked up directly, never by the model.
+	ChatService string           `json:"chatService"`
 	ChatHistory []assistant.Turn `json:"chatHistory"`
 }
 
@@ -176,7 +179,7 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 		history := cleanHistory(sig.ChatHistory)
 		n := len(history)
 		_ = sse.PatchElementTempl(views.ChatMessage(true, message, nil, nil, nil, n), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
-		_ = sse.MarshalAndPatchSignals(map[string]any{"chatInput": "", "chatBusy": true})
+		_ = sse.MarshalAndPatchSignals(map[string]any{"chatInput": "", "chatService": "", "chatBusy": true})
 
 		start := time.Now()
 		var answer assistant.Answer
@@ -215,7 +218,11 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 				k.FAQ = append(k.FAQ, assistant.QA{Question: qa.Question, Answer: qa.Answer})
 			}
 			var err error
-			answer, err = a.Reply(replyCtx, k, history, message)
+			if service := strings.TrimSpace(sig.ChatService); service != "" {
+				answer, err = a.Times(replyCtx, k, service)
+			} else {
+				answer, err = a.Reply(replyCtx, k, history, message)
+			}
 			cancel()
 			// A failed or abandoned reply is billed too: settle whatever it
 			// used, on a context the visitor leaving can't cancel. A model call

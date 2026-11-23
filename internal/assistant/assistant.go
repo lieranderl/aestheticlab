@@ -607,6 +607,15 @@ func (r *toolRun) offerBooking(args map[string]any) map[string]any {
 	return map[string]any{"ok": true, "note": "A Book button for " + cmp.Or(o.Staff, "any available person") + " is shown under your reply; don't write a link."}
 }
 
+// Times looks up a treatment's free times for the coming week, without the
+// model: what a choice's button asks for, so the times shown are always
+// that treatment's, whatever it is called in the visitor's language.
+func (a *Assistant) Times(ctx context.Context, k Knowledge, serviceID string) (Answer, error) {
+	run := &toolRun{a: a, k: k}
+	run.findFreeSlots(ctx, map[string]any{"service_id": serviceID})
+	return run.answer(nil, usage.Tokens{}, 0)
+}
+
 // chooseTreatment offers the visitor the treatments in service_ids that can
 // be booked online, each once and at most maxChoices: the chat asks which
 // one with a button for each.
