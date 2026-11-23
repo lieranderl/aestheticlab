@@ -116,12 +116,13 @@ func claimsAvailability(t string) bool {
 }
 
 // The visitor asks when they can come in two ways. Asking for free times
-// (a free slot, a time of day) leaves any day the reply names unchecked.
-// Asking to come at a day or time, or for a person then, leaves the chat
-// nothing to say without a lookup but a question back or the studio's
-// opening hours: a yes, a no or "that works" is unchecked whatever words
-// it uses. A day alone ("Can I apply the oil in the evening?") asks
-// neither.
+// (a free slot, a time of day, a treatment on a day) leaves any day the
+// reply names unchecked. Asking to come at a day or time, or for a person
+// then, leaves the chat nothing to say without a lookup but a question
+// back or the studio's opening hours: a yes, a no or "that works" is
+// unchecked whatever words it uses. A day alone ("Can I apply the oil in
+// the evening?"), or with a treatment the question is about the aftermath
+// of, asks neither.
 var (
 	freeTimeWords = regexp.MustCompile(`(?i)availab|\bfree (?:time|slot|day|spot)|\bslots?\b|\b(?:are you|anyone|someone) (?:free|available)\b` +
 		`|beschikba|\bvrije? (?:plek|tijd|moment)` +
@@ -133,6 +134,13 @@ var (
 		`|\bvenir\b|\bviens\b|réserv|rendez-vous|\brdv\b` +
 		`|прийти|приду|прийду|зайти|запис|на при[её]м|бронир|к вам` +
 		`|на прийом|заброн|до вас`)
+	// treatmentWords name the studio's kinds of treatment, never a body
+	// part: "my armpits tomorrow" is aftercare as often as a booking.
+	treatmentWords = regexp.MustCompile(`(?i)pedicur|manicur|pédicur|manucur|педикюр|маникюр|манікюр|\blaser|лазер` +
+		`|épil|epil|эпил|епіл|depil|dépil|депил|депіл|ontharing|\bwax|\bcire\b|\bépilation` +
+		`|lamin|ламин|ламін|lash ?lift|wimperlift|rehaussement|лифтинг|ліфтинг`)
+	// afterWords ask about the time after a treatment.
+	afterWords = regexp.MustCompile(`(?i)\bafter\b|\bna (?:de|het|mijn|een)\b|\bnadat\b|\baprès(?:[^-]|$)|после|після`)
 	// whenAsked are the question words for when.
 	whenAsked = regexp.MustCompile(`(?i)\bwhen\b|\bwanneer\b|\bquand\b|когда|коли`)
 )
@@ -142,8 +150,10 @@ var (
 func asked(s string, staff []string) (times, come bool) {
 	clocked := len(clockTimes(s)) > 0
 	free := freeTimeWords.MatchString(s)
-	come = (clocked || when.MatchString(s) || whenAsked.MatchString(s)) && (free || comeWords.MatchString(s) || namesStaff(s, staff))
-	return come || free || clocked, come
+	at := clocked || when.MatchString(s) || whenAsked.MatchString(s)
+	come = at && (free || comeWords.MatchString(s) || namesStaff(s, staff))
+	treatment := at && treatmentWords.MatchString(s) && !afterWords.MatchString(s)
+	return come || free || clocked || treatment, come
 }
 
 // namesStaff reports whether s names one of staff, as a whole word.
@@ -152,22 +162,27 @@ func namesStaff(s string, staff []string) bool {
 	return slices.ContainsFunc(staff, func(n string) bool { return slices.Contains(words, strings.ToLower(n)) })
 }
 
-// asksWhen reports whether the visitor's new message, or the one before it
-// (they may name the treatment only once asked), asks for free times, and
-// whether it asks to come at a day or time.
+// asksWhen reports whether the visitor asks for free times, and whether
+// they ask to come at a day or time. The message before the new one counts
+// too, as they may name the treatment only once asked; a new question
+// ("How much is a pedicure?") is no answer to that, so the earlier ask to
+// come then leaves only the days the reply names unchecked.
 func asksWhen(history []Turn, message string, staff []string) (times, come bool) {
-	said := []string{message}
+	times, come = asked(message, staff)
 	for _, t := range slices.Backward(history) {
 		if t.Role == RoleVisitor {
-			said = append(said, t.Text)
+			before, cameBefore := asked(t.Text, staff)
+			times = times || before
+			come = come || cameBefore && !isQuestion(message)
 			break
 		}
 	}
-	for _, s := range said {
-		t, c := asked(s, staff)
-		times, come = times || t, come || c
-	}
 	return times, come
+}
+
+// isQuestion reports whether s asks something.
+func isQuestion(s string) bool {
+	return strings.Contains(s, "?") || questionStart.MatchString(s)
 }
 
 // firstNames are the team's first names.
@@ -181,7 +196,7 @@ func firstNames(staff []content.Member) []string {
 	return names
 }
 
-// openingWords tell a sentence about the studio's opening days and hours:
+// openingWords tell a clause about the studio's opening days and hours:
 // the studio as its subject, never a person or an "open appointment".
 var openingWords = regexp.MustCompile(`(?i)\b(?:we(?:'|’)re|we are|the studio is|the salon is) (?:open|closed)\b|\bopening (?:hours|days)\b|\bour hours\b` +
 	`|\b(?:we zijn|wij zijn|de studio is|het salon is) (?:open|gesloten)\b|openingsuren|openingstijden` +
@@ -189,41 +204,52 @@ var openingWords = regexp.MustCompile(`(?i)\b(?:we(?:'|’)re|we are|the studio 
 	`|мы (?:открыты|закрыты|работаем|не работаем)|студия (?:открыта|закрыта|работает|не работает)|часы работы` +
 	`|ми (?:відчинені|зачинені|працюємо|не працюємо)|студія (?:відчинена|зачинена|працює|не працює)|години роботи`)
 
-// aboutOpening reports whether s is about the studio's opening hours.
-func aboutOpening(s string) bool {
-	return openingWords.MatchString(s) || strings.Contains(s, hoursToken)
-}
-
-// namesWhen reports whether t, asked when the visitor can come, names a
-// day or a part of the day other than in a sentence about opening hours:
-// without a lookup, whatever it says about that day is unchecked.
-func namesWhen(t string) bool {
-	return slices.ContainsFunc(sentence.Split(t, -1), func(s string) bool {
-		return when.MatchString(s) && !aboutOpening(s)
-	})
-}
-
 var (
 	// sentenceWithEnd is a sentence with the marks that end it.
 	sentenceWithEnd = regexp.MustCompile(`[^.!?;\n]+[.!?;\n]*`)
-	clause          = regexp.MustCompile(`,`)
+	// clause splits a sentence at commas and the words that join clauses:
+	// "We're open tomorrow and Zara can fit you in" is two claims.
+	clause = regexp.MustCompile(`(?i),|\s+(?:and|but|so|then|plus|en|maar|dus|want|et|mais|donc|alors|и|но|а|і|й|та|але|тож)\s+`)
+	// questionStart is a clause that starts by asking: "Which treatment,
+	// and with whom?".
+	questionStart = regexp.MustCompile(`(?i)^\s*(?:what|which|who|whom|whose|when|where|why|how|would|could|can|do|does|did|is|are|shall|should|will|may|with whom` +
+		`|wat|welke?|wie|wanneer|waar|waarom|hoe|wilt?|zou|kan|kunt|heb|hebt|bent|met wie` +
+		`|quel(?:le)?s?|qui|que|qu['’]|quand|où|pourquoi|comment|est-ce|voulez|souhaitez|préférez|avec qui` +
+		`|что|как(?:ой|ую|ая|ое|ие)?|кто|когда|где|почему|хотите|с кем` +
+		`|що|як(?:ий|у|а|е|і)?|хто|коли|де|чому|бажаєте|хочете|з ким)(?:[^\p{L}]|$)`)
 )
+
+// checked reports whether sentence s says nothing without a lookup: each
+// clause is about the opening hours or, in a question, asks.
+func checked(s string) bool {
+	question := strings.Contains(s, "?")
+	for _, c := range clause.Split(s, -1) {
+		switch {
+		case strings.IndexFunc(c, unicode.IsLetter) < 0:
+		case openingWords.MatchString(c) || strings.Contains(c, hoursToken):
+		case question && (strings.Contains(c, "?") || questionStart.MatchString(c)):
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// namesWhen reports whether t, asked when the visitor can come, names a
+// day or a part of the day in a sentence that says more than the opening
+// hours or a question back: without a lookup, whatever it says about that
+// day is unchecked.
+func namesWhen(t string) bool {
+	return slices.ContainsFunc(sentenceWithEnd.FindAllString(t, -1), func(s string) bool {
+		return when.MatchString(s) && !checked(s)
+	})
+}
 
 // asksBack reports whether t only asks the visitor something or tells them
 // the studio's opening hours, clause by clause ("Yes, we're open" says
 // yes): all the chat can say, without a lookup, to a visitor asking to come.
 func asksBack(t string) bool {
-	for _, s := range sentenceWithEnd.FindAllString(t, -1) {
-		if strings.Contains(s, "?") {
-			continue
-		}
-		for _, c := range clause.Split(s, -1) {
-			if strings.IndexFunc(c, unicode.IsLetter) >= 0 && !aboutOpening(c) {
-				return false
-			}
-		}
-	}
-	return true
+	return !slices.ContainsFunc(sentenceWithEnd.FindAllString(t, -1), func(s string) bool { return !checked(s) })
 }
 
 // hoursToken is what the model writes for the published opening hours.

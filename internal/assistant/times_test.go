@@ -203,6 +203,7 @@ func TestAReplyNamingATimeNotFoundIsDropped(t *testing.T) {
 // Questions about something else keep their answer.
 func TestAvailabilityIsConfirmedOnlyByALookup(t *testing.T) {
 	asked := []assistant.Turn{{Role: assistant.RoleVisitor, Text: "Can I come tomorrow afternoon?"}, {Role: assistant.RoleAssistant, Text: "Which treatment would you like?"}}
+	comeAsked := []assistant.Turn{{Role: assistant.RoleVisitor, Text: "Can I come tomorrow?"}, {Role: assistant.RoleAssistant, Text: "Which treatment would you like?"}}
 	for name, tc := range map[string]struct {
 		history []assistant.Turn
 		message string
@@ -218,7 +219,15 @@ func TestAvailabilityIsConfirmedOnlyByALookup(t *testing.T) {
 		"an open appointment":        {message: "Can I come tomorrow with Zara?", reply: "Zara has an open appointment tomorrow."},
 		"a person asked for a day":   {message: "Is Rubina in on Friday?", reply: "Yes, she is."},
 		"a no without a lookup":      {message: "Kan ik morgen langskomen?", reply: "Helaas, Zara is volzet."},
+		"a treatment for a day":      {message: "Pedicure tomorrow?", reply: "Tomorrow afternoon works for Zara."},
+		"a treatment asked when":     {message: "When can I get a pedicure?", reply: "Tomorrow afternoon works for Zara."},
+		"an opening and a claim":     {message: "Can I come tomorrow?", reply: "We're open tomorrow and Zara can fit you in."},
+		"a yes in a question":        {message: "Can I come tomorrow?", reply: "That works, shall I show you the Book button?"},
 		"a question back":            {message: "Can I come tomorrow?", reply: "Which treatment would you like?", want: "Which treatment would you like?"},
+		"a question back on the day": {message: "Can I come tomorrow?", reply: "What treatment would you like tomorrow?", want: "What treatment would you like tomorrow?"},
+		"a two-part question back":   {message: "Can I come tomorrow?", reply: "Which treatment, and with whom?", want: "Which treatment, and with whom?"},
+		"a new question after":       {history: comeAsked, message: "How much is a pedicure?", reply: "A pedicure costs 70 euros.", want: "A pedicure costs 70 euros."},
+		"aftercare of a treatment":   {message: "Can I apply the oil in the evening after lamination?", reply: "Apply the oil every evening.", want: "Apply the oil every evening."},
 		"a closed day":               {message: "Are you open on Sunday?", reply: "We're closed on Sundays.", want: "We're closed on Sundays."},
 		"a closed day asked to come": {message: "Can I come on Sunday?", reply: "We're closed on Sundays.", want: "We're closed on Sundays."},
 		"aftercare in the evening":   {message: "How do I care for my brows?", reply: "Apply the oil every evening.", want: "Apply the oil every evening."},
