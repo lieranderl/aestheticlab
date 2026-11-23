@@ -41,6 +41,7 @@ type ChatOffer struct {
 // found them: a treatment's, with one member of staff or anyone.
 type ChatTimes struct {
 	Service string
+	Price   *float64
 	// Staff is the person the lookup was for; empty for anyone.
 	Staff  string
 	Slots  []ChatSlot
@@ -62,6 +63,13 @@ func chatTimesHeading(ctx context.Context, t ChatTimes) string {
 		return trf(ctx, "Free times for %[1]v with %[2]v", t.Service, t.Staff)
 	}
 	return trf(ctx, "Free times for %v", t.Service)
+}
+
+func chatTimesPrice(ctx context.Context, t ChatTimes) string {
+	if t.Price == nil {
+		return ""
+	}
+	return price(ctx, *t.Price)
 }
 
 // chatSlotWhen is a free time as the chat lists it: "Mon 23/11 · 10:00".
@@ -122,6 +130,9 @@ func ChatTranscript(ctx context.Context, text string, times []ChatTimes) string 
 	}
 	for _, t := range times {
 		lines := []string{chatTimesHeading(ctx, t) + ":"}
+		if amount := chatTimesPrice(ctx, t); amount != "" {
+			lines = append(lines, amount)
+		}
 		for _, s := range t.Slots {
 			lines = append(lines, "• "+chatSlotWhen(ctx, s)+chatSlotStaff(t, s))
 		}

@@ -113,7 +113,7 @@ func TestAnUnansweringFirestoreFallsBackToTheSnapshot(t *testing.T) {
 	if !strings.Contains(h.logs.String(), "content_refresh_failed") {
 		t.Errorf("log lacks content_refresh_failed: %s", h.logs)
 	}
-	if err := h.store.Ping(context.Background()); err == nil {
-		t.Error("Ping() = nil, want an error")
+	if err := h.store.CheckLoaded(context.Background()); err == nil {
+		t.Error("CheckLoaded() = nil, want an error")
 	}
 }

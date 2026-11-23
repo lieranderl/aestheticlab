@@ -128,6 +128,9 @@ templ ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOff
 				{ text }
 				for i, t := range times {
 					<p class={ "font-semibold", templ.KV("mt-2", text != "" || i > 0) }>{ chatTimesHeading(ctx, t) }</p>
+                    if amount := chatTimesPrice(ctx, t); amount != "" {
+                        <p class="mt-1">{ amount }</p>
+                    }
                     if status := chatTimesStatus(ctx, t); status != "" {
                         <p class="mt-1">{ status }</p>
                     } else {

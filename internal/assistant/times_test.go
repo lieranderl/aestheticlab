@@ -147,6 +147,36 @@ func TestAReplyNamingATimeNotFoundIsDropped(t *testing.T) {
 			message:  "Monday at 18:00?",
 			hasTimes: true,
 		},
+		"an echoed visitor time without a lookup": {
+			replies: []*genai.GenerateContentResponse{text("Yes, Zara is free at 10:00.")},
+			message: "Can I book Zara at 10:00?",
+			wantErr: assistant.ErrNoAnswer,
+		},
+		"availability claim without a numeric time or lookup": {
+			replies: []*genai.GenerateContentResponse{text("Zara is available on Monday.")},
+			message: "Is Zara free on Monday?",
+			wantErr: assistant.ErrNoAnswer,
+		},
+		"availability claim in French without a lookup": {
+			replies: []*genai.GenerateContentResponse{text("Zara est disponible lundi matin.")},
+			wantErr: assistant.ErrNoAnswer,
+		},
+		"a free consultation": {
+			replies: []*genai.GenerateContentResponse{text("The consultation is free; contact us on Instagram. We are open Monday to Saturday.")},
+			want:    "The consultation is free; contact us on Instagram. We are open Monday to Saturday.",
+		},
+		"a treatment offered at the studio": {
+			replies: []*genai.GenerateContentResponse{text("Microneedling is available at our studio in Leuven.")},
+			want:    "Microneedling is available at our studio in Leuven.",
+		},
+		"a free consultation in French": {
+			replies: []*genai.GenerateContentResponse{text("Ce soin est disponible au studio.")},
+			want:    "Ce soin est disponible au studio.",
+		},
+		"published opening hours": {
+			replies: []*genai.GenerateContentResponse{text("Monday – Saturday · 10:00 – 18:30 · By appointment only")},
+			want:    "Monday – Saturday · 10:00 – 18:30 · By appointment only",
+		},
 		"a time without a lookup": {
 			replies: []*genai.GenerateContentResponse{text("Zara is free tomorrow at 14:00.")},
 			wantErr: assistant.ErrNoAnswer,

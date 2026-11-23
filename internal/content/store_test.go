@@ -19,7 +19,6 @@ type source struct {
 	mu      sync.Mutex
 	fetches int
 	fetch   func(ctx context.Context, n int) (content.Documents, error)
-	pingErr error
 }
 
 func (s *source) Fetch(ctx context.Context) (content.Documents, error) {
@@ -29,8 +28,6 @@ func (s *source) Fetch(ctx context.Context) (content.Documents, error) {
 	s.mu.Unlock()
 	return s.fetch(ctx, n)
 }
-
-func (s *source) Ping(context.Context) error { return s.pingErr }
 
 func (s *source) count() int {
 	s.mu.Lock()
@@ -263,21 +260,24 @@ func TestAStoreWithoutASourceServesTheSnapshot(t *testing.T) {
 	if s.Content(context.Background()) != content.Snapshot() {
 		t.Error("content is not the snapshot")
 	}
-	if err := s.Ping(context.Background()); !errors.Is(err, content.ErrNoSource) {
-		t.Errorf("Ping() = %v, want ErrNoSource", err)
+	if err := s.CheckLoaded(context.Background()); !errors.Is(err, content.ErrNoSource) {
+		t.Errorf("CheckLoaded() = %v, want ErrNoSource", err)
 	}
 }
 
-func TestPingAsksTheSource(t *testing.T) {
-	src := &source{pingErr: errors.New("unavailable")}
-	if err := newStore(src).store.Ping(context.Background()); err == nil {
-		t.Error("Ping() = nil, want the source's error")
+func TestCheckLoadedDoesNotStartOrRepeatARefresh(t *testing.T) {
+	src := &source{fetch: answer("Live content")}
+	store := newStore(src).store
+	if err := store.CheckLoaded(context.Background()); err == nil || src.count() != 0 {
+		t.Fatalf("unstarted check = %v, with %d fetches", err, src.count())
 	}
-	src.pingErr = nil
-	if err := newStore(src).store.Ping(context.Background()); err != nil {
-		t.Errorf("Ping() = %v", err)
+	store.Prefetch()
+	for range 2 {
+		if err := store.CheckLoaded(context.Background()); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if n := src.count(); n != 0 {
-		t.Errorf("Ping fetched %d times, want only the ping", n)
+	if n := src.count(); n != 1 {
+		t.Errorf("CheckLoaded triggered a refresh: got %d fetches, want 1", n)
 	}
 }
