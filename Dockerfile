@@ -7,7 +7,7 @@
 
 # Static assets (frontend/build.mjs): CSS, fonts, Datastar, icons and WebP
 # variants, content-hashed into static/dist/ for the Go binary to embed.
-FROM --platform=$BUILDPLATFORM oven/bun:1.4.4@sha256:1d22548f177f4ff38e0c15baa3c2c46c6c2060ba2d1bc573bb4720b407548f1d AS assets
+FROM --platform=$BUILDPLATFORM oven/bun:1.4.5@sha256:3aa040e5445efa09d75bb428a64ba50db13e2b3ac9b6b0c7f145615f62b2ee18 AS assets
 WORKDIR /src
 COPY package.json bun.lock ./
 RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache \
