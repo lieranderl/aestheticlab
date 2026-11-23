@@ -99,7 +99,7 @@ var (
 	when            = regexp.MustCompile(`(?i)` +
 		`\b(?:mon|tues|wednes|thurs|fri|satur|sun)day|\b(?:today|tomorrow|tonight|this week|next week|weekend|morning|afternoon|evening|(?:at|from|after|before) [0-9])\b` +
 		`|\b(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|demain|aujourd'hui|matin|soir|semaine|week-end)\b|après-midi|\bà [0-9]` +
-		`|\b(?:maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag|vandaag|morgen|overmorgen|ochtend|voormiddag|middag|namiddag|avond|deze week|volgende week|om [0-9])` +
+		`|\b(?:maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag|vandaag|morgen|overmorgen|ochtend|voormiddag|middag|namiddag|avond|vanavond|vanochtend|vanmorgen|vanmiddag|deze week|volgende week|om [0-9])` +
 		`|понедельник|вторник|среду|среда|четверг|пятниц|суббот|воскресень|сегодня|завтра|утром|утра|днём|днем|вечер|этой неделе|следующей неделе|выходн` +
 		`|понеділ|вівтор|середу|середа|четвер|п['’ʼ]?ятниц|субот|неділ|сьогодні|вранці|вдень|ввечері|цього тижня|наступного тижня|вихідн`)
 	sentence = regexp.MustCompile(`[.!?;\n]+`)
@@ -116,31 +116,35 @@ func claimsAvailability(t string) bool {
 }
 
 // The visitor asks when they can come in two ways. Asking for free times
-// (a free slot, a time of day, a treatment on a day) leaves any day the
-// reply names unchecked. Asking to come at a day or time, or for a person
-// then, leaves the chat nothing to say without a lookup but a question
-// back or the studio's opening hours: a yes, a no or "that works" is
-// unchecked whatever words it uses. A day alone ("Can I apply the oil in
-// the evening?"), or with a treatment the question is about the aftermath
-// of, asks neither.
+// (a free slot, a time of day) leaves any day the reply names unchecked.
+// Naming a day or a time, or asking when, is taken as asking to come
+// unless the message is plainly about something else (aftercare, the
+// opening hours, a duration, a price, the address): then the chat has nothing to say
+// without a lookup but a question back or the studio's opening hours, and
+// a yes, a no or "that works" is unchecked whatever words it uses. When in
+// doubt the visitor reads that the chat confirms free times only from the
+// calendar, never an unchecked yes.
 var (
 	freeTimeWords = regexp.MustCompile(`(?i)availab|\bfree (?:time|slot|day|spot)|\bslots?\b|\b(?:are you|anyone|someone) (?:free|available)\b` +
 		`|beschikba|\bvrije? (?:plek|tijd|moment)` +
 		`|disponib|créneau|\blibres?\b` +
 		`|свобод|окошк|окно|окна` +
 		`|вільн|віконц`)
+	// comeWords ask to come or book, whatever else the message says.
 	comeWords = regexp.MustCompile(`(?i)\b(?:i|we|to|i'll) (?:come|visit|drop by|pop in)\b|\b(?:can|could|may) (?:i|we) (?:come|visit|get in)\b|\bsee (?:me|us)\b|\bbook|\bappointment|\breserv` +
 		`|\bkomen\b|\blangs ?kom|\bboeken|\bafspraak|\bterecht\b` +
 		`|\bvenir\b|\bviens\b|réserv|rendez-vous|\brdv\b` +
 		`|прийти|приду|прийду|зайти|запис|на при[её]м|бронир|к вам` +
 		`|на прийом|заброн|до вас`)
-	// treatmentWords name the studio's kinds of treatment, never a body
-	// part: "my armpits tomorrow" is aftercare as often as a booking.
-	treatmentWords = regexp.MustCompile(`(?i)pedicur|manicur|pédicur|manucur|педикюр|маникюр|манікюр|\blaser|лазер` +
-		`|épil|epil|эпил|епіл|depil|dépil|депил|депіл|ontharing|\bwax|\bcire\b|\bépilation` +
-		`|lamin|ламин|ламін|lash ?lift|wimperlift|rehaussement|лифтинг|ліфтинг`)
-	// afterWords ask about the time after a treatment.
-	afterWords = regexp.MustCompile(`(?i)\bafter\b|\bna (?:de|het|mijn|een)\b|\bnadat\b|\baprès(?:[^-]|$)|после|після`)
+	// otherTopics are what a message with a day in it asks about when it
+	// isn't asking to come: aftercare, the time after a treatment, the
+	// opening hours, a duration, a consultation, a price, the address.
+	otherTopics = regexp.MustCompile(`(?i)\bafter\b|\bapply|\bwash|\bwear|\buse\b|\bavoid|\bshower|\bbath|\bswim|\bsauna|\bsun\b|\bsunbath|\bsunscreen|\bsunbed|\btan(?:ning)?\b|make-?up|\bcream|\boil\b|\bserum|moistur|\bexercis|\bsport|\bgym\b|\bsweat|\bshav|\bpluck|\btweez|\bscratch|\bwet\b|\bheal|\bredness|\bred\b|\bswell|\bitch|irritat|\bsore|\bpain|\bburn|\bbruis|\bfade|\bscab|\bpeel|regrow|grow back|\bresults?\b|aftercare|skincare|\bcare (?:for|of)` +
+		`|\bopen\b|\bclosed\b|\bopening|\bhours\b|\bwork(?:ing)?\b|how long|consult|консультац|hoe lang|combien de temps|how much|\bprice|\bcost|\bwhere\b|\baddress|\bparking` +
+		`|\bna (?:de|het|mijn|een)\b|\bnadat\b|smeren|aanbreng|\bwass|douch|\bzwem|\bzon\b|zonnebank|\bbruin|crème|creme|\bolie|\bzweet|\bscheren|\bkrabben|\bnat\b|genez|roodheid|\brood\b|zwelling|\bjeuk|\bpijn|resulta|nazorg|verzorg|geopend|gesloten|openingsuren|openingstijden|\bprijs|\bkost|\bwaar\b|\badres` +
+		`|\baprès(?:[^-]|$)|appliqu|\blaver|\blavez|douche|\bbain|\bnager|piscine|soleil|bronz|maquill|\bhuile|transpir|\brase|\bgratt|mouill|guéri|rougeur|gonfl|démang|douleur|résultat|\bsoins?\b|ouvert|fermé|horaires|\bprix|combien|\bcoût|\boù\b|adresse` +
+		`|после|нанос|мазать|мыть|умыва|душ|ванн|плава|бассейн|солн|загар|загора|макияж|крем|масл|потет|брить|чеса|мочить|заживл|покраснен|от[её]к|зуд|раздраж|болит|результат|уход|работаете|открыт|закрыт|часы работы|цена|стоит|сколько|где|адрес` +
+		`|після|мити|вмива|басейн|сонц|засмаг|макіяж|олі[яю]|пітні|голит|чуха|мочит|загоє|почервон|набряк|свербі|подразн|болить|догляд|працюєте|відчин|зачин|години роботи|ціна|коштує|скільки|\bде\b|адреса`)
 	// whenAsked are the question words for when.
 	whenAsked = regexp.MustCompile(`(?i)\bwhen\b|\bwanneer\b|\bquand\b|когда|коли`)
 )
@@ -151,9 +155,8 @@ func asked(s string, staff []string) (times, come bool) {
 	clocked := len(clockTimes(s)) > 0
 	free := freeTimeWords.MatchString(s)
 	at := clocked || when.MatchString(s) || whenAsked.MatchString(s)
-	come = at && (free || comeWords.MatchString(s) || namesStaff(s, staff))
-	treatment := at && treatmentWords.MatchString(s) && !afterWords.MatchString(s)
-	return come || free || clocked || treatment, come
+	come = at && (free || comeWords.MatchString(s) || namesStaff(s, staff) || !otherTopics.MatchString(s))
+	return come || free || clocked, come
 }
 
 // namesStaff reports whether s names one of staff, as a whole word.
@@ -164,25 +167,21 @@ func namesStaff(s string, staff []string) bool {
 
 // asksWhen reports whether the visitor asks for free times, and whether
 // they ask to come at a day or time. The message before the new one counts
-// too, as they may name the treatment only once asked; a new question
-// ("How much is a pedicure?") is no answer to that, so the earlier ask to
-// come then leaves only the days the reply names unchecked.
+// too, as they may name the treatment or the person only once asked ("With
+// Zara?"); a message about something else ("How much is a pedicure?") is
+// no answer to that, so the earlier ask to come then leaves only the days
+// the reply names unchecked.
 func asksWhen(history []Turn, message string, staff []string) (times, come bool) {
 	times, come = asked(message, staff)
 	for _, t := range slices.Backward(history) {
 		if t.Role == RoleVisitor {
 			before, cameBefore := asked(t.Text, staff)
 			times = times || before
-			come = come || cameBefore && !isQuestion(message)
+			come = come || cameBefore && !otherTopics.MatchString(message)
 			break
 		}
 	}
 	return times, come
-}
-
-// isQuestion reports whether s asks something.
-func isQuestion(s string) bool {
-	return strings.Contains(s, "?") || questionStart.MatchString(s)
 }
 
 // firstNames are the team's first names.
