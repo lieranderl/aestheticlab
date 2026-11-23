@@ -157,8 +157,8 @@ templ ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOff
 				</div>
 			}
 			<!-- A choice of treatments: each button asks for that one's free
-			times in the visitor's words and sends its ID, so the server looks
-			up that treatment itself (assistant.Times). -->
+			times in the visitor's words and sends the lookup itself, so the
+			server looks up that treatment (assistant.Times), never the model. -->
 			if len(choices) > 0 {
 				<div class="chat-footer mt-2 flex flex-wrap items-start gap-2 opacity-100" role="group" aria-label={ tr(ctx, "Treatments to choose from") }>
 					for _, c := range choices {
@@ -166,7 +166,7 @@ templ ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOff
 							type="button"
 							class="btn btn-outline btn-sm h-auto min-h-8 rounded-full border-base-300 py-1.5 font-main text-xs font-normal normal-case"
 							data-attr:disabled="$chatBusy"
-							data-on:click={ "$chatInput = " + jsString(chatChoiceAsk(ctx, c)) + "; $chatService = " + jsString(c.ServiceID) + "; @post('" + href(ctx, "chat") + "')" }
+							data-on:click={ "$chatInput = " + jsString(chatChoiceAsk(ctx, c)) + "; $chatLookup = " + jsString(c.Lookup) + "; @post('" + href(ctx, "chat") + "')" }
 						>{ c.Service }</button>
 					}
 				</div>

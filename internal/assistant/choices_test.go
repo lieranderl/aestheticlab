@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"google.golang.org/genai"
 
@@ -128,7 +129,7 @@ func TestThePromptOffersAChoiceOfTreatments(t *testing.T) {
 func TestAChoicesButtonLooksUpItsOwnTreatment(t *testing.T) {
 	m := &scripted{}
 	a := newAssistant(m)
-	got, err := a.Times(context.Background(), withManicures(knowledge()), "9001")
+	got, err := a.Times(context.Background(), withManicures(knowledge()), "9001", assistant.Search{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +142,42 @@ func TestAChoicesButtonLooksUpItsOwnTreatment(t *testing.T) {
 	if len(m.requests) != 0 {
 		t.Errorf("%d model calls, want none", len(m.requests))
 	}
-	if _, err := a.Times(context.Background(), withManicures(knowledge()), "nope"); err == nil {
+	if _, err := a.Times(context.Background(), withManicures(knowledge()), "nope", assistant.Search{}); err == nil {
 		t.Error("an unknown treatment gave an answer")
+	}
+}
+
+// A choice keeps the days, time of day and person the visitor asked for,
+// and a button's lookup applies them: picking the treatment never widens
+// the search. A filter the lookup can't read is no choice.
+func TestAChoiceKeepsTheSearch(t *testing.T) {
+	k := withManicures(knowledge())
+	search := map[string]any{"service_ids": []any{"9000", "9001"}, "from_date": "2026-11-24", "to_date": "2026-11-24", "from_time": "17:00", "staff_id": float64(642297)}
+	m := &scripted{replies: []*genai.GenerateContentResponse{call("choose_treatment", search)}}
+	got, err := newAssistant(m).Reply(context.Background(), k, nil, "Can I book a manicure with Zara on Tuesday after 17:00?")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := assistant.Search{FromDate: "2026-11-24", ToDate: "2026-11-24", FromTime: "17:00", StaffID: 642297}
+	if len(got.Choices) != 2 || got.Choices[0].Search != want || got.Choices[1].Search != want {
+		t.Errorf("choices = %+v, want each with %+v", got.Choices, want)
+	}
+
+	m = &scripted{replies: []*genai.GenerateContentResponse{call("choose_treatment", map[string]any{"service_ids": []any{"9000", "9001"}, "from_time": "after five"}), text("Which manicure would you like?")}}
+	if got, _ := newAssistant(m).Reply(context.Background(), k, nil, "A manicure after five?"); len(got.Choices) != 0 {
+		t.Errorf("choices = %+v with an unreadable time, want none", got.Choices)
+	}
+
+	times, err := newAssistant(&scripted{}).Times(context.Background(), k, "9001", want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(times.Times) != 1 || times.Times[0].Staff != "Zara" {
+		t.Fatalf("times = %+v, want Zara's", times.Times)
+	}
+	for _, s := range times.Times[0].Slots {
+		if at := s.Start.In(brussels); at.Format(time.DateOnly) != "2026-11-24" || at.Hour() < 17 {
+			t.Errorf("slot %v is outside Tuesday from 17:00", at)
+		}
 	}
 }

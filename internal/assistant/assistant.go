@@ -75,10 +75,32 @@ type Offer struct {
 }
 
 // Choice is a treatment the visitor can pick when they asked for a kind
-// with several options.
+// with several options, with the search they asked for.
 type Choice struct {
 	ServiceID string
 	Service   string
+	Search    Search
+}
+
+// Search narrows a lookup of free times, as find_free_slots reads it:
+// days (YYYY-MM-DD), a time of day (HH:MM) and a person; zero is any.
+type Search struct {
+	FromDate, ToDate, FromTime, ToTime string
+	StaffID                            int64
+}
+
+// args are s as find_free_slots' arguments for serviceID.
+func (s Search) args(serviceID string) map[string]any {
+	args := map[string]any{"service_id": serviceID}
+	for name, v := range map[string]string{"from_date": s.FromDate, "to_date": s.ToDate, "from_time": s.FromTime, "to_time": s.ToTime} {
+		if v != "" {
+			args[name] = v
+		}
+	}
+	if s.StaffID != 0 {
+		args["staff_id"] = float64(s.StaffID)
+	}
+	return args
 }
 
 // Answer is the assistant's reply, the Book buttons it offers, the free
@@ -607,19 +629,39 @@ func (r *toolRun) offerBooking(args map[string]any) map[string]any {
 	return map[string]any{"ok": true, "note": "A Book button for " + cmp.Or(o.Staff, "any available person") + " is shown under your reply; don't write a link."}
 }
 
-// Times looks up a treatment's free times for the coming week, without the
-// model: what a choice's button asks for, so the times shown are always
-// that treatment's, whatever it is called in the visitor's language.
-func (a *Assistant) Times(ctx context.Context, k Knowledge, serviceID string) (Answer, error) {
+// Times looks up a treatment's free times with search, without the model:
+// what a choice's button asks for, so the times shown are always that
+// treatment's, whatever it is called in the visitor's language.
+func (a *Assistant) Times(ctx context.Context, k Knowledge, serviceID string, search Search) (Answer, error) {
 	run := &toolRun{a: a, k: k}
-	run.findFreeSlots(ctx, map[string]any{"service_id": serviceID})
+	run.findFreeSlots(ctx, search.args(serviceID))
 	return run.answer(nil, usage.Tokens{}, 0)
 }
 
 // chooseTreatment offers the visitor the treatments in service_ids that can
-// be booked online, each once and at most maxChoices: the chat asks which
-// one with a button for each.
+// be booked online (by staff_id's person, if given), each once and at most
+// maxChoices, keeping the days and time of day asked for: the chat asks
+// which one with a button for each.
 func (r *toolRun) chooseTreatment(args map[string]any) map[string]any {
+	var search Search
+	for name, field := range map[string]*string{"from_date": &search.FromDate, "to_date": &search.ToDate, "from_time": &search.FromTime, "to_time": &search.ToTime} {
+		v, _ := args[name].(string)
+		if v = strings.TrimSpace(v); v == "" {
+			continue
+		}
+		_, date := availability.ParseDate(v)
+		_, clock := availability.ParseClock(v)
+		if strings.HasSuffix(name, "_date") && !date || strings.HasSuffix(name, "_time") && !clock {
+			return failure(name + " must be YYYY-MM-DD for a date or HH:MM for a time")
+		}
+		*field = v
+	}
+	if v, ok := args["staff_id"].(float64); ok {
+		if !slices.ContainsFunc(r.k.Content.Staff, func(m content.Member) bool { return m.ID == int64(v) }) {
+			return failure("unknown staff_id; use one from the team list")
+		}
+		search.StaffID = int64(v)
+	}
 	ids, _ := args["service_ids"].([]any)
 	var choices []Choice
 	for _, v := range ids {
@@ -629,8 +671,9 @@ func (r *toolRun) chooseTreatment(args map[string]any) map[string]any {
 			continue
 		}
 		s := r.k.Content.Services[i]
-		c := Choice{ServiceID: s.ID, Service: s.Name}
-		if len(s.StaffIDs) > 0 && !slices.Contains(choices, c) {
+		c := Choice{ServiceID: s.ID, Service: s.Name, Search: search}
+		bookable := len(s.StaffIDs) > 0 && (search.StaffID == 0 || slices.Contains(s.StaffIDs, search.StaffID))
+		if bookable && !slices.Contains(choices, c) {
 			choices = append(choices, c)
 		}
 	}

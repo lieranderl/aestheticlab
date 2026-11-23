@@ -546,7 +546,7 @@ func ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOffe
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "<!-- A choice of treatments: each button asks for that one's free\n\t\t\ttimes in the visitor's words and sends its ID, so the server looks\n\t\t\tup that treatment itself (assistant.Times). -->")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "<!-- A choice of treatments: each button asks for that one's free\n\t\t\ttimes in the visitor's words and sends the lookup itself, so the\n\t\t\tserver looks up that treatment (assistant.Times), never the model. -->")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -574,9 +574,9 @@ func ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOffe
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var31 string
-					templ_7745c5c3_Var31, templ_7745c5c3_Err = templruntime.NewAttributeExpression("$chatInput = " + jsString(chatChoiceAsk(ctx, c)) + "; $chatService = " + jsString(c.ServiceID) + "; @post('" + href(ctx, "chat") + "')").Resolve(ctx)
+					templ_7745c5c3_Var31, templ_7745c5c3_Err = templruntime.NewAttributeExpression("$chatInput = " + jsString(chatChoiceAsk(ctx, c)) + "; $chatLookup = " + jsString(c.Lookup) + "; @post('" + href(ctx, "chat") + "')").Resolve(ctx)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 169, Col: 159}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 169, Col: 155}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
 					if templ_7745c5c3_Err != nil {

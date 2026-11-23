@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -39,9 +41,9 @@ const (
 // chatSignals are the signals a chat request carries (views.chatSignals).
 type chatSignals struct {
 	ChatInput string `json:"chatInput"`
-	// ChatService is the treatment a choice's button asks for: its free
-	// times are looked up directly, never by the model.
-	ChatService string           `json:"chatService"`
+	// ChatLookup is the lookup a choice's button asks for (encodeLookup):
+	// its free times are looked up directly, never by the model.
+	ChatLookup  string           `json:"chatLookup"`
 	ChatHistory []assistant.Turn `json:"chatHistory"`
 }
 
@@ -179,7 +181,7 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 		history := cleanHistory(sig.ChatHistory)
 		n := len(history)
 		_ = sse.PatchElementTempl(views.ChatMessage(true, message, nil, nil, nil, n), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
-		_ = sse.MarshalAndPatchSignals(map[string]any{"chatInput": "", "chatService": "", "chatBusy": true})
+		_ = sse.MarshalAndPatchSignals(map[string]any{"chatInput": "", "chatLookup": "", "chatBusy": true})
 
 		start := time.Now()
 		var answer assistant.Answer
@@ -218,8 +220,8 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 				k.FAQ = append(k.FAQ, assistant.QA{Question: qa.Question, Answer: qa.Answer})
 			}
 			var err error
-			if service := strings.TrimSpace(sig.ChatService); service != "" {
-				answer, err = a.Times(replyCtx, k, service)
+			if service, search, ok := decodeLookup(sig.ChatLookup); ok {
+				answer, err = a.Times(replyCtx, k, service, search)
 			} else {
 				answer, err = a.Reply(replyCtx, k, history, message)
 			}
@@ -253,7 +255,7 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 		// model's.
 		choices := make([]views.ChatChoice, 0, len(answer.Choices))
 		for _, c := range answer.Choices {
-			choices = append(choices, views.ChatChoice{ServiceID: c.ServiceID, Service: c.Service})
+			choices = append(choices, views.ChatChoice{Service: c.Service, Lookup: encodeLookup(c)})
 		}
 		if len(choices) > 0 && answer.Text == "" {
 			answer.Text = views.ChatChoose(ctx)
@@ -283,4 +285,31 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 			assistant.Turn{Role: assistant.RoleAssistant, Text: views.ChatTranscript(ctx, answer.Text, times, choices)})
 		_ = sse.MarshalAndPatchSignals(map[string]any{"chatHistory": history, "chatBusy": false})
 	}
+}
+
+// encodeLookup is the lookup a choice's button sends back: its treatment
+// and the search the visitor asked for, as a query string.
+func encodeLookup(c assistant.Choice) string {
+	q := url.Values{"service_id": {c.ServiceID}}
+	for name, v := range map[string]string{"from_date": c.Search.FromDate, "to_date": c.Search.ToDate, "from_time": c.Search.FromTime, "to_time": c.Search.ToTime} {
+		if v != "" {
+			q.Set(name, v)
+		}
+	}
+	if c.Search.StaffID != 0 {
+		q.Set("staff_id", strconv.FormatInt(c.Search.StaffID, 10))
+	}
+	return q.Encode()
+}
+
+// decodeLookup reads encodeLookup's query; ok is false without a treatment.
+// The lookup itself checks the treatment, person, days and times.
+func decodeLookup(s string) (service string, search assistant.Search, ok bool) {
+	q, err := url.ParseQuery(s)
+	if err != nil || strings.TrimSpace(q.Get("service_id")) == "" {
+		return "", assistant.Search{}, false
+	}
+	search = assistant.Search{FromDate: q.Get("from_date"), ToDate: q.Get("to_date"), FromTime: q.Get("from_time"), ToTime: q.Get("to_time")}
+	search.StaffID, _ = strconv.ParseInt(q.Get("staff_id"), 10, 64)
+	return strings.TrimSpace(q.Get("service_id")), search, true
 }

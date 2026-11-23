@@ -15,9 +15,9 @@ func WithChat(ctx context.Context) context.Context { return context.WithValue(ct
 func chatEnabled(ctx context.Context) bool { on, _ := ctx.Value(chatKey{}).(bool); return on }
 
 // chatSignals are the chat's own signals: the panel is open, the input,
-// the treatment a choice's button asks for, the visible transcript the
+// the lookup a choice's button asks for, the visible transcript the
 // server reads back, and a reply is pending.
-const chatSignals = `{chatOpen: false, chatInput: '', chatService: '', chatHistory: [], chatBusy: false}`
+const chatSignals = `{chatOpen: false, chatInput: '', chatLookup: '', chatHistory: [], chatBusy: false}`
 
 // chatSuggestions are the common questions the empty chat offers.
 func chatSuggestions(ctx context.Context) []string {
@@ -32,8 +32,10 @@ func chatSuggestions(ctx context.Context) []string {
 // ChatChoice is a treatment to choose under an assistant reply, when the
 // visitor asked for a kind with several options.
 type ChatChoice struct {
-	ServiceID string
-	Service   string
+	Service string
+	// Lookup is the free-times lookup the button asks for, encoded by the
+	// server (its treatment, days, time of day and person).
+	Lookup string
 }
 
 // ChatChoose is the chat's own question over a choice of treatments.
