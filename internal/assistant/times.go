@@ -219,14 +219,16 @@ var (
 )
 
 // checked reports whether sentence s says nothing without a lookup: each
-// clause is about the opening hours or, in a question, asks.
-func checked(s string) bool {
+// clause is about the opening hours, in a question asks, or, with a
+// catalog, only names its treatments and prices.
+func checked(s string, cat *catalog) bool {
 	question := strings.Contains(s, "?")
 	for _, c := range clause.Split(s, -1) {
 		switch {
 		case strings.IndexFunc(c, unicode.IsLetter) < 0:
 		case openingWords.MatchString(c) || strings.Contains(c, hoursToken):
 		case question && (strings.Contains(c, "?") || questionStart.MatchString(c)):
+		case cat != nil && cat.lists(c):
 		default:
 			return false
 		}
@@ -240,15 +242,65 @@ func checked(s string) bool {
 // day is unchecked.
 func namesWhen(t string) bool {
 	return slices.ContainsFunc(sentenceWithEnd.FindAllString(t, -1), func(s string) bool {
-		return when.MatchString(s) && !checked(s)
+		return when.MatchString(s) && !checked(s, nil)
 	})
 }
 
-// asksBack reports whether t only asks the visitor something or tells them
-// the studio's opening hours, clause by clause ("Yes, we're open" says
-// yes): all the chat can say, without a lookup, to a visitor asking to come.
-func asksBack(t string) bool {
-	return !slices.ContainsFunc(sentenceWithEnd.FindAllString(t, -1), func(s string) bool { return !checked(s) })
+// asksBack reports whether t only asks the visitor something, names the
+// treatments they can choose from or tells them the studio's opening
+// hours, clause by clause ("Yes, we're open" says yes): all the chat can
+// say, without a lookup, to a visitor asking to come. Asked for a kind of
+// treatment with several options ("a manicure"), the chat lists them and
+// asks which.
+func asksBack(t string, cat *catalog) bool {
+	return !slices.ContainsFunc(sentenceWithEnd.FindAllString(t, -1), func(s string) bool { return !checked(s, cat) })
+}
+
+// catalog is what the chat can name without a lookup: the treatments, as
+// the words of their names, and the staff, whom it can't.
+type catalog struct{ words, staff []string }
+
+// catalogStopWords are words of treatment names that say nothing of the
+// treatment: "Coating removal (other salon)".
+var catalogStopWords = []string{"other", "salon", "using", "with", "from", "short", "long", "extra", "full", "small", "zone", "front", "back", "upper", "lower", "only", "partial", "classic", "express", "male", "combo", "care"}
+
+// newCatalog is k's treatments and staff.
+func newCatalog(k Knowledge) *catalog {
+	var names []string
+	for _, g := range k.Content.ServiceGroups {
+		names = append(names, g.Name, g.NameEN)
+	}
+	for _, s := range k.Content.Services {
+		names = append(names, s.Name, s.NameEN)
+	}
+	cat := &catalog{staff: firstNames(k.Content.Staff)}
+	for _, n := range names {
+		for _, w := range strings.FieldsFunc(strings.ToLower(n), func(r rune) bool { return !unicode.IsLetter(r) }) {
+			if utf8.RuneCountInString(w) >= 4 && !slices.Contains(catalogStopWords, w) && !slices.Contains(cat.words, w) {
+				cat.words = append(cat.words, w)
+			}
+		}
+	}
+	return cat
+}
+
+// confirms are the words that say a treatment can be had, or can't: a
+// clause with one in it is no list of options.
+var confirms = regexp.MustCompile(`(?i)\b(?:yes|sure|of course|okay|ok|fine|works?|possible|fits?|suits?|no problem|welcome|room|space|time|slots?|spots?|fully|booked|open|closed)\b|\bcan (?:come|fit|see|do|take|book|squeeze)|\b(?:have|has|got) (?:time|room|space)` +
+	`|\b(?:ja|lukt|past|mogelijk|kan|plaats|plek|tijd|vrij|volzet|volgeboekt|open|gesloten)\b` +
+	`|\b(?:oui|possible|d'accord|bien sûr|peut|peux|place|temps|libre|complet|ouvert|fermé)` +
+	`|(?:^|[^\p{L}])(?:да|так)(?:[^\p{L}]|$)|конечно|можно|могу|может|подходит|получится|место|время|окн|свобод|занят|звісно|можна|може|підходить|вийде|місце|час|вікн|вільн|зайнят`)
+
+// lists reports whether clause c only names treatments and their prices:
+// no day, time or person, and nothing that says one can be had.
+func (cat *catalog) lists(c string) bool {
+	words := strings.FieldsFunc(strings.ToLower(c), func(r rune) bool { return !unicode.IsLetter(r) })
+	names := slices.ContainsFunc(words, func(w string) bool {
+		return slices.ContainsFunc(cat.words, func(t string) bool { return strings.HasPrefix(w, t) })
+	})
+	return names &&
+		!when.MatchString(c) && len(clockTimes(c)) == 0 && !namesStaff(c, cat.staff) &&
+		!freeOrAvailable.MatchString(c) && !appointmentClaim.MatchString(c) && !confirms.MatchString(c)
 }
 
 // hoursToken is what the model writes for the published opening hours.
@@ -270,7 +322,7 @@ func (r *toolRun) answer(said []string, tokens usage.Tokens, unmetered int) (Ans
 			case t == "":
 			case slices.Contains(r.k.Facts, t) || t == r.k.Hours:
 				checked = append(checked, t)
-			case claimsAvailability(t) || r.asksWhen && namesWhen(t) || r.asksToCome && !asksBack(t):
+			case claimsAvailability(t) || r.asksWhen && namesWhen(t) || r.asksToCome && !asksBack(t, newCatalog(r.k)):
 				unverified = true
 			default:
 				checked = append(checked, t)
