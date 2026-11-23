@@ -88,6 +88,25 @@ The budget needs one-time access on the billing account, which only its Billing 
 1. In the console, **Billing → Account management → Permissions** for the AestheticLab account, grant `aesthetic-infra-deployer@PROJECT.iam.gserviceaccount.com` **Billing Account Costs Manager** and `aesthetic-infra-planner@PROJECT.iam.gserviceaccount.com` **Billing Account Viewer**.
 2. Set the repository variable `GCP_BILLING_ACCOUNT` to the account ID (`gh variable set GCP_BILLING_ACCOUNT`). Until it is set, the budget is skipped and the plan stays clean.
 
+#### Vertex AI spend cap (bootstrap, outside OpenTofu)
+
+Unlike a budget, a [spend cap](https://docs.cloud.google.com/billing/docs/how-to/budgets-spend-caps) pauses new Vertex AI requests in the project once the month's estimated list-price cost passes its amount. It is the backstop if the app's ledger ever fails open. Enforcement can lag, in-flight requests finish and are billed, and while it is enforced the chat answers with its fixed reply. It covers exactly one project and one service, monthly, with fixed 50/80/100% alerts to billing admins and project owners, and can't be made from an existing alerts-only budget. The Google provider (8.12) has no spend-cap field, so a Billing Account Administrator creates it once, by hand, and OpenTofu doesn't manage it. The chat uses Vertex AI only, so the Gemini API (AI Studio) service needs no cap.
+
+It exists for the AestheticLab account since 2026-11-23 (budget "Aesthetic Lab Vertex AI spend cap", €10). To recreate it, use the billing admin's own credentials; the token goes in a header file, never on the command line (`PROJECT_NUMBER` is the project's number, not its ID; keep the amount at `chat_budget_eur`):
+
+```bash
+curl -sS -X POST "https://billingbudgets.googleapis.com/v1/billingAccounts/BILLING_ACCOUNT/budgets" \
+  -H @<(printf 'Authorization: Bearer %s\n' "$(gcloud auth print-access-token)") -H "x-goog-user-project: PROJECT_ID" -H "Content-Type: application/json" \
+  -d '{"displayName": "Aesthetic Lab Vertex AI spend cap",
+       "budgetFilter": {"projects": ["projects/PROJECT_NUMBER"], "services": ["services/C7E2-9256-1C43"], "creditTypesTreatment": "EXCLUDE_ALL_CREDITS", "calendarPeriod": "MONTH"},
+       "amount": {"specifiedAmount": {"currencyCode": "EUR", "units": "10"}},
+       "thresholdRules": [{"thresholdPercent": 0.5}, {"thresholdPercent": 0.8}, {"thresholdPercent": 1.0}],
+       "notificationsRule": {"enableProjectLevelRecipients": true},
+       "spendCap": {"inputState": "CONFIGURED"}}'
+```
+
+The response's `spendCap.outputState` is `CONFIGURED`; it becomes `ENFORCED` at the cap and lifts by itself on the 1st. To lift it early, use **Billing → Budgets & alerts → Edit budget → Lift spend cap** (service returns within about an hour); an enforced cap can't be edited or deleted until lifted.
+
 ## Deployment contract
 
 OpenTofu owns service configuration and IAM. GitHub Actions owns only the container image and exact-revision traffic promotion. Image and traffic fields are intentionally ignored after bootstrap so a later plan cannot roll back a digest or promote an untested revision.

@@ -31,6 +31,10 @@ const (
 	// DefaultFetchTimeout bounds a refresh, which outlives the request that
 	// started it.
 	DefaultFetchTimeout = 5 * time.Second
+	// DefaultRetryAfter is how long a failed refresh holds off the next one;
+	// it doubles with each failure in a row, up to the TTL. Without it every
+	// request while the database fails would start another full read.
+	DefaultRetryAfter = 30 * time.Second
 	// dependencyWait bounds how long the probe joins an existing load.
 	dependencyWait = 3 * time.Second
 )
@@ -41,8 +45,8 @@ type Options struct {
 	Source Source
 	Logger *slog.Logger
 	// Now is the clock; nil is time.Now.
-	Now                                    func() time.Time
-	TTL, StaleWait, ColdWait, FetchTimeout time.Duration
+	Now                                                func() time.Time
+	TTL, StaleWait, ColdWait, FetchTimeout, RetryAfter time.Duration
 }
 
 // ErrNoSource is the dependency check error for a Store without a Source.
@@ -57,11 +61,16 @@ type Store struct {
 	log                                    *slog.Logger
 	now                                    func() time.Time
 	ttl, staleWait, coldWait, fetchTimeout time.Duration
+	retryAfter                             time.Duration
 
 	mu        sync.Mutex
 	current   *Content
 	fetchedAt time.Time
 	flight    *flight
+	// failures counts the refreshes in a row that failed; none starts
+	// before retryAt.
+	failures int
+	retryAt  time.Time
 }
 
 // flight is one refresh; done closes when it ends.
@@ -86,10 +95,12 @@ func NewStore(opts Options) *Store {
 		staleWait:    cmp.Or(opts.StaleWait, DefaultStaleWait),
 		coldWait:     cmp.Or(opts.ColdWait, DefaultColdWait),
 		fetchTimeout: cmp.Or(opts.FetchTimeout, DefaultFetchTimeout),
+		retryAfter:   cmp.Or(opts.RetryAfter, DefaultRetryAfter),
 	}
 }
 
-// Prefetch starts a refresh without waiting for it. The server calls it
+// Prefetch starts a refresh without waiting for it, unless a failed one is
+// still holding refreshes off. The server calls it
 // while the instance starts, when Cloud Run allocates CPU, so the first
 // request joins a fetch already under way.
 func (s *Store) Prefetch() {
@@ -102,7 +113,8 @@ func (s *Store) Prefetch() {
 // content is returned at once. Otherwise the request starts (or joins) a
 // refresh and waits for it, up to StaleWait when it has stale content and
 // ColdWait when it has none, then falls back to the stale content, else the
-// embedded snapshot.
+// embedded snapshot. After a failed refresh it falls back at once until the
+// retry delay has passed.
 func (s *Store) Content(ctx context.Context) *Content {
 	if s.source == nil {
 		return Snapshot()
@@ -117,16 +129,17 @@ func (s *Store) Content(ctx context.Context) *Content {
 	if current != nil {
 		wait = s.staleWait
 	}
-	f := s.refresh()
-	timer := time.NewTimer(wait)
-	defer timer.Stop()
-	select {
-	case <-f.done:
-		if f.err == nil {
-			return f.content
+	if f := s.refresh(); f != nil {
+		timer := time.NewTimer(wait)
+		defer timer.Stop()
+		select {
+		case <-f.done:
+			if f.err == nil {
+				return f.content
+			}
+		case <-timer.C:
+		case <-ctx.Done():
 		}
-	case <-timer.C:
-	case <-ctx.Done():
 	}
 	// Another refresh may have finished meanwhile.
 	s.mu.Lock()
@@ -140,12 +153,16 @@ func (s *Store) Content(ctx context.Context) *Content {
 }
 
 // refresh is the refresh under way, or a new one when there is none or the
-// one under way has outlived its timeout (suspended with its instance).
+// one under way has outlived its timeout (suspended with its instance). It
+// is nil while a failed refresh holds new ones off.
 func (s *Store) refresh() *flight {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if f := s.flight; f != nil && s.now().Sub(f.started) < s.fetchTimeout {
 		return f
+	}
+	if s.now().Before(s.retryAt) {
+		return nil
 	}
 	f := &flight{started: s.now(), done: make(chan struct{})}
 	s.flight = f
@@ -169,12 +186,23 @@ func (s *Store) run(f *flight) {
 	if err == nil && (s.current == nil || !f.started.Before(s.fetchedAt)) {
 		s.current, s.fetchedAt = f.content, f.started
 	}
+	var retry time.Duration
+	switch {
+	case err == nil:
+		s.failures, s.retryAt = 0, time.Time{}
+	case s.flight == f:
+		// Only the refresh in charge holds the next one off: an abandoned
+		// one failing late must not delay its replacement's successors.
+		s.failures++
+		retry = min(s.retryAfter<<min(s.failures-1, 10), max(s.ttl, s.retryAfter))
+		s.retryAt = s.now().Add(retry)
+	}
 	if s.flight == f {
 		s.flight = nil
 	}
 	s.mu.Unlock()
 	if err != nil {
-		s.log.Error("content_refresh_failed", "error", err.Error(), "duration_ms", time.Since(start).Milliseconds())
+		s.log.Error("content_refresh_failed", "error", err.Error(), "duration_ms", time.Since(start).Milliseconds(), "retry_in_ms", retry.Milliseconds())
 		return
 	}
 	s.log.Info("content_refreshed", "duration_ms", time.Since(start).Milliseconds())
