@@ -322,7 +322,7 @@
 			"daily_limit": "You've reached today's message limit for the assistant. Please message us on Instagram or by email.",
 			"suggestions": "Suggested questions",
 			"suggest_prices": "What do your treatments cost?",
-			"suggest_free": "When is the next free time?",
+			"suggest_book": "When can I book a manicure?",
 			"suggest_studio": "Tell me about the studio",
 			"suggest_laser": "How does laser hair removal work?",
 			"times": "Free times for {{service}}",

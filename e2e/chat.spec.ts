@@ -202,16 +202,16 @@ test("suggests common questions until the first message", async ({ page }) => {
 	const suggestions = panel.getByRole("group", { name: "Suggested questions" });
 	await expect(suggestions.getByRole("button")).toHaveText([
 		"What do your treatments cost?",
-		"When is the next free time?",
+		"When can I book a manicure?",
 		"Tell me about the studio",
 		"How does laser hair removal work?",
 	]);
 
 	await suggestions
-		.getByRole("button", { name: "When is the next free time?" })
+		.getByRole("button", { name: "When can I book a manicure?" })
 		.click();
 	await expect(panel.locator("#chat-log .chat-end")).toHaveText(
-		"When is the next free time?",
+		"When can I book a manicure?",
 	);
 	await expect(panel.locator("#chat-log .chat-start")).toHaveCount(2);
 	await expect(suggestions).toBeHidden();
@@ -370,7 +370,7 @@ test("lists the free times it found with a Book button", async ({ page }) => {
 	const panel = page.getByRole("dialog", { name: "Ask Aesthetic Lab" });
 	await panel
 		.getByRole("group", { name: "Suggested questions" })
-		.getByRole("button", { name: "When is the next free time?" })
+		.getByRole("button", { name: "When can I book a manicure?" })
 		.click();
 
 	const reply = panel.locator("#chat-log .chat-start").last();
