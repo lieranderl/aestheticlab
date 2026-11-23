@@ -10,6 +10,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/usage"
 )
 
@@ -114,16 +115,47 @@ func claimsAvailability(t string) bool {
 	})
 }
 
-// askedWhen are the visitor's words for free times beyond a day or a time.
-var askedWhen = regexp.MustCompile(`(?i)availab|\bfree (?:time|slot|day|spot)|\bslots?\b|\bwhen (?:can|could|are|is)\b` +
-	`|beschikba|\bvrije? (?:plek|tijd|moment)|\bwanneer\b` +
-	`|disponib|créneau|\blibres?\b|\bquand\b` +
-	`|свобод|окошк|окно|окна|когда` +
-	`|вільн|віконц|коли`)
+// The visitor asks when they can come in two ways. Asking for free times
+// (a free slot, a time of day) leaves any day the reply names unchecked.
+// Asking to come at a day or time, or for a person then, leaves the chat
+// nothing to say without a lookup but a question back or the studio's
+// opening hours: a yes, a no or "that works" is unchecked whatever words
+// it uses. A day alone ("Can I apply the oil in the evening?") asks
+// neither.
+var (
+	freeTimeWords = regexp.MustCompile(`(?i)availab|\bfree (?:time|slot|day|spot)|\bslots?\b|\b(?:are you|anyone|someone) (?:free|available)\b` +
+		`|beschikba|\bvrije? (?:plek|tijd|moment)` +
+		`|disponib|créneau|\blibres?\b` +
+		`|свобод|окошк|окно|окна` +
+		`|вільн|віконц`)
+	comeWords = regexp.MustCompile(`(?i)\b(?:i|we|to|i'll) (?:come|visit|drop by|pop in)\b|\b(?:can|could|may) (?:i|we) (?:come|visit|get in)\b|\bsee (?:me|us)\b|\bbook|\bappointment|\breserv` +
+		`|\bkomen\b|\blangs ?kom|\bboeken|\bafspraak|\bterecht\b` +
+		`|\bvenir\b|\bviens\b|réserv|rendez-vous|\brdv\b` +
+		`|прийти|приду|прийду|зайти|запис|на при[её]м|бронир|к вам` +
+		`|на прийом|заброн|до вас`)
+	// whenAsked are the question words for when.
+	whenAsked = regexp.MustCompile(`(?i)\bwhen\b|\bwanneer\b|\bquand\b|когда|коли`)
+)
+
+// asked reports whether s asks for free times, and whether it asks to
+// come at a day or time; staff are the team's first names.
+func asked(s string, staff []string) (times, come bool) {
+	clocked := len(clockTimes(s)) > 0
+	free := freeTimeWords.MatchString(s)
+	come = (clocked || when.MatchString(s) || whenAsked.MatchString(s)) && (free || comeWords.MatchString(s) || namesStaff(s, staff))
+	return come || free || clocked, come
+}
+
+// namesStaff reports whether s names one of staff, as a whole word.
+func namesStaff(s string, staff []string) bool {
+	words := strings.FieldsFunc(strings.ToLower(s), func(r rune) bool { return !unicode.IsLetter(r) })
+	return slices.ContainsFunc(staff, func(n string) bool { return slices.Contains(words, strings.ToLower(n)) })
+}
 
 // asksWhen reports whether the visitor's new message, or the one before it
-// (they may name the treatment only once asked), asks when they can come.
-func asksWhen(history []Turn, message string) bool {
+// (they may name the treatment only once asked), asks for free times, and
+// whether it asks to come at a day or time.
+func asksWhen(history []Turn, message string, staff []string) (times, come bool) {
 	said := []string{message}
 	for _, t := range slices.Backward(history) {
 		if t.Role == RoleVisitor {
@@ -131,29 +163,76 @@ func asksWhen(history []Turn, message string) bool {
 			break
 		}
 	}
-	return slices.ContainsFunc(said, func(s string) bool {
-		return len(clockTimes(s)) > 0 || when.MatchString(s) || askedWhen.MatchString(s)
-	})
+	for _, s := range said {
+		t, c := asked(s, staff)
+		times, come = times || t, come || c
+	}
+	return times, come
 }
 
-// openingWords tell a sentence about the studio's opening days and hours.
-var openingWords = regexp.MustCompile(`(?i)\b(?:open|opens|opened|closed?|opening hours|hours)\b|gesloten|openingsuren|openingstijden|ouvert|fermé|horaires|открыт|закрыт|работаем|часы работы|відчинен|зачинен|працюємо|години роботи`)
+// firstNames are the team's first names.
+func firstNames(staff []content.Member) []string {
+	var names []string
+	for _, m := range staff {
+		if f := strings.Fields(m.Name); len(f) > 0 {
+			names = append(names, f[0])
+		}
+	}
+	return names
+}
+
+// openingWords tell a sentence about the studio's opening days and hours:
+// the studio as its subject, never a person or an "open appointment".
+var openingWords = regexp.MustCompile(`(?i)\b(?:we(?:'|’)re|we are|the studio is|the salon is) (?:open|closed)\b|\bopening (?:hours|days)\b|\bour hours\b` +
+	`|\b(?:we zijn|wij zijn|de studio is|het salon is) (?:open|gesloten)\b|openingsuren|openingstijden` +
+	`|\b(?:nous sommes|le studio est|le salon est) (?:ouverts?|fermés?)|horaires` +
+	`|мы (?:открыты|закрыты|работаем|не работаем)|студия (?:открыта|закрыта|работает|не работает)|часы работы` +
+	`|ми (?:відчинені|зачинені|працюємо|не працюємо)|студія (?:відчинена|зачинена|працює|не працює)|години роботи`)
+
+// aboutOpening reports whether s is about the studio's opening hours.
+func aboutOpening(s string) bool {
+	return openingWords.MatchString(s) || strings.Contains(s, hoursToken)
+}
 
 // namesWhen reports whether t, asked when the visitor can come, names a
 // day or a part of the day other than in a sentence about opening hours:
 // without a lookup, whatever it says about that day is unchecked.
 func namesWhen(t string) bool {
 	return slices.ContainsFunc(sentence.Split(t, -1), func(s string) bool {
-		return when.MatchString(s) && !openingWords.MatchString(s) && !strings.Contains(s, hoursToken)
+		return when.MatchString(s) && !aboutOpening(s)
 	})
+}
+
+var (
+	// sentenceWithEnd is a sentence with the marks that end it.
+	sentenceWithEnd = regexp.MustCompile(`[^.!?;\n]+[.!?;\n]*`)
+	clause          = regexp.MustCompile(`,`)
+)
+
+// asksBack reports whether t only asks the visitor something or tells them
+// the studio's opening hours, clause by clause ("Yes, we're open" says
+// yes): all the chat can say, without a lookup, to a visitor asking to come.
+func asksBack(t string) bool {
+	for _, s := range sentenceWithEnd.FindAllString(t, -1) {
+		if strings.Contains(s, "?") {
+			continue
+		}
+		for _, c := range clause.Split(s, -1) {
+			if strings.IndexFunc(c, unicode.IsLetter) >= 0 && !aboutOpening(c) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // hoursToken is what the model writes for the published opening hours.
 const hoursToken = "{opening_hours}"
 
 // answer uses the recorded lookup outcomes as the entire availability reply.
-// Without a lookup, text that says when an appointment is free is withheld,
-// and the visitor told the chat confirms free times only from the calendar.
+// Without a lookup, text that says when an appointment is free, or anything
+// but a question back to a visitor asking to come, is withheld, and the
+// visitor told the chat confirms free times only from the calendar.
 // Published studio facts can be quoted verbatim; the opening hours are
 // filled in from the studio's data.
 func (r *toolRun) answer(said []string, tokens usage.Tokens, unmetered int) (Answer, error) {
@@ -166,7 +245,7 @@ func (r *toolRun) answer(said []string, tokens usage.Tokens, unmetered int) (Ans
 			case t == "":
 			case slices.Contains(r.k.Facts, t) || t == r.k.Hours:
 				checked = append(checked, t)
-			case claimsAvailability(t) || r.asksWhen && namesWhen(t):
+			case claimsAvailability(t) || r.asksWhen && namesWhen(t) || r.asksToCome && !asksBack(t):
 				unverified = true
 			default:
 				checked = append(checked, t)
