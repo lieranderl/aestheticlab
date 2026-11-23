@@ -74,12 +74,23 @@ type Offer struct {
 	Staff     string
 }
 
+// Choice is a treatment the visitor can pick when they asked for a kind
+// with several options.
+type Choice struct {
+	ServiceID string
+	Service   string
+}
+
 // Answer is the assistant's reply, the Book buttons it offers, the free
 // times it found, and the tokens its model calls were billed for. Text may
-// be empty when Times answers on its own.
+// be empty when Times or Choices answer on their own.
 type Answer struct {
 	Text   string
 	Offers []Offer
+	// Choices are the treatments choose_treatment offered: the chat asks
+	// which one with its own words and a button for each, and the model's
+	// text is dropped.
+	Choices []Choice
 	// Times are the free times find_free_slots returned, for the chat to
 	// show as they are: the model only explains them.
 	Times []FreeTimes
@@ -114,8 +125,9 @@ var ErrNoAnswer = errors.New("assistant gave no answer")
 
 // The tools' names.
 const (
-	toolFindFreeSlots = "find_free_slots"
-	toolOfferBooking  = "offer_booking"
+	toolFindFreeSlots   = "find_free_slots"
+	toolOfferBooking    = "offer_booking"
+	toolChooseTreatment = "choose_treatment"
 )
 
 const (
@@ -125,6 +137,8 @@ const (
 	maxSlots = 12
 	// maxOffers bounds the Book buttons under one reply.
 	maxOffers = 3
+	// maxChoices bounds the treatments one choice offers.
+	maxChoices = 8
 	// defaultDays is how far find_free_slots looks without dates.
 	defaultDays = 7
 	// maxOutputTokens bounds one model call's output, Gemini's thinking
@@ -248,7 +262,9 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 			part.FunctionResponse.ID = c.ID
 			parts = append(parts, part)
 		}
-		if last && worked {
+		// A choice of treatments is the whole answer: the chat asks which
+		// one itself.
+		if last && worked || len(run.choices) > 0 {
 			return run.answer(said, tokens, unmetered)
 		}
 		contents = append(contents, genai.NewContentFromParts(parts, genai.RoleUser))
@@ -410,6 +426,8 @@ type toolRun struct {
 	offers []Offer
 	// times are the calendar outcomes to show.
 	times []FreeTimes
+	// choices are the treatments choose_treatment offered.
+	choices []Choice
 	// asksWhen says the visitor asked for free times; asksToCome, that
 	// they asked to come at a day or time.
 	asksWhen, asksToCome bool
@@ -421,6 +439,8 @@ func (r *toolRun) call(ctx context.Context, c *genai.FunctionCall) map[string]an
 		return r.findFreeSlots(ctx, c.Args)
 	case toolOfferBooking:
 		return r.offerBooking(c.Args)
+	case toolChooseTreatment:
+		return r.chooseTreatment(c.Args)
 	}
 	return failure("unknown tool " + c.Name)
 }
@@ -585,4 +605,29 @@ func (r *toolRun) offerBooking(args map[string]any) map[string]any {
 		r.offers = append(r.offers, o)
 	}
 	return map[string]any{"ok": true, "note": "A Book button for " + cmp.Or(o.Staff, "any available person") + " is shown under your reply; don't write a link."}
+}
+
+// chooseTreatment offers the visitor the treatments in service_ids that can
+// be booked online, each once and at most maxChoices: the chat asks which
+// one with a button for each.
+func (r *toolRun) chooseTreatment(args map[string]any) map[string]any {
+	ids, _ := args["service_ids"].([]any)
+	var choices []Choice
+	for _, v := range ids {
+		id, _ := v.(string)
+		i := slices.IndexFunc(r.k.Content.Services, func(s content.Service) bool { return s.ID == strings.TrimSpace(id) })
+		if i < 0 || len(choices) == maxChoices {
+			continue
+		}
+		s := r.k.Content.Services[i]
+		c := Choice{ServiceID: s.ID, Service: s.Name}
+		if len(s.StaffIDs) > 0 && !slices.Contains(choices, c) {
+			choices = append(choices, c)
+		}
+	}
+	if len(choices) < 2 {
+		return failure("fewer than two of these can be booked online; with one, call find_free_slots for it, else answer in words")
+	}
+	r.choices = choices
+	return map[string]any{"ok": true, "note": "The chat asks the visitor which treatment, with a button for each; nothing you write is shown."}
 }

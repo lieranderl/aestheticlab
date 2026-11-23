@@ -175,7 +175,7 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 		}
 		history := cleanHistory(sig.ChatHistory)
 		n := len(history)
-		_ = sse.PatchElementTempl(views.ChatMessage(true, message, nil, nil, n), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
+		_ = sse.PatchElementTempl(views.ChatMessage(true, message, nil, nil, nil, n), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
 		_ = sse.MarshalAndPatchSignals(map[string]any{"chatInput": "", "chatBusy": true})
 
 		start := time.Now()
@@ -242,6 +242,15 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 				answer.Text = strings.TrimSpace(answer.Text + "\n\n" + views.ChatTimesUnverified(ctx))
 			}
 		}
+		// A choice of treatments is asked in the chat's words, never the
+		// model's.
+		choices := make([]views.ChatChoice, 0, len(answer.Choices))
+		for _, c := range answer.Choices {
+			choices = append(choices, views.ChatChoice{ServiceID: c.ServiceID, Service: c.Service})
+		}
+		if len(choices) > 0 && answer.Text == "" {
+			answer.Text = views.ChatChoose(ctx)
+		}
 		offers := make([]views.ChatOffer, 0, len(answer.Offers))
 		for _, o := range answer.Offers {
 			offers = append(offers, views.ChatOffer{ServiceID: o.ServiceID, Service: o.Service, StaffID: o.StaffID, Staff: o.Staff})
@@ -258,13 +267,13 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 		}
 		// Visitors' messages and replies are never logged: only counts.
 		log.InfoContext(ctx, "chat_reply", "locale", string(l), "outcome", outcome, "turns", n+1,
-			"offers", len(offers), "times", len(times), "duration_ms", time.Since(start).Milliseconds(), "cost_eur", cost,
+			"offers", len(offers), "times", len(times), "choices", len(choices), "duration_ms", time.Since(start).Milliseconds(), "cost_eur", cost,
 			"prompt_tokens", answer.Tokens.Prompt, "cached_tokens", answer.Tokens.Cached, "output_tokens", answer.Tokens.Output,
 			"unmetered_calls", answer.Unmetered)
-		_ = sse.PatchElementTempl(views.ChatMessage(false, answer.Text, times, offers, n+1), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
+		_ = sse.PatchElementTempl(views.ChatMessage(false, answer.Text, times, offers, choices, n+1), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
 		history = append(history,
 			assistant.Turn{Role: assistant.RoleVisitor, Text: message},
-			assistant.Turn{Role: assistant.RoleAssistant, Text: views.ChatTranscript(ctx, answer.Text, times)})
+			assistant.Turn{Role: assistant.RoleAssistant, Text: views.ChatTranscript(ctx, answer.Text, times, choices)})
 		_ = sse.MarshalAndPatchSignals(map[string]any{"chatHistory": history, "chatBusy": false})
 	}
 }

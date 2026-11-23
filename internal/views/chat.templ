@@ -61,7 +61,7 @@ templ chatWidget() {
 			<div class="flex grow flex-col-reverse overflow-y-auto px-4 py-3">
 				<div>
 					<div id="chat-log" class="flex flex-col gap-3" aria-live="polite">
-						@ChatMessage(false, tr(ctx, "Hi! Ask me about our treatments, prices, team or free times."), nil, nil, 0)
+						@ChatMessage(false, tr(ctx, "Hi! Ask me about our treatments, prices, team or free times."), nil, nil, nil, 0)
 					</div>
 					<div class="chat chat-start" hidden data-attr:hidden="!$chatBusy">
 						<div class="chat-bubble bg-base-200 font-main text-sm">
@@ -112,9 +112,10 @@ templ chatWidget() {
 }
 
 // ChatMessage is one message in the chat log: the visitor's on the right,
-// the assistant's on the left with the free times it found and its Book
-// buttons. n numbers the message so its buttons' ids stay unique.
-templ ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOffer, n int) {
+// the assistant's on the left with the free times it found, its Book
+// buttons and the treatments to choose from. n numbers the message so its
+// buttons' ids stay unique.
+templ ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOffer, choices []ChatChoice, n int) {
 	if visitor {
 		<div class="chat chat-end">
 			<div class="chat-bubble chat-bubble-primary whitespace-pre-line font-main text-sm">{ text }</div>
@@ -152,6 +153,20 @@ templ ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOff
 				<div class="chat-footer mt-2 flex flex-col items-start gap-2 opacity-100">
 					for _, o := range offers {
 						@BookButton(chatBooking(ctx, o, n))
+					}
+				</div>
+			}
+			<!-- A choice of treatments: each button asks for that one's free
+			times, as if the visitor had typed it. -->
+			if len(choices) > 0 {
+				<div class="chat-footer mt-2 flex flex-wrap items-start gap-2 opacity-100" role="group" aria-label={ tr(ctx, "Treatments to choose from") }>
+					for _, c := range choices {
+						<button
+							type="button"
+							class="btn btn-outline btn-sm h-auto min-h-8 rounded-full border-base-300 py-1.5 font-main text-xs font-normal normal-case"
+							data-attr:disabled="$chatBusy"
+							data-on:click={ "$chatInput = " + jsString(chatChoiceAsk(ctx, c)) + "; @post('" + href(ctx, "chat") + "')" }
+						>{ c.Service }</button>
 					}
 				</div>
 			}

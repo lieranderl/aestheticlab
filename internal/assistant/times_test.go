@@ -12,7 +12,6 @@ import (
 
 	"github.com/lieranderl/aestheticlab/internal/assistant"
 	"github.com/lieranderl/aestheticlab/internal/availability"
-	"github.com/lieranderl/aestheticlab/internal/content"
 )
 
 // toolSlots are the free times find_free_slots returned to the model in
@@ -235,12 +234,9 @@ func TestAvailabilityIsConfirmedOnlyByALookup(t *testing.T) {
 		"aftercare without after":    {message: "Can I wear makeup tonight?", reply: "Wait 24 hours before wearing makeup.", want: "Wait 24 hours before wearing makeup."},
 		"redness by a day":           {message: "Will the redness be gone tomorrow?", reply: "Redness usually fades within a day.", want: "Redness usually fades within a day."},
 		"aftercare in Dutch":         {message: "Mag ik vanavond douchen?", reply: "Wacht 24 uur met douchen.", want: "Wacht 24 uur met douchen."},
-		"the options of a kind":      {message: "When can I book a pedicure?", reply: "We offer Pedicure (70 euros), and Coating removal (10 euros). Which one would you like?", want: "We offer Pedicure (70 euros), and Coating removal (10 euros). Which one would you like?"},
-		"the options in French":      {message: "Quand puis-je réserver une pédicure ?", reply: "Nous proposons la Pedicure à 70 €. Laquelle souhaitez-vous ?", want: "Nous proposons la Pedicure à 70 €. Laquelle souhaitez-vous ?"},
 		"a treatment that works":     {message: "When can I book a pedicure?", reply: "A pedicure is possible."},
 		"a treatment with a person":  {message: "When can I book a pedicure?", reply: "Zara does the pedicure."},
 		"a treatment that is free":   {message: "When can I book a pedicure?", reply: "The pedicure is available."},
-		"the options as lines":       {message: "When can I book a pedicure?", reply: "Pedicure: 70 euros\nCoating removal: 10 euros\nWhich one would you like?", want: "Pedicure: 70 euros\nCoating removal: 10 euros\nWhich one would you like?"},
 		"a treatment that suits":     {message: "When can I book a pedicure?", reply: "We can accommodate you for a pedicure."},
 		"a treatment for you":        {message: "When can I book a pedicure?", reply: "A pedicure is no problem for us."},
 		"a treatment at a time":      {message: "When can I book a pedicure?", reply: "Pedicure at 10:00."},
@@ -403,39 +399,5 @@ func TestAllStaffRefinementReplacesStaffSpecificResults(t *testing.T) {
 		len(got.Times[0].Slots) != 0 || got.Times[0].Failed ||
 		len(got.Offers) != 1 || got.Offers[0].StaffID != 0 {
 		t.Fatalf("want only the empty all-staff result and its booking offer, got %+v, %v", got, err)
-	}
-}
-
-// Asked when they can book a kind of treatment with several options,
-// Gemini lists the options and asks which; the visitor reads that, as
-// Gemini wrote it. A sentence that says one can be had is still withheld.
-// The replies are Gemini's own, to the studio's manicures.
-func TestAListOfTheOptionsReachesTheVisitor(t *testing.T) {
-	k := knowledge()
-	manicures := *k.Content
-	manicures.ServiceGroups = append(slices.Clone(manicures.ServiceGroups), content.ServiceGroup{ID: "2", Name: "Manicure", NameEN: "Manicure"})
-	manicures.Services = slices.Clone(manicures.Services)
-	for i, n := range []string{"Manicure", "Manicure+polish", "Manicure + gel polish color (short nails)", "Manicure + gel polish nude (long nails)", "Express manicure + polish", "Male manicure", "Extensions using dual forms"} {
-		manicures.Services = append(manicures.Services, content.Service{ID: fmt.Sprint(9000 + i), GroupID: "2", Name: n, NameEN: n, Duration: 60, Price: 40, StaffIDs: []int64{642297}})
-	}
-	k.Content = &manicures
-	for reply, shown := range map[string]bool{
-		"We offer several manicure services: Classic, Manicure + gel polish (nude or color, for short or long nails), Manicure + polish, Express manicure, Male manicure, or Extensions. Which of these would you like to book?": true,
-		"We have several types of manicures available: classic, express, or with gel polish (nude, color, long or short nails, or for men). Which one would you like to book?":                                                   true,
-		"Which manicure would you like to book? We offer a classic dry manicure, male manicure, express manicure with polish, or various options with gel polish (nude or color, for short or long nails).":                      true,
-		"A manicure is available.":                         false,
-		"Manicures are available for you.":                 false,
-		"We can accommodate you for a manicure.":           false,
-		"Several manicure services are possible tomorrow.": false,
-		"Zara offers several manicure services.":           false,
-	} {
-		m := &scripted{replies: []*genai.GenerateContentResponse{text(reply)}}
-		got, err := newAssistant(m).Reply(context.Background(), k, nil, "When can I book a manicure?")
-		if err != nil {
-			t.Fatalf("%q: %v", reply, err)
-		}
-		if want := map[bool]string{true: reply}[shown]; got.Text != want || got.Unverified == shown {
-			t.Errorf("%q: text %q, unverified %v; want shown %v", reply, got.Text, got.Unverified, shown)
-		}
 	}
 }
