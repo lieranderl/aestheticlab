@@ -61,12 +61,12 @@ func TestAChoiceOfTreatmentsIsAskedWithButtons(t *testing.T) {
 		"in English": {
 			path: "/en-BE/chat",
 			args: map[string]any{"service_ids": both},
-			want: []string{"Which one would you like? Pick a treatment to see its free times.", `aria-label="Treatments to choose from"`, ">Manicure<", ">Manicure+polish<", "When can I book Manicure?", "When can I book Manicure+polish?", `"chatHistory"`, "• Manicure+polish"},
+			want: []string{"Which one would you like? Pick a treatment to see its free times.", `aria-label="Treatments to choose from"`, ">Manicure<", ">Manicure+polish<", "When can I book Manicure?", "When can I book Manicure+polish?", "$chatLookup = 'service_id=4887841'", `"chatHistory"`, "• Manicure+polish"},
 		},
 		"in Dutch": {
 			path: "/nl-BE/chat",
 			args: map[string]any{"service_ids": both},
-			want: []string{"Welke wil je? Kies een behandeling om de vrije tijden te zien.", ">Manicure + lak<", "Wanneer kan ik Manicure + lak boeken?"},
+			want: []string{"Welke wil je? Kies een behandeling om de vrije tijden te zien.", ">Manicure + lak<", "Wanneer kan ik Manicure + lak boeken?", "$chatLookup = 'service_id=4887841'"},
 		},
 	} {
 		h := server.New(server.Config{Content: manicureContent(t), Assistant: assistant.New(assistant.Options{Model: choosing{tc.args}}), Spending: &spending{}, ChatPrice: testPrice})
@@ -79,5 +79,37 @@ func TestAChoiceOfTreatmentsIsAskedWithButtons(t *testing.T) {
 		if strings.Contains(body, "tomorrow works") {
 			t.Errorf("%s: the model's own text is shown", name)
 		}
+	}
+}
+
+// A choice's button sends its treatment's ID with the message: the chat
+// shows that treatment's times without asking the model which it meant.
+func TestAChoicesButtonShowsItsOwnTreatmentsTimes(t *testing.T) {
+	m := &counting{}
+	h := server.New(server.Config{Content: manicureContent(t), Assistant: assistant.New(assistant.Options{Model: m}), Spending: &spending{}, ChatPrice: testPrice})
+	body := html.UnescapeString(post(t, h, "/nl-BE/chat", `{"chatInput":"Wanneer kan ik Manicure + lak boeken?","chatLookup":"service_id=4887841"}`, nil).Body.String())
+	for _, w := range []string{"Wanneer kan ik Manicure + lak boeken?", "Vrije tijden voor Manicure + lak", `"chatLookup":""`} {
+		if !strings.Contains(body, w) {
+			t.Errorf("the reply lacks %q", w)
+		}
+	}
+	if m.calls != 0 {
+		t.Errorf("%d model calls, want none", m.calls)
+	}
+}
+
+// A choice for a day, time and person keeps them on its buttons, and the
+// lookup a button asks for applies them.
+func TestAChoicesButtonKeepsTheSearch(t *testing.T) {
+	h := server.New(server.Config{Content: manicureContent(t), Assistant: assistant.New(assistant.Options{Model: choosing{map[string]any{"service_ids": []any{"4847894", "4887841"}, "from_time": "17:00", "staff_id": float64(642297)}}}), Spending: &spending{}, ChatPrice: testPrice})
+	body := html.UnescapeString(post(t, h, "/en-BE/chat", `{"chatInput":"A manicure with Zara after 17:00?"}`, nil).Body.String())
+	if w := "$chatLookup = 'from_time=17%3A00&service_id=4887841&staff_id=642297'"; !strings.Contains(body, w) {
+		t.Errorf("the reply lacks %q", w)
+	}
+
+	h = server.New(server.Config{Content: manicureContent(t), Assistant: assistant.New(assistant.Options{Model: &counting{}}), Spending: &spending{}, ChatPrice: testPrice})
+	body = html.UnescapeString(post(t, h, "/nl-BE/chat", `{"chatInput":"Wanneer kan ik Manicure + lak boeken?","chatLookup":"from_time=17%3A00&service_id=4887841&staff_id=642297"}`, nil).Body.String())
+	if w := "Vrije tijden voor Manicure + lak bij Zara"; !strings.Contains(body, w) {
+		t.Errorf("the reply lacks %q", w)
 	}
 }

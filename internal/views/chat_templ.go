@@ -546,7 +546,7 @@ func ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOffe
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "<!-- A choice of treatments: each button asks for that one's free\n\t\t\ttimes, as if the visitor had typed it. -->")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "<!-- A choice of treatments: each button asks for that one's free\n\t\t\ttimes in the visitor's words and sends the lookup itself, so the\n\t\t\tserver looks up that treatment (assistant.Times), never the model. -->")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -558,7 +558,7 @@ func ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOffe
 				var templ_7745c5c3_Var30 string
 				templ_7745c5c3_Var30, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Treatments to choose from")).Resolve(ctx)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 162, Col: 141}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 163, Col: 141}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var30)
 				if templ_7745c5c3_Err != nil {
@@ -574,9 +574,9 @@ func ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOffe
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var31 string
-					templ_7745c5c3_Var31, templ_7745c5c3_Err = templruntime.NewAttributeExpression("$chatInput = " + jsString(chatChoiceAsk(ctx, c)) + "; @post('" + href(ctx, "chat") + "')").Resolve(ctx)
+					templ_7745c5c3_Var31, templ_7745c5c3_Err = templruntime.NewAttributeExpression("$chatInput = " + jsString(chatChoiceAsk(ctx, c)) + "; $chatLookup = " + jsString(c.Lookup) + "; @post('" + href(ctx, "chat") + "')").Resolve(ctx)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 168, Col: 113}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 169, Col: 155}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
 					if templ_7745c5c3_Err != nil {
@@ -589,7 +589,7 @@ func ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOffe
 					var templ_7745c5c3_Var32 string
 					templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(c.Service)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 169, Col: 18}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/chat.templ`, Line: 170, Col: 18}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 					if templ_7745c5c3_Err != nil {
