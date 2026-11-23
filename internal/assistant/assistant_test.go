@@ -361,6 +361,7 @@ func TestThePromptKeepsTimesAndCareAdviceHonest(t *testing.T) {
 		"where the visitor chooses the time: never say you booked, reserved or selected a time",
 		"mention the Book button only when you called offer_booking",
 		"never list dates or times yourself",
+		"ask which one in one short question that names the options",
 		"last_lookup",
 		"how-we-do-it details only as the information below states them",
 		"If a note from the owner and a treatment's description disagree, follow the note",
