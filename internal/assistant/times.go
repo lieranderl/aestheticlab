@@ -20,6 +20,7 @@ import (
 type FreeTimes struct {
 	ServiceID string
 	Service   string
+	Price     *float64
 	// StaffID and Staff are the person the lookup was for; zero for anyone.
 	StaffID int64
 	Staff   string
@@ -66,6 +67,11 @@ func clockTimes(s string) []string {
 // searches for different staff. Switching to or from all staff supersedes
 // earlier results for that treatment with the other staff scope.
 func (r *toolRun) showTimes(ft FreeTimes) {
+	if ft.Price == nil {
+		if i := slices.IndexFunc(r.times, func(t FreeTimes) bool { return t.ServiceID == ft.ServiceID && t.Price != nil }); i >= 0 {
+			ft.Price = r.times[i].Price
+		}
+	}
 	r.times = slices.DeleteFunc(r.times, func(t FreeTimes) bool {
 		return t.ServiceID == ft.ServiceID && t.StaffID != ft.StaffID && (t.StaffID == 0 || ft.StaffID == 0)
 	})
@@ -80,18 +86,18 @@ func (r *toolRun) showTimes(ft FreeTimes) {
 	}
 }
 
+// Appointment phrases in the site's supported languages. Numeric clock times
+// in generated prose are handled separately from these common expressions.
+var appointmentClaim = regexp.MustCompile(`(?i)\b(?:is free|are free|free slot|free times? (?:are|on|at)|is available|are available|slots? available|appointments? available|no availability|vrij op|vrije (?:plek|tijd|uren)|beschikbaar op|créneaux? (?:libres?|disponibles?)|(?:est|sont) (?:libres?|disponibles?)|[0-9]{1,2}\s*(?:a\.?m\.?|p\.?m\.?))\b|свободн(?:ое время|ые окна|а в)|есть окошко|вільн(?:ий час|і години|а в)`)
+
 // answer uses the recorded lookup outcomes as the entire availability reply.
-// Clock text cannot validate the date, staff, or whether a slot is free.
-func (r *toolRun) answer(said []string, known string, tokens usage.Tokens, unmetered int) (Answer, error) {
+// Published studio facts can be quoted verbatim, including opening hours.
+func (r *toolRun) answer(said []string, tokens usage.Tokens, unmetered int) (Answer, error) {
 	var text string
 	if len(r.times) == 0 {
-		trusted := map[string]bool{}
-		for _, c := range clockTimes(known) {
-			trusted[c] = true
-		}
 		checked := make([]string, 0, len(said))
 		for _, t := range said {
-			if !slices.ContainsFunc(clockTimes(t), func(c string) bool { return !trusted[c] }) {
+			if slices.Contains(r.k.Facts, t) || (len(clockTimes(t)) == 0 && !appointmentClaim.MatchString(t)) {
 				checked = append(checked, t)
 			}
 		}

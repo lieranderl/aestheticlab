@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -15,8 +14,6 @@ import (
 type Source interface {
 	// Fetch reads every content document.
 	Fetch(ctx context.Context) (Documents, error)
-	// Ping reads one document, to show the source answers.
-	Ping(ctx context.Context) error
 }
 
 // Defaults for Options (plans/go-datastar-scale-to-zero.md, Cold-Start
@@ -34,8 +31,8 @@ const (
 	// DefaultFetchTimeout bounds a refresh, which outlives the request that
 	// started it.
 	DefaultFetchTimeout = 5 * time.Second
-	// pingTimeout bounds the dependency check's one read.
-	pingTimeout = 3 * time.Second
+	// dependencyWait bounds how long the probe joins an existing load.
+	dependencyWait = 3 * time.Second
 )
 
 // Options configure a Store. Zero values take the defaults.
@@ -48,7 +45,7 @@ type Options struct {
 	TTL, StaleWait, ColdWait, FetchTimeout time.Duration
 }
 
-// ErrNoSource is Ping's error for a Store without a Source.
+// ErrNoSource is the dependency check error for a Store without a Source.
 var ErrNoSource = errors.New("no content database is configured")
 
 // Store is one instance's content cache. Content is fetched inside the
@@ -183,16 +180,27 @@ func (s *Store) run(f *flight) {
 	s.log.Info("content_refreshed", "duration_ms", time.Since(start).Milliseconds())
 }
 
-// Ping checks that the content source answers, with one bounded read: the
-// /dependencyz probe.
-func (s *Store) Ping(ctx context.Context) error {
+// CheckLoaded reports whether this instance has loaded database content.
+// It can join an in-flight startup load but never starts a database read.
+func (s *Store) CheckLoaded(ctx context.Context) error {
 	if s.source == nil {
 		return ErrNoSource
 	}
-	ctx, cancel := context.WithTimeout(ctx, pingTimeout)
-	defer cancel()
-	if err := s.source.Ping(ctx); err != nil {
-		return fmt.Errorf("ping content source: %w", err)
+	s.mu.Lock()
+	loaded, f := s.current != nil, s.flight
+	s.mu.Unlock()
+	if loaded {
+		return nil
 	}
-	return nil
+	if f == nil {
+		return errors.New("database content has not been loaded")
+	}
+	ctx, cancel := context.WithTimeout(ctx, dependencyWait)
+	defer cancel()
+	select {
+	case <-f.done:
+		return f.err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

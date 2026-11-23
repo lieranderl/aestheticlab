@@ -147,6 +147,20 @@ func TestAReplyNamingATimeNotFoundIsDropped(t *testing.T) {
 			message:  "Monday at 18:00?",
 			hasTimes: true,
 		},
+		"an echoed visitor time without a lookup": {
+			replies: []*genai.GenerateContentResponse{text("Yes, Zara is free at 10:00.")},
+			message: "Can I book Zara at 10:00?",
+			wantErr: assistant.ErrNoAnswer,
+		},
+		"availability claim without a numeric time or lookup": {
+			replies: []*genai.GenerateContentResponse{text("Zara is available on Monday.")},
+			message: "Is Zara free on Monday?",
+			wantErr: assistant.ErrNoAnswer,
+		},
+		"published opening hours": {
+			replies: []*genai.GenerateContentResponse{text("Monday – Saturday · 10:00 – 18:30 · By appointment only")},
+			want:    "Monday – Saturday · 10:00 – 18:30 · By appointment only",
+		},
 		"a time without a lookup": {
 			replies: []*genai.GenerateContentResponse{text("Zara is free tomorrow at 14:00.")},
 			wantErr: assistant.ErrNoAnswer,

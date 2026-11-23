@@ -25,7 +25,6 @@ import (
 type docsSource struct{ docs content.Documents }
 
 func (s docsSource) Fetch(context.Context) (content.Documents, error) { return s.docs, nil }
-func (s docsSource) Ping(context.Context) error                       { return nil }
 
 func bookableContent(t *testing.T) *content.Store {
 	t.Helper()
@@ -315,12 +314,12 @@ func TestAReplyIsSettledEvenIfTheVisitorLeaves(t *testing.T) {
 
 // timesOnly is a model that looks up Pedicure's free times with
 // only_times, as for a plain availability question.
-type timesOnly struct{}
+type timesOnly struct{ price bool }
 
-func (timesOnly) Generate(context.Context, []*genai.Content, *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error) {
+func (m timesOnly) Generate(context.Context, []*genai.Content, *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error) {
 	return &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{
 		Content: genai.NewContentFromParts([]*genai.Part{{FunctionCall: &genai.FunctionCall{
-			ID: "1", Name: "find_free_slots", Args: map[string]any{"service_id": "4847871", "only_times": true},
+			ID: "1", Name: "find_free_slots", Args: map[string]any{"service_id": "4847871", "only_times": true, "include_price": m.price},
 		}}}, genai.RoleModel),
 		FinishReason: genai.FinishReasonStop,
 	}}}, nil
@@ -338,17 +337,17 @@ func TestFreeTimesAreShownFromTheLookupWithABookButton(t *testing.T) {
 	}
 	h := server.New(server.Config{
 		Content: bookableContent(t),
-		Assistant: assistant.New(assistant.Options{Model: timesOnly{}, Location: brussels, Finder: availability.NewFinder(availability.FinderOptions{
+		Assistant: assistant.New(assistant.Options{Model: timesOnly{price: true}, Location: brussels, Finder: availability.NewFinder(availability.FinderOptions{
 			Source: availability.DevSource{Location: brussels}, EveryStaff: true, DevHours: true, Location: brussels,
 		})}),
 		Spending: &spending{}, ChatPrice: testPrice,
 	})
-	body := post(t, h, "/en-BE/chat", `{"chatInput":"When is the next free time?"}`, nil).Body.String()
+	body := post(t, h, "/en-BE/chat", `{"chatInput":"How much is a pedicure and when is the next free time?"}`, nil).Body.String()
 	times := slotTime.FindAllStringSubmatch(body, -1)
 	if len(times) == 0 {
 		t.Fatalf("no free times shown:\n%s", body)
 	}
-	for _, want := range []string{"Free times for Pedicure", "the booking page confirms them", `id="chat-book-1-4847871"`} {
+	for _, want := range []string{"Free times for Pedicure", "€70", "the booking page confirms them", `id="chat-book-1-4847871"`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the reply lacks %q", want)
 		}
@@ -358,7 +357,7 @@ func TestFreeTimesAreShownFromTheLookupWithABookButton(t *testing.T) {
 		t.Fatal("no transcript")
 	}
 	transcript := body[i:]
-	if !strings.Contains(transcript, `"text":"Free times for Pedicure:\n• `) {
+	if !strings.Contains(transcript, `"text":"Free times for Pedicure:\n€70\n• `) {
 		t.Errorf("the transcript does not keep the times as text: %s", transcript)
 	}
 	for _, m := range times {

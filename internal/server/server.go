@@ -53,10 +53,8 @@ func New(cfg Config) http.Handler {
 	if store == nil {
 		store = content.NewStore(content.Options{Logger: log})
 	}
-	// /dependencyz is for deploy smoke tests: one bounded Firestore read.
-	// Phase 9a removes the uptime check that calls it today, so that it
-	// never keeps an instance warm.
-	mux.HandleFunc("GET /dependencyz", dependency(store, log))
+	// /dependencyz verifies the deployment candidate loaded database content.
+	mux.HandleFunc("GET /dependencyz", dependency(store))
 	mux.HandleFunc("GET /static/", staticFiles(cfg.Static))
 	mux.HandleFunc("GET /og/", shareImages(cfg.Static))
 	for _, name := range rootFiles {
@@ -110,12 +108,10 @@ func probe(w http.ResponseWriter, _ *http.Request) {
 	_, _ = io.WriteString(w, "OK")
 }
 
-// dependency answers OK when the content database answers one read, else
-// 503 (with the reason only in the log).
-func dependency(store *content.Store, log *slog.Logger) http.HandlerFunc {
+// dependency reports whether the instance has loaded database content.
+func dependency(store *content.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := store.Ping(r.Context()); err != nil {
-			log.WarnContext(r.Context(), "dependency_check_failed", "error", err.Error())
+		if err := store.CheckLoaded(r.Context()); err != nil {
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.Header().Set("Cache-Control", "no-store")
 			w.WriteHeader(http.StatusServiceUnavailable)

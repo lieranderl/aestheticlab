@@ -178,7 +178,7 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		}); ok {
 			if err := model.checkInput(ctx, contents, cfg); err != nil {
 				if len(run.times) > 0 {
-					return run.answer(said, "", tokens, unmetered)
+					return run.answer(said, tokens, unmetered)
 				}
 				return Answer{Tokens: tokens, Unmetered: unmetered}, err
 			}
@@ -189,7 +189,7 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 				tokens, unmetered = addTokens(tokens, worstRoundTokens), unmetered+1
 			}
 			if len(run.times) > 0 {
-				return run.answer(said, "", tokens, unmetered)
+				return run.answer(said, tokens, unmetered)
 			}
 			return Answer{Tokens: tokens, Unmetered: unmetered}, fmt.Errorf("model: %w", err)
 		}
@@ -210,7 +210,7 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 		}
 		said = append(said, reply)
 		if len(calls) == 0 {
-			return run.answer(said, prompt+"\n"+visitor, tokens, unmetered)
+			return run.answer(said, tokens, unmetered)
 		}
 		// Text written with a find_free_slots call comes before the times
 		// are known: any times in it are guesses, never shown.
@@ -239,11 +239,11 @@ func (a *Assistant) Reply(ctx context.Context, k Knowledge, history []Turn, mess
 			parts = append(parts, part)
 		}
 		if onlyTimes && worked {
-			return run.answer(said, prompt+"\n"+visitor, tokens, unmetered)
+			return run.answer(said, tokens, unmetered)
 		}
 		contents = append(contents, genai.NewContentFromParts(parts, genai.RoleUser))
 	}
-	return run.answer(said, prompt+"\n"+visitor, tokens, unmetered)
+	return run.answer(said, tokens, unmetered)
 }
 
 // billed is a response's billed tokens: the prompt with any tool-use
@@ -449,6 +449,9 @@ func (r *toolRun) findFreeSlots(ctx context.Context, args map[string]any) map[st
 		return failure(problem)
 	}
 	shown := FreeTimes{ServiceID: s.ID, Service: s.Name, Failed: true}
+	if includePrice, _ := args["include_price"].(bool); includePrice {
+		shown.Price = &s.Price
+	}
 	if args["staff_id"] != nil && len(staff) == 1 {
 		shown.StaffID, shown.Staff = staff[0].ID, staff[0].Name
 	}

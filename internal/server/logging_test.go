@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lieranderl/aestheticlab/internal/content"
 	"github.com/lieranderl/aestheticlab/internal/server"
 )
 
@@ -82,7 +81,9 @@ func TestEachRequestIsLoggedWithoutItsQuery(t *testing.T) {
 
 func TestSuccessfulProbesAreNotLogged(t *testing.T) {
 	var buf bytes.Buffer
-	h := server.New(server.Config{Logger: server.NewLogger(&buf), Content: content.NewStore(content.Options{Source: pinger{}})})
+	store := bookableContent(t)
+	store.Prefetch()
+	h := server.New(server.Config{Logger: server.NewLogger(&buf), Content: store})
 	for _, path := range []string{"/healthz", "/readyz", "/dependencyz"} {
 		get(t, h, path)
 	}

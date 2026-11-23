@@ -27,10 +27,8 @@ func NewGemini(ctx context.Context, project, location, model string) (*Gemini, e
 	return &Gemini{client: client, model: model}, nil
 }
 
-// geminiConfig is the client's configuration. A busy or failing endpoint
-// (429, 5xx; the eu endpoint answered both in testing) is retried once
-// after about a second, within the chat's reply timeout. Failed requests
-// aren't billed, so the spending ledger's worst case still holds.
+// geminiConfig lets the token preflight recover once from a transient error.
+// Billable generation overrides this retry policy.
 func geminiConfig(project, location string) *genai.ClientConfig {
 	return &genai.ClientConfig{
 		Backend: genai.BackendVertexAI, Project: project, Location: location,
@@ -63,7 +61,19 @@ func (g *Gemini) checkInput(ctx context.Context, contents []*genai.Content, cfg 
 
 // Generate implements Model.
 func (g *Gemini) Generate(ctx context.Context, contents []*genai.Content, cfg *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error) {
-	return g.client.Models.GenerateContent(ctx, g.model, contents, cfg)
+	// A dropped response may hide a billable success. One reservation covers
+	// one attempt, so do not allow the SDK to replay a generation.
+	request := genai.GenerateContentConfig{}
+	if cfg != nil {
+		request = *cfg
+	}
+	options := genai.HTTPOptions{}
+	if request.HTTPOptions != nil {
+		options = *request.HTTPOptions
+	}
+	options.RetryOptions = &genai.HTTPRetryOptions{Attempts: genai.Ptr[int32](1)}
+	request.HTTPOptions = &options
+	return g.client.Models.GenerateContent(ctx, g.model, contents, &request)
 }
 
 // Fake is a scripted stand-in for local development and the browser tests:

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"github.com/lieranderl/aestheticlab/internal/content"
@@ -26,7 +27,9 @@ func serve(t *testing.T, h http.Handler, req *http.Request) *httptest.ResponseRe
 }
 
 func TestProbesAnswerOKWithoutCaching(t *testing.T) {
-	h := server.New(server.Config{Content: content.NewStore(content.Options{Source: pinger{}})})
+	store := bookableContent(t)
+	store.Prefetch()
+	h := server.New(server.Config{Content: store})
 	for _, path := range []string{"/healthz", "/readyz", "/dependencyz"} {
 		t.Run(path, func(t *testing.T) {
 			res := get(t, h, path)
@@ -43,19 +46,47 @@ func TestProbesAnswerOKWithoutCaching(t *testing.T) {
 	}
 }
 
-// pinger is a content source that answers pings; or fails them with err.
-type pinger struct{ err error }
+type failingContent struct{ fetches atomic.Int32 }
 
-func (p pinger) Fetch(context.Context) (content.Documents, error) {
-	return content.Documents{}, errors.New("not fetched in these tests")
+func (s *failingContent) Fetch(context.Context) (content.Documents, error) {
+	s.fetches.Add(1)
+	return content.Documents{}, errors.New("unavailable")
 }
 
-func (p pinger) Ping(context.Context) error { return p.err }
+func (s *failingContent) Ping(context.Context) error {
+	s.fetches.Add(1)
+	return errors.New("unavailable")
+}
+
+func TestDependencyzDoesNotStartContentReads(t *testing.T) {
+	for _, prefetched := range []bool{false, true} {
+		source := &failingContent{}
+		store := content.NewStore(content.Options{Source: source})
+		if prefetched {
+			store.Prefetch()
+		}
+		h := server.New(server.Config{Content: store})
+		for range 3 {
+			if res := get(t, h, "/dependencyz"); res.Code != http.StatusServiceUnavailable {
+				t.Fatalf("status = %d, want 503", res.Code)
+			}
+		}
+		want := 0
+		if prefetched {
+			want = 1
+		}
+		if source.fetches.Load() != int32(want) {
+			t.Fatalf("%d source calls, want %d startup calls", source.fetches.Load(), want)
+		}
+	}
+}
 
 func TestDependencyzFailsWhenTheContentDatabaseDoesNot(t *testing.T) {
+	store := content.NewStore(content.Options{Source: &failingContent{}})
+	store.Prefetch()
 	for name, cfg := range map[string]server.Config{
 		"no database":      {},
-		"failing database": {Content: content.NewStore(content.Options{Source: pinger{errors.New("unavailable")}})},
+		"failing database": {Content: store},
 	} {
 		t.Run(name, func(t *testing.T) {
 			res := get(t, server.New(cfg), "/dependencyz")
