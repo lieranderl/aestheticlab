@@ -210,7 +210,7 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 			log.ErrorContext(ctx, "chat_budget_unreadable", "error", budget.Error())
 		default:
 			loc := store.Content(replyCtx).In(l)
-			k := assistant.Knowledge{Locale: l, Content: loc, Facts: views.AssistantFacts(ctx, loc), CareNotes: views.AssistantCareNotes(ctx), Categories: views.AssistantCategories(ctx, loc)}
+			k := assistant.Knowledge{Locale: l, Content: loc, Facts: views.AssistantFacts(ctx, loc), Hours: views.AssistantHours(ctx), CareNotes: views.AssistantCareNotes(ctx), Categories: views.AssistantCategories(ctx, loc)}
 			for _, qa := range views.AssistantFAQ(ctx, loc) {
 				k.FAQ = append(k.FAQ, assistant.QA{Question: qa.Question, Answer: qa.Answer})
 			}
@@ -236,6 +236,10 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 					log.ErrorContext(ctx, "chat_failed", "locale", string(l), "error", err.Error())
 				}
 				answer = assistant.Answer{Text: views.ChatUnavailable(ctx), Tokens: answer.Tokens, Unmetered: answer.Unmetered}
+			}
+			if answer.Unverified {
+				outcome = "unverified"
+				answer.Text = strings.TrimSpace(answer.Text + "\n\n" + views.ChatTimesUnverified(ctx))
 			}
 		}
 		offers := make([]views.ChatOffer, 0, len(answer.Offers))

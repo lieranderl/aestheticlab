@@ -313,13 +313,13 @@ func TestAReplyIsSettledEvenIfTheVisitorLeaves(t *testing.T) {
 }
 
 // timesOnly is a model that looks up Pedicure's free times with
-// only_times, as for a plain availability question.
+// last_lookup, as for a plain availability question.
 type timesOnly struct{ price bool }
 
 func (m timesOnly) Generate(context.Context, []*genai.Content, *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error) {
 	return &genai.GenerateContentResponse{Candidates: []*genai.Candidate{{
 		Content: genai.NewContentFromParts([]*genai.Part{{FunctionCall: &genai.FunctionCall{
-			ID: "1", Name: "find_free_slots", Args: map[string]any{"service_id": "4847871", "only_times": true, "include_price": m.price},
+			ID: "1", Name: "find_free_slots", Args: map[string]any{"service_id": "4847871", "last_lookup": true, "include_price": m.price},
 		}}}, genai.RoleModel),
 		FinishReason: genai.FinishReasonStop,
 	}}}, nil
@@ -365,5 +365,30 @@ func TestFreeTimesAreShownFromTheLookupWithABookButton(t *testing.T) {
 		if !strings.Contains(transcript, label) || !strings.HasSuffix(m[1], label[len(label)-5:]) {
 			t.Errorf("shown %q (%s) is not in the transcript", label, m[1])
 		}
+	}
+}
+
+// says is a model that answers every message with its text.
+type says string
+
+func (s says) Generate(context.Context, []*genai.Content, *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error) {
+	return &genai.GenerateContentResponse{
+		Candidates:    []*genai.Candidate{{Content: genai.NewContentFromText(string(s), genai.RoleModel), FinishReason: genai.FinishReasonStop}},
+		UsageMetadata: &genai.GenerateContentResponseUsageMetadata{},
+	}, nil
+}
+
+// A day the model confirmed without checking the calendar never reaches
+// the visitor: the chat says it confirms free times only from the calendar.
+// Opening hours come from the site's own data.
+func TestTheChatConfirmsFreeTimesOnlyFromTheCalendar(t *testing.T) {
+	body := post(t, chatSite(t, says("Tomorrow afternoon works for Zara.")), "/en-BE/chat", `{"chatInput":"Can I come tomorrow afternoon?"}`, nil).Body.String()
+	if strings.Contains(body, "works for Zara") || !strings.Contains(body, "I can only confirm free times by checking the calendar.") {
+		t.Errorf("unchecked availability:\n%s", body)
+	}
+
+	body = post(t, chatSite(t, says("We're in Leuven, open {opening_hours}.")), "/en-BE/chat", `{"chatInput":"Where are you and when are you open?"}`, nil).Body.String()
+	if !strings.Contains(body, "open Monday – Saturday · 10:00 – 18:00 · By appointment only.") {
+		t.Errorf("opening hours not filled in:\n%s", body)
 	}
 }

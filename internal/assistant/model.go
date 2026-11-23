@@ -78,7 +78,7 @@ func (g *Gemini) Generate(ctx context.Context, contents []*genai.Content, cfg *g
 
 // Fake is a scripted stand-in for local development and the browser tests:
 // no network and no cost. A message about times calls find_free_slots with
-// only_times, so the times found end the reply; one about booking calls
+// last_lookup, so the times found end the reply; one about booking calls
 // offer_booking, for the first bookable treatment; anything else gets a
 // fixed reply.
 type Fake struct{}
@@ -108,7 +108,7 @@ func (Fake) Generate(_ context.Context, contents []*genai.Content, cfg *genai.Ge
 	}
 	switch {
 	case service != "" && timesWords.MatchString(msg):
-		return fakeCall(toolFindFreeSlots, map[string]any{"service_id": service, "only_times": true}), nil
+		return fakeCall(toolFindFreeSlots, map[string]any{"service_id": service, "last_lookup": true}), nil
 	case service != "" && bookWords.MatchString(msg):
 		return fakeCall(toolOfferBooking, map[string]any{"service_id": service}), nil
 	}

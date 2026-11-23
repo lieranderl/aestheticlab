@@ -39,7 +39,6 @@ func AssistantFacts(ctx context.Context, loc *content.Localized) []string {
 		siteName + ", " + street + ", " + zip + " " + city + ", Belgium",
 		tr(ctx, "Manicure, pedicure, brows, lashes and laser, in a calm studio in the heart of Leuven."),
 		tr(ctx, "Opened in 2024 with a simple promise: beautiful work in a space that feels calm, honest and welcoming. We listen first, then create."),
-		tr(ctx, "Monday") + " – " + tr(ctx, "Saturday") + " · " + opens + " – " + closes + " · " + tr(ctx, "By appointment only"),
 		"Email: " + siteEmail,
 		"Instagram: @aestheticlabbe (" + instagram + ")",
 		"Google: " + ratingLabel(ctx),
@@ -48,6 +47,12 @@ func AssistantFacts(ctx context.Context, loc *content.Localized) []string {
 		facts = append(facts, tr(ctx, "Parking")+": "+p.Name)
 	}
 	return facts
+}
+
+// AssistantHours are the opening hours in the page's language, as the
+// footer and contact section show them.
+func AssistantHours(ctx context.Context) string {
+	return tr(ctx, "Monday") + " – " + tr(ctx, "Saturday") + " · " + opens + " – " + closes + " · " + tr(ctx, "By appointment only")
 }
 
 // AssistantCategories are the categories' descriptions as the services

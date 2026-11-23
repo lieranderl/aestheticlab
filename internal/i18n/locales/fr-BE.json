@@ -330,6 +330,7 @@
 			"times_failed": "Nous n’avons pas pu vérifier les disponibilités. Consultez la page de réservation.",
 			"times_with": "Créneaux libres : {{service}} avec {{name}}",
 			"times_note": "Ces créneaux semblent libres pour l'instant ; la page de réservation les confirme.",
+			"times_unverified": "Je ne peux confirmer des créneaux libres qu’en consultant l’agenda. Dites-moi quel soin vous souhaitez et je les cherche.",
 			"times_unchecked": "Impossible de vérifier les créneaux de {{names}} : la page de réservation les affiche.",
 			"weekday_short": {
 				"mon": "lun.",

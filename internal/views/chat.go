@@ -174,6 +174,12 @@ func ChatUnavailable(ctx context.Context) string {
 	return tr(ctx, "Sorry, I can't answer right now. Please message us on Instagram or by email.")
 }
 
+// ChatTimesUnverified is added to a reply whose text said when an
+// appointment is free without checking the calendar, in its place.
+func ChatTimesUnverified(ctx context.Context) string {
+	return tr(ctx, "I can only confirm free times by checking the calendar. Tell me which treatment you'd like and I'll look them up.")
+}
+
 // ChatTooFast is the reply when a visitor sends messages too quickly.
 func ChatTooFast(ctx context.Context) string {
 	return tr(ctx, "You're sending messages too quickly. Please wait a minute and try again.")

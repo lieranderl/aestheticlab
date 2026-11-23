@@ -2,8 +2,9 @@ package assistant_test
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -121,13 +122,12 @@ func TestALaterLookupForATreatmentReplacesTheEarlierOne(t *testing.T) {
 // Availability prose is suppressed even if it repeats a time in the question.
 func TestAReplyNamingATimeNotFoundIsDropped(t *testing.T) {
 	k := knowledge()
-	k.Facts = append(k.Facts, "Monday – Saturday · 10:00 – 18:30 · By appointment only")
 	for name, tc := range map[string]struct {
-		replies  []*genai.GenerateContentResponse
-		message  string
-		want     string
-		wantErr  error
-		hasTimes bool
+		replies    []*genai.GenerateContentResponse
+		message    string
+		want       string
+		unverified bool
+		hasTimes   bool
 	}{
 		"a shown time": {
 			replies:  []*genai.GenerateContentResponse{call("find_free_slots", monday(nil)), text("Zara is free on Monday from 10:00.")},
@@ -148,18 +148,18 @@ func TestAReplyNamingATimeNotFoundIsDropped(t *testing.T) {
 			hasTimes: true,
 		},
 		"an echoed visitor time without a lookup": {
-			replies: []*genai.GenerateContentResponse{text("Yes, Zara is free at 10:00.")},
-			message: "Can I book Zara at 10:00?",
-			wantErr: assistant.ErrNoAnswer,
+			replies:    []*genai.GenerateContentResponse{text("Yes, Zara is free at 10:00.")},
+			message:    "Can I book Zara at 10:00?",
+			unverified: true,
 		},
 		"availability claim without a numeric time or lookup": {
-			replies: []*genai.GenerateContentResponse{text("Zara is available on Monday.")},
-			message: "Is Zara free on Monday?",
-			wantErr: assistant.ErrNoAnswer,
+			replies:    []*genai.GenerateContentResponse{text("Zara is available on Monday.")},
+			message:    "Is Zara free on Monday?",
+			unverified: true,
 		},
 		"availability claim in French without a lookup": {
-			replies: []*genai.GenerateContentResponse{text("Zara est disponible lundi matin.")},
-			wantErr: assistant.ErrNoAnswer,
+			replies:    []*genai.GenerateContentResponse{text("Zara est disponible lundi matin.")},
+			unverified: true,
 		},
 		"a free consultation": {
 			replies: []*genai.GenerateContentResponse{text("The consultation is free; contact us on Instagram. We are open Monday to Saturday.")},
@@ -167,6 +167,7 @@ func TestAReplyNamingATimeNotFoundIsDropped(t *testing.T) {
 		},
 		"a treatment offered at the studio": {
 			replies: []*genai.GenerateContentResponse{text("Microneedling is available at our studio in Leuven.")},
+			message: "Is microneedling available?",
 			want:    "Microneedling is available at our studio in Leuven.",
 		},
 		"a free consultation in French": {
@@ -178,17 +179,17 @@ func TestAReplyNamingATimeNotFoundIsDropped(t *testing.T) {
 			want:    "Monday – Saturday · 10:00 – 18:30 · By appointment only",
 		},
 		"a time without a lookup": {
-			replies: []*genai.GenerateContentResponse{text("Zara is free tomorrow at 14:00.")},
-			wantErr: assistant.ErrNoAnswer,
+			replies:    []*genai.GenerateContentResponse{text("Zara is free tomorrow at 14:00.")},
+			unverified: true,
 		},
 	} {
 		m := &scripted{replies: tc.replies}
 		got, err := newAssistant(m).Reply(context.Background(), k, nil, tc.message)
-		if !errors.Is(err, tc.wantErr) {
-			t.Fatalf("%s: err = %v, want %v", name, err, tc.wantErr)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
 		}
-		if got.Text != tc.want || (len(got.Times) > 0) != tc.hasTimes {
-			t.Errorf("%s: text %q with %d times; want %q, times %v", name, got.Text, len(got.Times), tc.want, tc.hasTimes)
+		if got.Text != tc.want || got.Unverified != tc.unverified || (len(got.Times) > 0) != tc.hasTimes {
+			t.Errorf("%s: text %q, unverified %v, %d times; want %q, %v, times %v", name, got.Text, got.Unverified, len(got.Times), tc.want, tc.unverified, tc.hasTimes)
 		}
 		if tc.hasTimes && !sameSlots(got.Times[0].Slots, toolSlots(t, m, 1)) {
 			t.Errorf("%s: times = %+v, not the tool's", name, got.Times[0].Slots)
@@ -196,12 +197,79 @@ func TestAReplyNamingATimeNotFoundIsDropped(t *testing.T) {
 	}
 }
 
-// A plain availability question needs no model round that only repeats
-// the times: with only_times the reply ends with the lookup, its times
-// and a Book button. Text written with the call is a guess, never shown.
+// Asked when they can come, the visitor never reads a day or part of the
+// day the calendar wasn't checked for, whatever words the model used: the
+// chat says it can only confirm free times from the calendar instead.
+// Questions about something else keep their answer.
+func TestAvailabilityIsConfirmedOnlyByALookup(t *testing.T) {
+	asked := []assistant.Turn{{Role: assistant.RoleVisitor, Text: "Can I come tomorrow afternoon?"}, {Role: assistant.RoleAssistant, Text: "Which treatment would you like?"}}
+	for name, tc := range map[string]struct {
+		history []assistant.Turn
+		message string
+		reply   string
+		want    string
+	}{
+		"a day that works":           {message: "Can I come tomorrow afternoon with Zara?", reply: "Tomorrow afternoon works for Zara."},
+		"after naming the treatment": {history: asked, message: "A pedicure with Zara", reply: "Tomorrow afternoon works for Zara."},
+		"in Dutch":                   {message: "Kan ik morgenmiddag komen?", reply: "Morgenmiddag past bij Zara."},
+		"in Russian":                 {message: "Можно прийти завтра?", reply: "Зара может принять вас завтра."},
+		"in Ukrainian":               {message: "Чи є вільний час у п'ятницю?", reply: "У п'ятницю Зара може вас прийняти."},
+		"a closed day":               {message: "Are you open on Sunday?", reply: "We're closed on Sundays.", want: "We're closed on Sundays."},
+		"aftercare in the evening":   {message: "How do I care for my brows?", reply: "Apply the oil every evening.", want: "Apply the oil every evening."},
+		"a treatment without a when": {message: "Is there a free slot for a pedicure?", reply: "Pedicure costs 70 euros.", want: "Pedicure costs 70 euros."},
+	} {
+		m := &scripted{replies: []*genai.GenerateContentResponse{text(tc.reply)}}
+		got, err := newAssistant(m).Reply(context.Background(), knowledge(), tc.history, tc.message)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if got.Text != tc.want || got.Unverified != (tc.want == "") {
+			t.Errorf("%s: text %q, unverified %v; want %q", name, got.Text, got.Unverified, tc.want)
+		}
+	}
+}
+
+// The opening hours come from the studio's data: the model writes a
+// placeholder, so the hours can stand next to any other answer without
+// reading as a free time.
+func TestOpeningHoursAreFilledInFromTheStudioData(t *testing.T) {
+	const hours = "Monday – Saturday · 10:00 – 18:30 · By appointment only"
+	for name, tc := range map[string]struct{ message, reply, want string }{
+		"with the address": {
+			message: "Where are you and when are you open?",
+			reply:   "We're at Diestsestraat 174 in Leuven. Hours: {opening_hours}.",
+			want:    "We're at Diestsestraat 174 in Leuven. Hours: " + hours + ".",
+		},
+		"on a day asked": {
+			message: "Are you open on Saturday?",
+			reply:   "Yes, we're open on Saturdays: {opening_hours}.",
+			want:    "Yes, we're open on Saturdays: " + hours + ".",
+		},
+	} {
+		m := &scripted{replies: []*genai.GenerateContentResponse{text(tc.reply)}}
+		got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, tc.message)
+		if err != nil || got.Text != tc.want || got.Unverified {
+			t.Errorf("%s: %q, unverified %v, %v; want %q", name, got.Text, got.Unverified, err, tc.want)
+		}
+		if prompt := m.configs[0].SystemInstruction.Parts[0].Text; !strings.Contains(prompt, "{opening_hours}") || !strings.Contains(prompt, hours) {
+			t.Errorf("%s: the prompt lacks the hours or their placeholder", name)
+		}
+	}
+
+	// Hours the model writes itself are still a time of day.
+	m := &scripted{replies: []*genai.GenerateContentResponse{text("We're at Diestsestraat 174, open 10:00 – 18:30.")}}
+	if got, _ := newAssistant(m).Reply(context.Background(), knowledge(), nil, "Where are you?"); got.Text != "" {
+		t.Errorf("hours written by the model: %q, want them withheld", got.Text)
+	}
+}
+
+// A lookup the model marks as its last ends the reply when it found times:
+// the times, with the price if asked, are the whole answer, so another
+// model round would only write prose the chat drops. Text written with the
+// call is a guess, never shown.
 func TestAPlainAvailabilityQuestionEndsWithTheTimes(t *testing.T) {
 	m := &scripted{replies: []*genai.GenerateContentResponse{
-		textAndCall("Zara is free at 9:00.", "find_free_slots", monday(map[string]any{"only_times": true})),
+		textAndCall("Zara is free at 9:00.", "find_free_slots", monday(map[string]any{"last_lookup": true})),
 	}}
 	got, err := newAssistant(m).Reply(context.Background(), knowledge(), nil, "When can I come on Monday?")
 	if err != nil {
@@ -214,9 +282,28 @@ func TestAPlainAvailabilityQuestionEndsWithTheTimes(t *testing.T) {
 		t.Errorf("answer = %+v; want only the times and a Book button", got)
 	}
 
-	// Without times to show, the model explains.
+	// The price is on the card too: a question for both is one model call.
 	m = &scripted{replies: []*genai.GenerateContentResponse{
-		call("find_free_slots", monday(map[string]any{"only_times": true, "from_time": "23:00"})),
+		call("find_free_slots", monday(map[string]any{"last_lookup": true, "include_price": true})),
+	}}
+	got, err = newAssistant(m).Reply(context.Background(), knowledge(), nil, "How much is a pedicure and when on Monday?")
+	if err != nil || len(m.requests) != 1 || got.Text != "" || len(got.Times) != 1 || got.Times[0].Price == nil || *got.Times[0].Price != 70 {
+		t.Errorf("price and times: %+v, %v after %d model calls; want one call and the card with its price", got, err, len(m.requests))
+	}
+	prompt := m.configs[0].SystemInstruction.Parts[0].Text
+	desc := ""
+	for _, f := range m.configs[0].Tools[0].FunctionDeclarations {
+		if f.Name == "find_free_slots" {
+			desc = fmt.Sprint(f.ParametersJsonSchema)
+		}
+	}
+	if !strings.Contains(prompt, "pass last_lookup=true unless you will call find_free_slots again") || strings.Contains(prompt+desc, "also asked something else") {
+		t.Error("the prompt still has the model look further after a lookup that answers the price and the times")
+	}
+
+	// Without times found, the model may look further.
+	m = &scripted{replies: []*genai.GenerateContentResponse{
+		call("find_free_slots", monday(map[string]any{"last_lookup": true, "from_time": "23:00"})),
 		text("There are no free times that late."),
 	}}
 	got, err = newAssistant(m).Reply(context.Background(), knowledge(), nil, "Monday night?")
