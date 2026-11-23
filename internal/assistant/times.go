@@ -219,16 +219,17 @@ var (
 )
 
 // checked reports whether sentence s says nothing without a lookup: each
-// clause is about the opening hours, in a question asks, or, with a
-// catalog, only names its treatments and prices.
+// clause is about the opening hours, in a question asks, or, in a sentence
+// that names a treatment of the catalog, only lists treatments and prices.
 func checked(s string, cat *catalog) bool {
 	question := strings.Contains(s, "?")
+	listing := cat != nil && cat.names(s)
 	for _, c := range clause.Split(s, -1) {
 		switch {
 		case strings.IndexFunc(c, unicode.IsLetter) < 0:
 		case openingWords.MatchString(c) || strings.Contains(c, hoursToken):
 		case question && (strings.Contains(c, "?") || questionStart.MatchString(c)):
-		case cat != nil && cat.lists(c):
+		case listing && cat.lists(c):
 		default:
 			return false
 		}
@@ -261,9 +262,9 @@ func asksBack(t string, cat *catalog) bool {
 // one that lists ("we offer", "or", "euros"): anything else may say one
 // can be had ("We can accommodate you for a pedicure").
 type catalog struct {
-	// kinds are the words that name a treatment; names, every word of the
-	// treatments' names.
-	kinds, names []string
+	// kinds are the words that name a treatment; nameWords, every word of
+	// the treatments' names.
+	kinds, nameWords []string
 }
 
 // catalogStopWords are words of treatment names that say nothing of the
@@ -273,18 +274,27 @@ var catalogStopWords = []string{"other", "salon", "using", "with", "from", "shor
 // listingWords are the words, in the five languages, a list of treatments
 // and prices is written with, and nothing more.
 var listingWords = strings.Fields(`a an the we our offer offers have there are is here or and with plus for of at from between choose choice choices option options kind kinds type types several few two three four these following euro euros eur price prices costs cost minutes min
-	we wij hebben bieden aan er zijn is hier een de het of en onze met voor van keuze opties soorten verschillende euro prijs kost minuten
-	nous proposons avons voici il y a plusieurs un une la le les l d des de du ou et avec à pour entre choix options types sortes euro euros prix coûte minutes
-	у нас есть мы предлагаем вот несколько вариант варианта вариантов варианты вид вида видов виды или и с со за от на выбор евро цена стоит минут
-	ми пропонуємо ось є кілька варіант варіанта варіантів варіанти вид види видів або чи і й та з із за від на вибір євро ціна коштує хвилин`)
+	service services treatment treatments variety varieties various different many some both either also such like including dry classic men women
+	we wij hebben bieden aan er zijn is hier een de het of en onze met voor van keuze opties soorten verschillende diverse diensten behandelingen euro prijs kost minuten mannen vrouwen
+	nous proposons avons voici il y a plusieurs un une la le les l d des de du ou et avec à pour entre choix options types sortes services soins prestations différents différentes divers diverses variés euro euros prix coûte minutes hommes femmes
+	у нас есть мы предлагаем вот несколько вариант варианта вариантов варианты вид вида видов виды услуги процедуры разные различные или и с со за от на выбор евро цена стоит минут мужской мужчин женский
+	ми пропонуємо ось є кілька варіант варіанта варіантів варіанти вид види видів послуги процедури різні або чи і й та з із за від на вибір євро ціна коштує хвилин чоловічий чоловіків`)
+
+// availableWords say a treatment is offered; in a list ("several types of
+// manicures available") they name no time, but alone ("A manicure is
+// available") they may say one can be had now.
+var (
+	availableWords = []string{"available", "beschikbaar", "disponible", "disponibles", "доступны", "доступні"}
+	optionWords    = []string{"type", "types", "kind", "kinds", "option", "options", "service", "services", "treatments", "varieties", "soorten", "opties", "diensten", "behandelingen", "sortes", "soins", "prestations", "виды", "видов", "варианты", "вариантов", "услуги", "процедуры", "види", "видів", "варіанти", "варіантів", "послуги", "процедури"}
+)
 
 // newCatalog is k's treatments.
 func newCatalog(k Knowledge) *catalog {
 	cat := &catalog{}
 	add := func(name string) {
 		for _, w := range letterWords(name) {
-			if !slices.Contains(cat.names, w) {
-				cat.names = append(cat.names, w)
+			if !slices.Contains(cat.nameWords, w) {
+				cat.nameWords = append(cat.nameWords, w)
 			}
 			if utf8.RuneCountInString(w) >= 4 && !slices.Contains(catalogStopWords, w) && !slices.Contains(cat.kinds, w) {
 				cat.kinds = append(cat.kinds, w)
@@ -307,18 +317,26 @@ func letterWords(s string) []string {
 	return strings.FieldsFunc(strings.ToLower(s), func(r rune) bool { return !unicode.IsLetter(r) })
 }
 
-// lists reports whether clause c only names treatments and their prices:
-// a treatment, and no word but those of treatment names and listing, nor
-// a time of day.
+// names reports whether s names a kind of treatment.
+func (cat *catalog) names(s string) bool {
+	return slices.ContainsFunc(letterWords(s), cat.kind)
+}
+
+// kind reports whether w names a kind of treatment ("manicures").
+func (cat *catalog) kind(w string) bool {
+	return slices.ContainsFunc(cat.kinds, func(k string) bool { return strings.HasPrefix(w, k) })
+}
+
+// lists reports whether clause c, of a sentence that names a treatment,
+// only lists treatments and their prices: no word but those of treatment
+// names and listing, nor a time of day.
 func (cat *catalog) lists(c string) bool {
-	kind := func(w string) bool {
-		return slices.ContainsFunc(cat.kinds, func(k string) bool { return strings.HasPrefix(w, k) })
-	}
 	words := letterWords(c)
-	return slices.ContainsFunc(words, kind) && len(clockTimes(c)) == 0 &&
-		!slices.ContainsFunc(words, func(w string) bool {
-			return !kind(w) && !slices.Contains(cat.names, w) && !slices.Contains(listingWords, w)
-		})
+	options := slices.ContainsFunc(words, func(w string) bool { return slices.Contains(optionWords, w) })
+	return len(clockTimes(c)) == 0 && !slices.ContainsFunc(words, func(w string) bool {
+		return !cat.kind(w) && !slices.Contains(cat.nameWords, w) && !slices.Contains(listingWords, w) &&
+			(!options || !slices.Contains(availableWords, w))
+	})
 }
 
 // hoursToken is what the model writes for the published opening hours.
