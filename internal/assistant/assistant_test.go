@@ -145,7 +145,7 @@ func TestTheSystemPromptCarriesTheSalonAndTheRules(t *testing.T) {
 			names = append(names, f.Name)
 		}
 	}
-	if !slices.Equal(names, []string{"find_free_slots", "offer_booking"}) {
+	if !slices.Equal(names, []string{"find_free_slots", "choose_treatment", "offer_booking"}) {
 		t.Errorf("tools = %v", names)
 	}
 }
@@ -361,7 +361,7 @@ func TestThePromptKeepsTimesAndCareAdviceHonest(t *testing.T) {
 		"where the visitor chooses the time: never say you booked, reserved or selected a time",
 		"mention the Book button only when you called offer_booking",
 		"never list dates or times yourself",
-		"ask which one in one short question that names the options",
+		"ask which one in one short question",
 		"last_lookup",
 		"how-we-do-it details only as the information below states them",
 		"If a note from the owner and a treatment's description disagree, follow the note",

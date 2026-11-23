@@ -332,6 +332,9 @@
 			"times_note": "These times look free now; the booking page confirms them.",
 			"times_unverified": "I can only confirm free times by checking the calendar. Tell me which treatment you'd like and I'll look them up.",
 			"times_unchecked": "{{names}} could not be checked: the booking page shows their times.",
+			"choose": "Which one would you like? Pick a treatment to see its free times.",
+			"choose_label": "Treatments to choose from",
+			"choose_ask": "When can I book {{service}}?",
 			"weekday_short": {
 				"mon": "Mon",
 				"tue": "Tue",

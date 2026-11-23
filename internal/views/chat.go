@@ -28,6 +28,23 @@ func chatSuggestions(ctx context.Context) []string {
 	}
 }
 
+// ChatChoice is a treatment to choose under an assistant reply, when the
+// visitor asked for a kind with several options.
+type ChatChoice struct {
+	ServiceID string
+	Service   string
+}
+
+// ChatChoose is the chat's own question over a choice of treatments.
+func ChatChoose(ctx context.Context) string {
+	return tr(ctx, "Which one would you like? Pick a treatment to see its free times.")
+}
+
+// chatChoiceAsk is what a choice's button sends: a request for its times.
+func chatChoiceAsk(ctx context.Context, c ChatChoice) string {
+	return trf(ctx, "When can I book %v?", c.Service)
+}
+
 // ChatOffer is a Book button under an assistant reply: a treatment, with
 // one member of staff or anyone.
 type ChatOffer struct {
@@ -123,10 +140,17 @@ func chatTimesNote(ctx context.Context) string {
 // ChatTranscript is an assistant reply as the transcript keeps it: its
 // text, then its free times as plain lines, so a restored chat and the
 // model's next turn see the times the visitor saw.
-func ChatTranscript(ctx context.Context, text string, times []ChatTimes) string {
+func ChatTranscript(ctx context.Context, text string, times []ChatTimes, choices []ChatChoice) string {
 	parts := []string{}
 	if text != "" {
 		parts = append(parts, text)
+	}
+	if len(choices) > 0 {
+		lines := make([]string, 0, len(choices))
+		for _, c := range choices {
+			lines = append(lines, "• "+c.Service)
+		}
+		parts = append(parts, strings.Join(lines, "\n"))
 	}
 	for _, t := range times {
 		lines := []string{chatTimesHeading(ctx, t) + ":"}

@@ -332,6 +332,9 @@
 			"times_note": "Deze tijden lijken nu vrij; de boekingspagina bevestigt ze.",
 			"times_unverified": "Vrije tijden kan ik alleen bevestigen door de agenda te bekijken. Laat me weten welke behandeling je wilt, dan zoek ik ze op.",
 			"times_unchecked": "De tijden van {{names}} konden niet worden gecontroleerd: de boekingspagina toont ze.",
+			"choose": "Welke wil je? Kies een behandeling om de vrije tijden te zien.",
+			"choose_label": "Behandelingen om uit te kiezen",
+			"choose_ask": "Wanneer kan ik {{service}} boeken?",
 			"weekday_short": {
 				"mon": "ma",
 				"tue": "di",

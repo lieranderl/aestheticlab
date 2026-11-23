@@ -219,17 +219,14 @@ var (
 )
 
 // checked reports whether sentence s says nothing without a lookup: each
-// clause is about the opening hours, in a question asks, or, in a sentence
-// that names a treatment of the catalog, only lists treatments and prices.
-func checked(s string, cat *catalog) bool {
+// clause is about the opening hours or, in a question, asks.
+func checked(s string) bool {
 	question := strings.Contains(s, "?")
-	listing := cat != nil && cat.names(s)
 	for _, c := range clause.Split(s, -1) {
 		switch {
 		case strings.IndexFunc(c, unicode.IsLetter) < 0:
 		case openingWords.MatchString(c) || strings.Contains(c, hoursToken):
 		case question && (strings.Contains(c, "?") || questionStart.MatchString(c)):
-		case listing && cat.lists(c):
 		default:
 			return false
 		}
@@ -243,100 +240,16 @@ func checked(s string, cat *catalog) bool {
 // day is unchecked.
 func namesWhen(t string) bool {
 	return slices.ContainsFunc(sentenceWithEnd.FindAllString(t, -1), func(s string) bool {
-		return when.MatchString(s) && !checked(s, nil)
+		return when.MatchString(s) && !checked(s)
 	})
 }
 
-// asksBack reports whether t only asks the visitor something, names the
-// treatments they can choose from or tells them the studio's opening
-// hours, clause by clause ("Yes, we're open" says yes): all the chat can
-// say, without a lookup, to a visitor asking to come. Asked for a kind of
-// treatment with several options ("a manicure"), the chat lists them and
-// asks which.
-func asksBack(t string, cat *catalog) bool {
-	return !slices.ContainsFunc(sentenceWithEnd.FindAllString(t, -1), func(s string) bool { return !checked(s, cat) })
-}
-
-// catalog is what the chat can name without a lookup: the treatments. A
-// clause lists them only if every word in it is a word of their names or
-// one that lists ("we offer", "or", "euros"): anything else may say one
-// can be had ("We can accommodate you for a pedicure").
-type catalog struct {
-	// kinds are the words that name a treatment; nameWords, every word of
-	// the treatments' names.
-	kinds, nameWords []string
-}
-
-// catalogStopWords are words of treatment names that say nothing of the
-// treatment: "Coating removal (other salon)".
-var catalogStopWords = []string{"other", "salon", "using", "with", "from", "short", "long", "extra", "full", "small", "zone", "front", "back", "upper", "lower", "only", "partial", "classic", "express", "male", "combo", "care"}
-
-// listingWords are the words, in the five languages, a list of treatments
-// and prices is written with, and nothing more.
-var listingWords = strings.Fields(`a an the we our offer offers have there are is here or and with plus for of at from between choose choice choices option options kind kinds type types several few two three four these following euro euros eur price prices costs cost minutes min
-	service services treatment treatments variety varieties various different many some both either also such like including dry classic men women
-	we wij hebben bieden aan er zijn is hier een de het of en onze met voor van keuze opties soorten verschillende diverse diensten behandelingen euro prijs kost minuten mannen vrouwen
-	nous proposons avons voici il y a plusieurs un une la le les l d des de du ou et avec à pour entre choix options types sortes services soins prestations différents différentes divers diverses variés euro euros prix coûte minutes hommes femmes
-	у нас есть мы предлагаем вот несколько вариант варианта вариантов варианты вид вида видов виды услуги процедуры разные различные или и с со за от на выбор евро цена стоит минут мужской мужчин женский
-	ми пропонуємо ось є кілька варіант варіанта варіантів варіанти вид види видів послуги процедури різні або чи і й та з із за від на вибір євро ціна коштує хвилин чоловічий чоловіків`)
-
-// availableWords say a treatment is offered; in a list ("several types of
-// manicures available") they name no time, but alone ("A manicure is
-// available") they may say one can be had now.
-var (
-	availableWords = []string{"available", "beschikbaar", "disponible", "disponibles", "доступны", "доступні"}
-	optionWords    = []string{"type", "types", "kind", "kinds", "option", "options", "service", "services", "treatments", "varieties", "soorten", "opties", "diensten", "behandelingen", "sortes", "soins", "prestations", "виды", "видов", "варианты", "вариантов", "услуги", "процедуры", "види", "видів", "варіанти", "варіантів", "послуги", "процедури"}
-)
-
-// newCatalog is k's treatments.
-func newCatalog(k Knowledge) *catalog {
-	cat := &catalog{}
-	add := func(name string) {
-		for _, w := range letterWords(name) {
-			if !slices.Contains(cat.nameWords, w) {
-				cat.nameWords = append(cat.nameWords, w)
-			}
-			if utf8.RuneCountInString(w) >= 4 && !slices.Contains(catalogStopWords, w) && !slices.Contains(cat.kinds, w) {
-				cat.kinds = append(cat.kinds, w)
-			}
-		}
-	}
-	for _, g := range k.Content.ServiceGroups {
-		add(g.Name)
-		add(g.NameEN)
-	}
-	for _, s := range k.Content.Services {
-		add(s.Name)
-		add(s.NameEN)
-	}
-	return cat
-}
-
-// letterWords are s's words, lower case, without digits or punctuation.
-func letterWords(s string) []string {
-	return strings.FieldsFunc(strings.ToLower(s), func(r rune) bool { return !unicode.IsLetter(r) })
-}
-
-// names reports whether s names a kind of treatment.
-func (cat *catalog) names(s string) bool {
-	return slices.ContainsFunc(letterWords(s), cat.kind)
-}
-
-// kind reports whether w names a kind of treatment ("manicures").
-func (cat *catalog) kind(w string) bool {
-	return slices.ContainsFunc(cat.kinds, func(k string) bool { return strings.HasPrefix(w, k) })
-}
-
-// lists reports whether clause c, of a sentence that names a treatment,
-// only lists treatments and their prices: no word but those of treatment
-// names and listing, nor a time of day.
-func (cat *catalog) lists(c string) bool {
-	words := letterWords(c)
-	options := slices.ContainsFunc(words, func(w string) bool { return slices.Contains(optionWords, w) })
-	return len(clockTimes(c)) == 0 && !slices.ContainsFunc(words, func(w string) bool {
-		return !cat.kind(w) && !slices.Contains(cat.nameWords, w) && !slices.Contains(listingWords, w) &&
-			(!options || !slices.Contains(availableWords, w))
-	})
+// asksBack reports whether t only asks the visitor something or tells them
+// the studio's opening hours, clause by clause ("Yes, we're open" says
+// yes): all the chat can say, without a lookup, to a visitor asking to
+// come. A choice of treatments is choose_treatment's, in the chat's words.
+func asksBack(t string) bool {
+	return !slices.ContainsFunc(sentenceWithEnd.FindAllString(t, -1), func(s string) bool { return !checked(s) })
 }
 
 // hoursToken is what the model writes for the published opening hours.
@@ -351,14 +264,14 @@ const hoursToken = "{opening_hours}"
 func (r *toolRun) answer(said []string, tokens usage.Tokens, unmetered int) (Answer, error) {
 	var text string
 	unverified := false
-	if len(r.times) == 0 {
+	if len(r.times) == 0 && len(r.choices) == 0 {
 		checked := make([]string, 0, len(said))
 		for _, t := range said {
 			switch {
 			case t == "":
 			case slices.Contains(r.k.Facts, t) || t == r.k.Hours:
 				checked = append(checked, t)
-			case claimsAvailability(t) || r.asksWhen && namesWhen(t) || r.asksToCome && !asksBack(t, newCatalog(r.k)):
+			case claimsAvailability(t) || r.asksWhen && namesWhen(t) || r.asksToCome && !asksBack(t):
 				unverified = true
 			default:
 				checked = append(checked, t)
@@ -366,7 +279,7 @@ func (r *toolRun) answer(said []string, tokens usage.Tokens, unmetered int) (Ans
 		}
 		text = strings.ReplaceAll(finalAnswer(checked), hoursToken, r.k.Hours)
 	}
-	if text == "" && len(r.times) == 0 && !unverified {
+	if text == "" && len(r.times) == 0 && len(r.choices) == 0 && !unverified {
 		return Answer{Tokens: tokens, Unmetered: unmetered}, ErrNoAnswer
 	}
 	var offers []Offer
@@ -378,5 +291,5 @@ func (r *toolRun) answer(said []string, tokens usage.Tokens, unmetered int) (Ans
 			offers = append(offers, offer)
 		}
 	}
-	return Answer{Text: text, Offers: offers, Times: r.times, Tokens: tokens, Unmetered: unmetered, Unverified: unverified}, nil
+	return Answer{Text: text, Offers: offers, Choices: r.choices, Times: r.times, Tokens: tokens, Unmetered: unmetered, Unverified: unverified}, nil
 }
