@@ -233,6 +233,15 @@ async function build() {
 	);
 	// Consent Mode and analytics (window.aesthetic), loaded before Datastar.
 	files.set("site.js", await copy("frontend/site.js", "site.js"));
+	// Google's web-vitals (attribution build, pinned in package.json);
+	// site.js loads it only after analytics consent.
+	files.set(
+		"web-vitals.js",
+		await copy(
+			"node_modules/web-vitals/dist/web-vitals.attribution.iife.js",
+			"web-vitals.js",
+		),
+	);
 
 	// Public link-preview URLs are stable; overwrite changed bytes and use
 	// the server's short cache rather than the immutable hashed-file cache.

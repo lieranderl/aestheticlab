@@ -84,6 +84,9 @@ func TestThePolicyPagesAreServedInEachLocale(t *testing.T) {
 	if strings.Contains(privacy, ">1. Information") {
 		t.Error("section titles keep their translated numbers")
 	}
+	if !strings.Contains(privacy, "how quickly our pages load and respond") {
+		t.Error("the privacy policy does not say Google Analytics records page speed and errors")
+	}
 	for path, want := range map[string]string{"/en-BE/notice/": "Nails", "/en-BE/notice/?tab=laser": "Laser"} {
 		body := get(t, h, path).Body.String()
 		if !strings.Contains(body, `aria-label="`+want+`" checked`) {

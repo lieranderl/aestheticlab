@@ -50,7 +50,7 @@ templ Layout(meta PageMeta) {
 			@templ.Raw(jsonLDScript())
 			<!-- Consent defaults and gtag first, then Datastar: deferred and module
 			     scripts run in document order, and pages call window.aesthetic. -->
-			<script defer src={ assets.URL("site.js") }></script>
+			<script defer src={ assets.URL("site.js") } data-web-vitals={ assets.URL("web-vitals.js") }></script>
 			<script type="module" src={ assets.URL("datastar.js") }></script>
 		</head>
 		<body
