@@ -209,7 +209,7 @@
 			"info": "1. Information We Collect",
 			"info_text": "We collect the following personal information when you book an appointment or contact us:",
 			"kicker": "Legal",
-			"last_update_date": "Last updated: 19.02.2026",
+			"last_update_date": "Last updated: 25.11.2026",
 			"legal": "Legal authorities if required by law",
 			"name": "Name",
 			"on_this_page": "On this page",
@@ -231,7 +231,8 @@
 			"who_text": "Aesthetic Lab, {{address}}. For anything about your data, write to {{email}}.",
 			"chat_messages": "Messages you send in our website chat",
 			"chat_answer": "Answer your questions in our website chat",
-			"chat_processor": "Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab."
+			"chat_processor": "Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab.",
+			"chat_analytics": "If you accept analytics, Google Analytics also records how our website chat is used: that it was opened or closed, how many messages were sent, and whether a reply showed free times or a booking button. What you write in the chat is never sent to Google Analytics."
 		},
 		"services": {
 			"add_on_note": "Prices are for the treatment itself. Repairs, nail art and removal are add-ons from {{price}}.",

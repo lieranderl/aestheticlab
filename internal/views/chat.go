@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/a-h/templ"
 )
 
 type chatKey struct{}
@@ -18,6 +20,34 @@ func chatEnabled(ctx context.Context) bool { on, _ := ctx.Value(chatKey{}).(bool
 // the lookup a choice's button asks for, the visible transcript the
 // server reads back, and a reply is pending.
 const chatSignals = `{chatOpen: false, chatInput: '', chatLookup: '', chatHistory: [], chatBusy: false}`
+
+// Chat analytics: Google Analytics events, sent only after the visitor
+// accepts analytics (aesthetic.track). They carry labels and counts, never
+// what the visitor or the assistant wrote. The transcript keeps the last
+// 20 messages, so message counts stop at 11 sent and 10 answered.
+
+// chatOpened records the chat being opened from placement.
+func chatOpened(placement string) string {
+	return "aesthetic.track('chat_opened', {placement: " + jsString(placement) + "})"
+}
+
+// chatSent records a message about to be sent: typed, a suggested
+// question, or a treatment's button (choice).
+func chatSent(source string) string {
+	return "aesthetic.track('chat_message_sent', {source: " + jsString(source) + ", message_number: Math.floor($chatHistory.length / 2) + 1})"
+}
+
+// chatClosed records the chat being closed after the messages answered so
+// far.
+const chatClosed = "aesthetic.track('chat_closed', {messages: Math.floor($chatHistory.length / 2)})"
+
+// chatReplyShown records a reply as it is shown: how it went (the server's
+// outcome) and how many lists of free times, Book buttons and treatment
+// buttons it carried.
+func chatReplyShown(outcome string, times, offers, choices int) string {
+	return "aesthetic.track('chat_reply_shown', {outcome: " + jsString(outcome) + ", free_times: " + strconv.Itoa(times) +
+		", booking_offers: " + strconv.Itoa(offers) + ", choices: " + strconv.Itoa(choices) + "})"
+}
 
 // chatSuggestions are the common questions the empty chat offers.
 func chatSuggestions(ctx context.Context) []string {
@@ -215,4 +245,13 @@ func ChatTooFast(ctx context.Context) string {
 // ChatDailyLimit is the reply when a visitor has sent today's messages.
 func ChatDailyLimit(ctx context.Context) string {
 	return tr(ctx, "You've reached today's message limit for the assistant. Please message us on Instagram or by email.")
+}
+
+// chatReplyAttrs records a reply as it is shown (chatReplyShown); the
+// greeting, with no outcome, is not recorded.
+func chatReplyAttrs(outcome string, times, offers, choices int) templ.Attributes {
+	if outcome == "" {
+		return nil
+	}
+	return templ.Attributes{"data-init": chatReplyShown(outcome, times, offers, choices)}
 }

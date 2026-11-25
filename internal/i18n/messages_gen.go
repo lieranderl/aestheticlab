@@ -183,7 +183,8 @@ var messages = []string{
 	"Treatment",                 // app.pricelist.treatment
 	"Change cookie settings",    // app.privacy.change_cookies
 	"7. Changes to This Policy", // app.privacy.changes
-	"We may update this Privacy Policy from time to time. The latest version will always be available on our website.", // app.privacy.changes_text
+	"We may update this Privacy Policy from time to time. The latest version will always be available on our website.",                                                                                                                                                         // app.privacy.changes_text
+	"If you accept analytics, Google Analytics also records how our website chat is used: that it was opened or closed, how many messages were sent, and whether a reply showed free times or a booking button. What you write in the chat is never sent to Google Analytics.", // app.privacy.chat_analytics
 	"Answer your questions in our website chat", // app.privacy.chat_answer
 	"Messages you send in our website chat",     // app.privacy.chat_messages
 	"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab.", // app.privacy.chat_processor
@@ -196,7 +197,7 @@ var messages = []string{
 	"Improve our services",      // app.privacy.improve
 	"1. Information We Collect", // app.privacy.info
 	"We collect the following personal information when you book an appointment or contact us:", // app.privacy.info_text
-	"Last updated: 19.02.2026",             // app.privacy.last_update_date
+	"Last updated: 25.11.2026",             // app.privacy.last_update_date
 	"Legal authorities if required by law", // app.privacy.legal
 	"Name",                                 // app.privacy.name
 	"On this page",                         // app.privacy.on_this_page
@@ -453,7 +454,8 @@ var translations = map[Locale]map[string]string{
 		"Treatment":                 "Behandeling",
 		"Change cookie settings":    "Cookie-instellingen wijzigen",
 		"7. Changes to This Policy": "7. Wijzigingen in dit beleid",
-		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.": "We kunnen dit privacybeleid van tijd tot tijd bijwerken. De nieuwste versie is altijd beschikbaar op onze website.",
+		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.":                                                                                                                                                         "We kunnen dit privacybeleid van tijd tot tijd bijwerken. De nieuwste versie is altijd beschikbaar op onze website.",
+		"If you accept analytics, Google Analytics also records how our website chat is used: that it was opened or closed, how many messages were sent, and whether a reply showed free times or a booking button. What you write in the chat is never sent to Google Analytics.": "Als u analytics accepteert, registreert Google Analytics ook hoe onze websitechat wordt gebruikt: dat hij werd geopend of gesloten, hoeveel berichten er werden verstuurd en of een antwoord vrije tijden of een boekingsknop toonde. Wat u in de chat schrijft, wordt nooit naar Google Analytics gestuurd.",
 		"Answer your questions in our website chat": "Je vragen beantwoorden in onze websitechat",
 		"Messages you send in our website chat":     "Berichten die je in onze websitechat stuurt",
 		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab.": "Google Cloud (Vertex AI, in de EU), waarop onze websitechat draait. Chatberichten worden alleen gebruikt om je te antwoorden; onze servers bewaren ze niet, en je browser bewaart het gesprek alleen tot je het tabblad sluit.",
@@ -466,7 +468,7 @@ var translations = map[Locale]map[string]string{
 		"Improve our services":      "Onze diensten verbeteren",
 		"1. Information We Collect": "1. Informatie die we verzamelen",
 		"We collect the following personal information when you book an appointment or contact us:": "We verzamelen de volgende persoonlijke informatie wanneer u een afspraak boekt of contact met ons opneemt:",
-		"Last updated: 19.02.2026":             "Laatst bijgewerkt: 19.02.2026",
+		"Last updated: 25.11.2026":             "Laatst bijgewerkt: 25.11.2026",
 		"Legal authorities if required by law": "Wettelijke autoriteiten indien vereist door de wet",
 		"Name":                                 "Naam",
 		"On this page":                         "Op deze pagina",
@@ -720,7 +722,8 @@ var translations = map[Locale]map[string]string{
 		"Treatment":                 "Soin",
 		"Change cookie settings":    "Modifier les cookies",
 		"7. Changes to This Policy": "7. Modifications de cette politique",
-		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.": "Nous pouvons mettre à jour cette politique de confidentialité de temps à autre. La dernière version sera toujours disponible sur notre site Web.",
+		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.":                                                                                                                                                         "Nous pouvons mettre à jour cette politique de confidentialité de temps à autre. La dernière version sera toujours disponible sur notre site Web.",
+		"If you accept analytics, Google Analytics also records how our website chat is used: that it was opened or closed, how many messages were sent, and whether a reply showed free times or a booking button. What you write in the chat is never sent to Google Analytics.": "Si vous acceptez les cookies analytiques, Google Analytics enregistre aussi l’utilisation du chat de notre site : son ouverture ou sa fermeture, le nombre de messages envoyés et si une réponse a proposé des créneaux libres ou un bouton de réservation. Ce que vous écrivez dans le chat n’est jamais envoyé à Google Analytics.",
 		"Answer your questions in our website chat": "Répondre à vos questions dans le chat de notre site",
 		"Messages you send in our website chat":     "Les messages que vous envoyez dans le chat de notre site",
 		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab.": "Google Cloud (Vertex AI, dans l’UE), qui fait fonctionner l’assistant de chat de notre site. Les messages servent uniquement à vous répondre ; nos serveurs ne les conservent pas, et votre navigateur garde la conversation seulement jusqu’à la fermeture de l’onglet.",
@@ -733,7 +736,7 @@ var translations = map[Locale]map[string]string{
 		"Improve our services":      "Améliorer nos services",
 		"1. Information We Collect": "1. Informations que nous collectons",
 		"We collect the following personal information when you book an appointment or contact us:": "Nous collectons les informations personnelles suivantes lorsque vous prenez rendez-vous ou nous contactez :",
-		"Last updated: 19.02.2026":             "Dernière mise à jour : 19.02.2026",
+		"Last updated: 25.11.2026":             "Dernière mise à jour : 25.11.2026",
 		"Legal authorities if required by law": "Autorités légales si la loi l'exige",
 		"Name":                                 "Nom",
 		"On this page":                         "Sur cette page",
@@ -987,7 +990,8 @@ var translations = map[Locale]map[string]string{
 		"Treatment":                 "Процедура",
 		"Change cookie settings":    "Изменить настройки cookies",
 		"7. Changes to This Policy": "7. Изменения в этой политике",
-		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.": "Мы можем время от времени обновлять эту Политику конфиденциальности. Последняя версия всегда будет доступна на нашем сайте.",
+		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.":                                                                                                                                                         "Мы можем время от времени обновлять эту Политику конфиденциальности. Последняя версия всегда будет доступна на нашем сайте.",
+		"If you accept analytics, Google Analytics also records how our website chat is used: that it was opened or closed, how many messages were sent, and whether a reply showed free times or a booking button. What you write in the chat is never sent to Google Analytics.": "Если вы принимаете аналитику, Google Analytics также фиксирует, как используется чат на нашем сайте: что его открыли или закрыли, сколько сообщений отправлено и показал ли ответ свободное время или кнопку записи. То, что вы пишете в чате, никогда не отправляется в Google Analytics.",
 		"Answer your questions in our website chat": "Отвечать на ваши вопросы в чате на сайте",
 		"Messages you send in our website chat":     "Сообщения, которые вы отправляете в чат на нашем сайте",
 		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab.": "Google Cloud (Vertex AI, в ЕС), на котором работает чат-ассистент нашего сайта. Сообщения используются только для ответа вам; наши серверы их не хранят, а ваш браузер сохраняет переписку только до закрытия вкладки.",
@@ -1000,7 +1004,7 @@ var translations = map[Locale]map[string]string{
 		"Improve our services":      "Улучшать наши услуги",
 		"1. Information We Collect": "1. Информация, которую мы собираем",
 		"We collect the following personal information when you book an appointment or contact us:": "Мы собираем следующую личную информацию, когда вы записываетесь на прием или связываетесь с нами:",
-		"Last updated: 19.02.2026":             "Последнее обновление: 19.02.2026",
+		"Last updated: 25.11.2026":             "Последнее обновление: 25.11.2026",
 		"Legal authorities if required by law": "Юридические органы, если это требуется по закону",
 		"Name":                                 "Имя",
 		"On this page":                         "На этой странице",
@@ -1254,7 +1258,8 @@ var translations = map[Locale]map[string]string{
 		"Treatment":                 "Процедура",
 		"Change cookie settings":    "Змінити налаштування cookies",
 		"7. Changes to This Policy": "7. Зміни в цій політиці",
-		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.": "Ми можемо час від часу оновлювати цю Політику конфіденційності. Остання версія завжди буде доступна на нашому сайті.",
+		"We may update this Privacy Policy from time to time. The latest version will always be available on our website.":                                                                                                                                                         "Ми можемо час від часу оновлювати цю Політику конфіденційності. Остання версія завжди буде доступна на нашому сайті.",
+		"If you accept analytics, Google Analytics also records how our website chat is used: that it was opened or closed, how many messages were sent, and whether a reply showed free times or a booking button. What you write in the chat is never sent to Google Analytics.": "Якщо ви приймаєте аналітику, Google Analytics також фіксує, як використовується чат на нашому сайті: що його відкрили чи закрили, скільки повідомлень надіслано і чи показала відповідь вільний час або кнопку бронювання. Те, що ви пишете в чаті, ніколи не надсилається до Google Analytics.",
 		"Answer your questions in our website chat": "Відповідати на ваші запитання в чаті на сайті",
 		"Messages you send in our website chat":     "Повідомлення, які ви надсилаєте в чат на нашому сайті",
 		"Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab.": "Google Cloud (Vertex AI, у ЄС), на якому працює чат-асистент нашого сайту. Повідомлення використовуються лише для відповіді вам; наші сервери їх не зберігають, а ваш браузер зберігає розмову лише до закриття вкладки.",
@@ -1267,7 +1272,7 @@ var translations = map[Locale]map[string]string{
 		"Improve our services":      "Покращувати наші послуги",
 		"1. Information We Collect": "1. Інформація, яку ми збираємо",
 		"We collect the following personal information when you book an appointment or contact us:": "Ми збираємо наступну особисту інформацію, коли ви записуєтеся на прийом або зв'язуєтеся з нами:",
-		"Last updated: 19.02.2026":             "Останнє оновлення: 19.02.2026",
+		"Last updated: 25.11.2026":             "Останнє оновлення: 25.11.2026",
 		"Legal authorities if required by law": "Юридичні органи, якщо це вимагається законом",
 		"Name":                                 "Ім'я",
 		"On this page":                         "На цій сторінці",

@@ -155,6 +155,47 @@ func TestAChatMessageGetsAReplyAndTheTranscriptBack(t *testing.T) {
 	}
 }
 
+func TestThePageRecordsOpeningSendingAndClosingTheChat(t *testing.T) {
+	body := get(t, chatSite(t, answers{"ok"}), "/en-BE/").Body.String()
+	for _, want := range []string{
+		"aesthetic.track(&#39;chat_opened&#39;, {placement: &#39;launcher&#39;})",
+		"aesthetic.track(&#39;chat_opened&#39;, {placement: &#39;good_to_know&#39;})",
+		"{source: &#39;typed&#39;", "{source: &#39;suggestion&#39;",
+		"aesthetic.track(&#39;chat_closed&#39;",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the page lacks %q", want)
+		}
+	}
+}
+
+// trackedReplies are the chat_reply_shown events in a chat response.
+var trackedReplies = regexp.MustCompile(`aesthetic\.track\(&#39;chat_reply_shown&#39;, \{[^}]*\}\)`)
+
+func TestEachReplyIsRecordedByOutcomeWithoutItsText(t *testing.T) {
+	h := chatSite(t, answers{"Tap the button to book."})
+	body := post(t, h, "/en-BE/chat", `{"chatInput":"I want to book with Zara"}`, nil).Body.String()
+	events := trackedReplies.FindAllString(body, -1)
+	if len(events) != 1 {
+		t.Fatalf("want one chat_reply_shown, got %q:\n%s", events, body)
+	}
+	if want := "{outcome: &#39;answered&#39;, free_times: 0, booking_offers: 1, choices: 0}"; !strings.Contains(events[0], want) {
+		t.Errorf("chat_reply_shown = %s, want %s", events[0], want)
+	}
+	for _, text := range []string{"Zara", "I want", "Tap the button", "Pedicure"} {
+		if strings.Contains(events[0], text) {
+			t.Errorf("chat_reply_shown carries %q: %s", text, events[0])
+		}
+	}
+	var limited string
+	for range 7 {
+		limited = post(t, h, "/en-BE/chat", `{"chatInput":"hi"}`, map[string]string{"X-Forwarded-For": "203.0.113.9"}).Body.String()
+	}
+	if !strings.Contains(limited, "{outcome: &#39;rate_limited&#39;") {
+		t.Errorf("a refused message is not recorded as rate_limited:\n%s", limited)
+	}
+}
+
 func TestAnOfferedBookingOpensTimelyWithTreatmentAndPerson(t *testing.T) {
 	h := chatSite(t, answers{"Tap the button to book."})
 	body := post(t, h, "/fr-BE/chat", `{"chatInput":"I want to book with Zara"}`, nil).Body.String()
@@ -207,13 +248,19 @@ func TestAFailingModelGetsTheFixedReply(t *testing.T) {
 	}
 }
 
+// chatAnalytics begins the policy's sentence on the chat in Google Analytics.
+const chatAnalytics = "If you accept analytics, Google Analytics also records how our website chat is used"
+
 func TestThePrivacyPolicyNamesTheChatOnlyWhereItRuns(t *testing.T) {
 	const processor = "Google Cloud (Vertex AI, in the EU)"
 	if body := get(t, chatSite(t, answers{"ok"}), "/en-BE/privacy-policy/").Body.String(); !strings.Contains(body, processor) || !strings.Contains(body, "Messages you send in our website chat") {
 		t.Error("with the chat on, the privacy policy does not name it")
 	}
-	if body := get(t, server.New(server.Config{}), "/en-BE/privacy-policy/").Body.String(); strings.Contains(body, processor) {
+	if body := get(t, server.New(server.Config{}), "/en-BE/privacy-policy/").Body.String(); strings.Contains(body, processor) || strings.Contains(body, chatAnalytics) {
 		t.Error("with the chat off, the privacy policy names it")
+	}
+	if body := get(t, chatSite(t, answers{"ok"}), "/en-BE/privacy-policy/").Body.String(); !strings.Contains(body, chatAnalytics) {
+		t.Error("with the chat on, the privacy policy does not say Google Analytics sees how it is used")
 	}
 }
 

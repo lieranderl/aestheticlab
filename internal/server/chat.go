@@ -180,7 +180,7 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 		}
 		history := cleanHistory(sig.ChatHistory)
 		n := len(history)
-		_ = sse.PatchElementTempl(views.ChatMessage(true, message, nil, nil, nil, n), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
+		_ = sse.PatchElementTempl(views.ChatMessage(true, message, nil, nil, nil, n, ""), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
 		_ = sse.MarshalAndPatchSignals(map[string]any{"chatInput": "", "chatLookup": "", "chatBusy": true})
 
 		start := time.Now()
@@ -278,7 +278,7 @@ func chat(l i18n.Locale, store *content.Store, a *assistant.Assistant, spend Spe
 			"offers", len(offers), "times", len(times), "choices", len(choices), "duration_ms", time.Since(start).Milliseconds(), "cost_eur", cost,
 			"prompt_tokens", answer.Tokens.Prompt, "cached_tokens", answer.Tokens.Cached, "output_tokens", answer.Tokens.Output,
 			"unmetered_calls", answer.Unmetered)
-		_ = sse.PatchElementTempl(views.ChatMessage(false, answer.Text, times, offers, choices, n+1), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
+		_ = sse.PatchElementTempl(views.ChatMessage(false, answer.Text, times, offers, choices, n+1, outcome), datastar.WithSelectorID("chat-log"), datastar.WithModeAppend())
 		history = append(history,
 			assistant.Turn{Role: assistant.RoleVisitor, Text: message},
 			assistant.Turn{Role: assistant.RoleAssistant, Text: views.ChatTranscript(ctx, answer.Text, times, choices)})

@@ -403,3 +403,74 @@ test("lists the free times it found with a Book button", async ({ page }) => {
 		first,
 	);
 });
+
+/** The chat's Google Analytics events so far: name and parameters. */
+async function chatEvents(page: import("@playwright/test").Page) {
+	return page.evaluate(() =>
+		(window as unknown as { dataLayer: IArguments[] }).dataLayer
+			.map((entry) => Array.from(entry))
+			.filter(
+				([command, name]) =>
+					command === "event" && String(name).startsWith("chat_"),
+			)
+			.map(([, name, params]) => ({ name, params })),
+	);
+}
+
+test("records the chat in analytics after consent, without its text", async ({
+	page,
+}) => {
+	await page.addInitScript((key) => {
+		window.localStorage.setItem(
+			key,
+			JSON.stringify({
+				version: 1,
+				analytics: true,
+				updatedAt: new Date().toISOString(),
+			}),
+		);
+	}, consentStorageKey);
+	await page.goto("/en-BE/");
+	await page.getByRole("button", { name: "Chat with our assistant" }).click();
+	const panel = page.getByRole("dialog", { name: "Ask Aesthetic Lab" });
+	const input = panel.getByRole("textbox", { name: "Your question" });
+	await input.fill("Do you do pedicures?");
+	await input.press("Enter");
+	await expect(panel.locator("#chat-log .chat-start")).toHaveCount(2);
+	await panel.getByRole("button", { name: "Close chat" }).click();
+
+	await expect
+		.poll(async () => (await chatEvents(page)).map((e) => e.name))
+		.toEqual([
+			"chat_opened",
+			"chat_message_sent",
+			"chat_reply_shown",
+			"chat_closed",
+		]);
+	const events = await chatEvents(page);
+	expect(events[0]?.params).toMatchObject({ placement: "launcher" });
+	expect(events[1]?.params).toMatchObject({
+		source: "typed",
+		message_number: 1,
+	});
+	expect(events[2]?.params).toMatchObject({
+		outcome: "answered",
+		booking_offers: 0,
+	});
+	expect(events[3]?.params).toMatchObject({ messages: 1 });
+	expect(JSON.stringify(events)).not.toContain("pedicure");
+});
+
+test("records nothing of the chat without analytics consent", async ({
+	page,
+}) => {
+	await page.goto("/en-BE/");
+	await page.getByRole("button", { name: "Chat with our assistant" }).click();
+	const panel = page.getByRole("dialog", { name: "Ask Aesthetic Lab" });
+	const input = panel.getByRole("textbox", { name: "Your question" });
+	await input.fill("Hello");
+	await input.press("Enter");
+	await expect(panel.locator("#chat-log .chat-start")).toHaveCount(2);
+	await panel.getByRole("button", { name: "Close chat" }).click();
+	expect(await chatEvents(page)).toEqual([]);
+});

@@ -209,7 +209,7 @@
 			"info": "1. Informations que nous collectons",
 			"info_text": "Nous collectons les informations personnelles suivantes lorsque vous prenez rendez-vous ou nous contactez :",
 			"kicker": "Mentions légales",
-			"last_update_date": "Dernière mise à jour : 19.02.2026",
+			"last_update_date": "Dernière mise à jour : 25.11.2026",
 			"legal": "Autorités légales si la loi l'exige",
 			"name": "Nom",
 			"on_this_page": "Sur cette page",
@@ -231,7 +231,8 @@
 			"who_text": "Aesthetic Lab, {{address}}. Pour toute question sur vos données, écrivez à {{email}}.",
 			"chat_messages": "Les messages que vous envoyez dans le chat de notre site",
 			"chat_answer": "Répondre à vos questions dans le chat de notre site",
-			"chat_processor": "Google Cloud (Vertex AI, dans l’UE), qui fait fonctionner l’assistant de chat de notre site. Les messages servent uniquement à vous répondre ; nos serveurs ne les conservent pas, et votre navigateur garde la conversation seulement jusqu’à la fermeture de l’onglet."
+			"chat_processor": "Google Cloud (Vertex AI, dans l’UE), qui fait fonctionner l’assistant de chat de notre site. Les messages servent uniquement à vous répondre ; nos serveurs ne les conservent pas, et votre navigateur garde la conversation seulement jusqu’à la fermeture de l’onglet.",
+			"chat_analytics": "Si vous acceptez les cookies analytiques, Google Analytics enregistre aussi l’utilisation du chat de notre site : son ouverture ou sa fermeture, le nombre de messages envoyés et si une réponse a proposé des créneaux libres ou un bouton de réservation. Ce que vous écrivez dans le chat n’est jamais envoyé à Google Analytics."
 		},
 		"services": {
 			"add_on_note": "Les prix concernent le soin lui-même. Réparations, nail art et dépose sont en supplément, dès {{price}}.",
