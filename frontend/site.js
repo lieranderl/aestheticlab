@@ -6,6 +6,8 @@
 // sends only consent-aware pings (Consent Mode advanced).
 (() => {
 	const measurementId = "G-95QF984DPQ";
+	// The layout passes web-vitals' hashed URL; loaded only after consent.
+	const webVitalsURL = document.currentScript?.dataset.webVitals;
 	const storageKey = "aestheticlab_cookie_consent_v2";
 	const denied = {
 		ad_storage: "denied",
@@ -85,7 +87,103 @@
 			{ analytics_consent: analytics ? "granted" : "denied" },
 			false,
 		);
+		if (analytics) measureVitals();
 	}
+
+	// GA4 parameter values longer than 100 characters are cut off.
+	const maxParam = 100;
+
+	/**
+	 * Text for analytics with query strings, fragments and email addresses
+	 * removed: URLs in messages can carry personal data.
+	 */
+	function scrub(text) {
+		return String(text)
+			.replace(/[?#][^\s]*/g, "")
+			.replace(/[^\s@/]+@[^\s@]+\.[^\s@]+/g, "[email]")
+			.trim();
+	}
+
+	let vitalsRequested = false;
+
+	/** Loads web-vitals once and reports each metric as Google suggests. */
+	function measureVitals() {
+		if (vitalsRequested || !webVitalsURL) return;
+		vitalsRequested = true;
+		const script = document.createElement("script");
+		script.async = true;
+		script.src = webVitalsURL;
+		script.onload = () => {
+			const vitals = window.webVitals;
+			if (!vitals) return;
+			for (const on of [
+				vitals.onCLS,
+				vitals.onFCP,
+				vitals.onINP,
+				vitals.onLCP,
+				vitals.onTTFB,
+			]) {
+				on?.(reportVital);
+			}
+		};
+		document.head.appendChild(script);
+	}
+
+	/**
+	 * One Web Vitals metric as an event named after it. value is an integer
+	 * (CLS times 1000) so GA can sum it; debug_target is the element behind
+	 * a poor LCP, INP or CLS.
+	 */
+	function reportVital({ name, value, delta, id, rating, attribution }) {
+		const target =
+			attribution?.target ??
+			attribution?.interactionTarget ??
+			attribution?.largestShiftTarget;
+		track(name, {
+			value: Math.round(name === "CLS" ? delta * 1000 : delta),
+			metric_id: id,
+			metric_value: value,
+			metric_delta: delta,
+			metric_rating: rating,
+			debug_target: target ? String(target).slice(0, maxParam) : undefined,
+		});
+	}
+
+	// Errors: a few per page, each once, from this site's own scripts only
+	// (not extensions or other origins' "Script error.").
+	const maxErrors = 5;
+	const reportedErrors = new Set();
+
+	function reportError(message, where = "") {
+		if (stored()?.analytics !== true || reportedErrors.size >= maxErrors)
+			return;
+		const text = scrub(message).slice(0, maxParam - where.length);
+		const description = text + where;
+		if (!text || reportedErrors.has(description)) return;
+		reportedErrors.add(description);
+		track("exception", { description, fatal: false });
+	}
+
+	window.addEventListener("error", (event) => {
+		if (!event.filename || event.message === "Script error.") return;
+		let url;
+		try {
+			url = new URL(event.filename);
+		} catch {
+			return;
+		}
+		if (url.origin !== window.location.origin) return;
+		reportError(
+			event.message,
+			` @ ${url.pathname}:${event.lineno || 0}:${event.colno || 0}`,
+		);
+	});
+	window.addEventListener("unhandledrejection", (event) => {
+		const reason = event.reason;
+		const message =
+			reason instanceof Error ? reason.message : String(reason ?? "");
+		if (message) reportError(`unhandledrejection: ${message}`);
+	});
 
 	window.gtag("consent", "default", { ...denied, wait_for_update: 500 });
 	window.gtag("set", "ads_data_redaction", true);
@@ -93,6 +191,7 @@
 	const choice = stored();
 	if (choice) {
 		window.gtag("consent", "update", choice.analytics ? granted : denied);
+		if (choice.analytics) measureVitals();
 	}
 	window.gtag("js", new Date());
 	window.gtag("config", measurementId, config);

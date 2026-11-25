@@ -38,7 +38,8 @@
 		"lint-staged": "^17.6.2",
 		"sharp": "0.35.5",
 		"simple-icons": "16.38.1",
-		"tailwindcss": "^4.3.5"
+		"tailwindcss": "^4.3.5",
+		"web-vitals": "6.2.3"
 	},
 	"overrides": {
 		"sharp": "0.35.5"

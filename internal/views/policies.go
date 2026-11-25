@@ -58,6 +58,7 @@ func privacySections(ctx context.Context) []policySection {
 			Text:  tr(ctx, "We may update this Privacy Policy from time to time. The latest version will always be available on our website."),
 		},
 	}
+	sections[6].Text += " " + tr(ctx, "If you accept analytics, Google Analytics also records how quickly our pages load and respond, and errors in our website's own code. Web addresses in these error reports are shortened so they carry no personal details.")
 	// The chat assistant's data, only where the chat runs.
 	if chatEnabled(ctx) {
 		sections[1].List = append(sections[1].List, tr(ctx, "Messages you send in our website chat"))
