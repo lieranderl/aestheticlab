@@ -42,7 +42,7 @@ func fileURL(name string) string {
 	case "fonts/onest-vietnamese-wght-normal.woff2":
 		return "/static/dist/fonts/onest-vietnamese-wght-normal.d852d4d094.woff2"
 	case "site.js":
-		return "/static/dist/site.4829af08a1.js"
+		return "/static/dist/site.c061ba59b9.js"
 	case "video/cateye-poster.jpg":
 		return "/static/dist/media/video/cateye-poster.6b3602984d.jpg"
 	case "video/cateye.mp4":
@@ -63,6 +63,8 @@ func fileURL(name string) string {
 		return "/static/dist/media/video/shimmer-poster.fd6e2cd6bf.jpg"
 	case "video/shimmer.mp4":
 		return "/static/dist/media/video/shimmer.51d6530fcd.mp4"
+	case "web-vitals.js":
+		return "/static/dist/web-vitals.42d0cfd64b.js"
 	}
 	return ""
 }
@@ -194,6 +196,7 @@ var fileNames = []string{
 	"video/reset.mp4",
 	"video/shimmer-poster.jpg",
 	"video/shimmer.mp4",
+	"web-vitals.js",
 }
 
 var imageNames = []string{

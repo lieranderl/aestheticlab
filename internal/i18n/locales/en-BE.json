@@ -202,6 +202,7 @@
 			"cookies": "6. Cookies & Tracking Technologies",
 			"cookies_analytics": "Analytics cookies: optional; analytics storage is granted only after your consent.",
 			"cookies_necessary": "Strictly necessary cookies: always active for basic website functionality.",
+			"cookies_performance": "If you accept analytics, Google Analytics also records how quickly our pages load and respond, and errors in our website's own code. Web addresses in these error reports are shortened so they carry no personal details.",
 			"cookies_text": "We use strictly necessary cookies to operate the website. Google Analytics runs in Consent Mode v2. Before consent or if you reject analytics, analytics storage and advertising-related consent stay denied; Google may receive cookieless consent and measurement pings, and analytics cookies are not set. If you accept analytics, Google Analytics may use analytics cookies to understand website usage and improve our services. You can change your choice at any time via Cookie settings.",
 			"email": "Email address",
 			"email_request": "Email a data request",
