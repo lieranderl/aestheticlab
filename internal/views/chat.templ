@@ -34,7 +34,7 @@ templ chatWidget() {
 				aria-controls="chat-panel"
 				data-attr:aria-expanded="$chatOpen ? 'true' : 'false'"
 				data-attr:hidden="$chatOpen"
-				data-on:click="$chatOpen = true; setTimeout(() => document.getElementById('chat-input')?.focus(), 0)"
+				data-on:click={ "$chatOpen = true; " + chatOpened("launcher") + "; setTimeout(() => document.getElementById('chat-input')?.focus(), 0)" }
 			>
 				@Icon("outline/chat-bubble-left-right", "size-6")
 			</button>
@@ -46,11 +46,11 @@ templ chatWidget() {
 			class="card flex h-[min(36rem,calc(100dvh-8rem))] w-[min(24rem,calc(100vw-2rem))] flex-col lg:h-[min(44rem,calc(100dvh-7.5rem))] lg:w-md border border-base-300 bg-base-100 shadow-xl"
 			hidden
 			data-attr:hidden="!$chatOpen"
-			data-on:keydown__window="evt.key === 'Escape' && $chatOpen && ($chatOpen = false)"
+			data-on:keydown__window={ "if (evt.key === 'Escape' && $chatOpen) { $chatOpen = false; " + chatClosed + " }" }
 		>
 			<header class="flex items-center justify-between gap-3 border-b border-base-300 px-4 py-3">
 				<h2 id="chat-title" class="font-cormorant text-2xl leading-none">{ tr(ctx, "Ask Aesthetic Lab") }</h2>
-				<button id="chat-close" type="button" class="btn btn-circle btn-ghost btn-sm" aria-label={ tr(ctx, "Close chat") } data-on:click="$chatOpen = false">
+				<button id="chat-close" type="button" class="btn btn-circle btn-ghost btn-sm" aria-label={ tr(ctx, "Close chat") } data-on:click={ "$chatOpen = false; " + chatClosed }>
 					@Icon("mini/x-mark", "size-5")
 				</button>
 			</header>
@@ -61,7 +61,7 @@ templ chatWidget() {
 			<div class="flex grow flex-col-reverse overflow-y-auto px-4 py-3">
 				<div>
 					<div id="chat-log" class="flex flex-col gap-3" aria-live="polite">
-						@ChatMessage(false, tr(ctx, "Hi! Ask me about our treatments, prices, team or free times."), nil, nil, nil, 0)
+						@ChatMessage(false, tr(ctx, "Hi! Ask me about our treatments, prices, team or free times."), nil, nil, nil, 0, "")
 					</div>
 					<div class="chat chat-start" hidden data-attr:hidden="!$chatBusy">
 						<div class="chat-bubble bg-base-200 font-main text-sm">
@@ -83,11 +83,11 @@ templ chatWidget() {
 					<button
 						type="button"
 						class="btn btn-outline btn-sm h-auto min-h-8 rounded-full border-base-300 py-1.5 font-main text-xs font-normal normal-case"
-						data-on:click={ "$chatInput = " + jsString(q) + "; @post('" + href(ctx, "chat") + "')" }
+						data-on:click={ "$chatInput = " + jsString(q) + "; " + chatSent("suggestion") + "; @post('" + href(ctx, "chat") + "')" }
 					>{ q }</button>
 				}
 			</div>
-			<form class="flex items-end gap-2 border-t border-base-300 p-3" data-on:submit={ "$chatInput.trim() && !$chatBusy && @post('" + href(ctx, "chat") + "')" }>
+			<form class="flex items-end gap-2 border-t border-base-300 p-3" data-on:submit={ "if ($chatInput.trim() && !$chatBusy) { " + chatSent("typed") + "; @post('" + href(ctx, "chat") + "') }" }>
 				<label for="chat-input" class="sr-only">{ tr(ctx, "Your question") }</label>
 				<!-- Enter sends, Shift+Enter adds a line. Typed text stays 16px (phones
 				zoom into smaller fields); only the hint is smaller. While empty the
@@ -114,14 +114,15 @@ templ chatWidget() {
 // ChatMessage is one message in the chat log: the visitor's on the right,
 // the assistant's on the left with the free times it found, its Book
 // buttons and the treatments to choose from. n numbers the message so its
-// buttons' ids stay unique.
-templ ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOffer, choices []ChatChoice, n int) {
+// buttons' ids stay unique. outcome is how the server's reply went, for
+// analytics; the greeting has none.
+templ ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOffer, choices []ChatChoice, n int, outcome string) {
 	if visitor {
 		<div class="chat chat-end">
 			<div class="chat-bubble chat-bubble-primary whitespace-pre-line font-main text-sm">{ text }</div>
 		</div>
 	} else {
-		<div class="chat chat-start">
+		<div class="chat chat-start" { chatReplyAttrs(outcome, len(times), len(offers), len(choices))... }>
 			<!-- The times come from the lookup itself, never from the model's
 			text (assistant.FreeTimes). No nested div: scripts/chat-test-set.ts
 			reads the bubble up to its first closing div. -->
@@ -166,7 +167,7 @@ templ ChatMessage(visitor bool, text string, times []ChatTimes, offers []ChatOff
 							type="button"
 							class="btn btn-outline btn-sm h-auto min-h-8 rounded-full border-base-300 py-1.5 font-main text-xs font-normal normal-case"
 							data-attr:disabled="$chatBusy"
-							data-on:click={ "$chatInput = " + jsString(chatChoiceAsk(ctx, c)) + "; $chatLookup = " + jsString(c.Lookup) + "; @post('" + href(ctx, "chat") + "')" }
+							data-on:click={ "$chatInput = " + jsString(chatChoiceAsk(ctx, c)) + "; $chatLookup = " + jsString(c.Lookup) + "; " + chatSent("choice") + "; @post('" + href(ctx, "chat") + "')" }
 						>{ c.Service }</button>
 					}
 				</div>

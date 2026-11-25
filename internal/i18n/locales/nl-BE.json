@@ -209,7 +209,7 @@
 			"info": "1. Informatie die we verzamelen",
 			"info_text": "We verzamelen de volgende persoonlijke informatie wanneer u een afspraak boekt of contact met ons opneemt:",
 			"kicker": "Juridisch",
-			"last_update_date": "Laatst bijgewerkt: 19.02.2026",
+			"last_update_date": "Laatst bijgewerkt: 25.11.2026",
 			"legal": "Wettelijke autoriteiten indien vereist door de wet",
 			"name": "Naam",
 			"on_this_page": "Op deze pagina",
@@ -231,7 +231,8 @@
 			"who_text": "Aesthetic Lab, {{address}}. Voor alles over je gegevens kun je mailen naar {{email}}.",
 			"chat_messages": "Berichten die je in onze websitechat stuurt",
 			"chat_answer": "Je vragen beantwoorden in onze websitechat",
-			"chat_processor": "Google Cloud (Vertex AI, in de EU), waarop onze websitechat draait. Chatberichten worden alleen gebruikt om je te antwoorden; onze servers bewaren ze niet, en je browser bewaart het gesprek alleen tot je het tabblad sluit."
+			"chat_processor": "Google Cloud (Vertex AI, in de EU), waarop onze websitechat draait. Chatberichten worden alleen gebruikt om je te antwoorden; onze servers bewaren ze niet, en je browser bewaart het gesprek alleen tot je het tabblad sluit.",
+			"chat_analytics": "Als u analytics accepteert, registreert Google Analytics ook hoe onze websitechat wordt gebruikt: dat hij werd geopend of gesloten, hoeveel berichten er werden verstuurd en of een antwoord vrije tijden of een boekingsknop toonde. Wat u in de chat schrijft, wordt nooit naar Google Analytics gestuurd."
 		},
 		"services": {
 			"add_on_note": "Prijzen gelden voor de behandeling zelf. Herstellingen, nail art en verwijderen zijn extra, vanaf {{price}}.",

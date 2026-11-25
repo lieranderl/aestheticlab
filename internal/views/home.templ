@@ -351,7 +351,7 @@ templ faq(loc *content.Localized) {
 							data-attr:hidden="false"
 							aria-controls="chat-panel"
 							class="inline-flex min-h-11 items-center self-start font-main text-xs font-semibold tracking-[0.16em] uppercase underline-offset-4 hover:underline lg:btn lg:btn-accent lg:h-12 lg:min-h-12 lg:px-5.5 lg:tracking-[0.18em] lg:no-underline"
-							data-on:click="$chatOpen = true; setTimeout(() => document.getElementById('chat-input')?.focus(), 0)"
+							data-on:click={ "$chatOpen = true; " + chatOpened("good_to_know") + "; setTimeout(() => document.getElementById('chat-input')?.focus(), 0)" }
 						>
 							{ tr(ctx, "Ask our assistant") }
 						</button>

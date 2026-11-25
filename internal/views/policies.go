@@ -62,6 +62,7 @@ func privacySections(ctx context.Context) []policySection {
 	if chatEnabled(ctx) {
 		sections[1].List = append(sections[1].List, tr(ctx, "Messages you send in our website chat"))
 		sections[2].List = append(sections[2].List, tr(ctx, "Answer your questions in our website chat"))
+		sections[6].Text += " " + tr(ctx, "If you accept analytics, Google Analytics also records how our website chat is used: that it was opened or closed, how many messages were sent, and whether a reply showed free times or a booking button. What you write in the chat is never sent to Google Analytics.")
 		sections[4].List = append([]string{tr(ctx, "Google Cloud (Vertex AI, in the EU), which runs our website chat assistant. Chat messages are used only to answer you; our servers do not store them, and your browser keeps the conversation only until you close the tab.")}, sections[4].List...)
 	}
 	for i := range sections {
