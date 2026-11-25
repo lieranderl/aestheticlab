@@ -60,9 +60,18 @@ func (b Booking) event() string {
 // open is the Datastar expression that opens the booking dialog on b's
 // widget and records booking_opened.
 func (b Booking) open() string {
-	return "$bookingUrl = " + jsString(b.widgetURL()) + "; $bookingTitle = " + jsString(b.Text) + "; $bookingLoaded = false; $bookingEvent = " + jsString(b.event()) +
+	return "$bookingUrl = " + jsString(b.widgetURL()) + "; $bookingTitle = " + jsString(b.Text) + "; $bookingLoaded = false; $bookingOpenedAt = Date.now(); $bookingEvent = " + jsString(b.event()) +
 		"; document.getElementById('booking').showModal(); aesthetic.track('booking_opened', JSON.parse($bookingEvent))"
 }
+
+// bookingClosed records booking_closed when the dialog closes: the opening
+// button's parameters, whether the widget loaded and how long the dialog
+// stayed open. Timely never tells the page that a booking was made, so the
+// time open stands in for it; time_open buckets it for reports.
+const bookingClosed = "if ($bookingUrl) { const s = Math.round((Date.now() - $bookingOpenedAt) / 1000); " +
+	"aesthetic.track('booking_closed', {...JSON.parse($bookingEvent), widget_loaded: String($bookingLoaded), seconds_open: s, " +
+	"time_open: s < 30 ? 'under_30s' : s < 120 ? '30s_to_2m' : s < 300 ? '2m_to_5m' : '5m_plus'}) }; " +
+	"$bookingUrl = ''; $bookingLoaded = false"
 
 // track is the expression that records event name with params.
 func track(name string, params map[string]string) string {

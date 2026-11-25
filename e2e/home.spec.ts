@@ -293,6 +293,71 @@ test("opens and closes the booking dialog", async ({ page }) => {
 	await expect(dialog).toBeHidden();
 });
 
+/** The booking dialog's Google Analytics events so far. */
+async function bookingEvents(page: import("@playwright/test").Page) {
+	return page.evaluate(() =>
+		(window as unknown as { dataLayer: IArguments[] }).dataLayer
+			.map((entry) => Array.from(entry))
+			.filter(
+				([command, name]) =>
+					command === "event" && String(name).startsWith("booking_"),
+			)
+			.map(([, name, params]) => ({ name, params })),
+	);
+}
+
+// Timely never tells the page a booking was made, so how long the dialog
+// stayed open stands in for it.
+test("records how long the booking dialog stayed open after consent", async ({
+	page,
+}) => {
+	await page.addInitScript((key) => {
+		window.localStorage.setItem(
+			key,
+			JSON.stringify({
+				version: 1,
+				analytics: true,
+				updatedAt: new Date().toISOString(),
+			}),
+		);
+	}, consentStorageKey);
+	await page.goto("/en-BE/");
+	await page.getByRole("button", { name: "Book Appointment" }).first().click();
+	const dialog = page.getByRole("dialog", { name: "Book Appointment" });
+	await expect(dialog.locator("[aria-busy]")).toHaveAttribute(
+		"aria-busy",
+		"false",
+		{ timeout: 10000 },
+	);
+	await dialog.getByRole("button", { name: "Close" }).first().click();
+	await expect(dialog).toBeHidden();
+
+	await expect
+		.poll(async () => (await bookingEvents(page)).map((e) => e.name))
+		.toEqual(["booking_opened", "booking_widget_loaded", "booking_closed"]);
+	const [opened, , closed] = await bookingEvents(page);
+	expect(closed?.params).toMatchObject({
+		booking_id: opened?.params.booking_id,
+		widget_loaded: "true",
+		time_open: "under_30s",
+	});
+	expect(closed?.params.seconds_open).toBeGreaterThanOrEqual(0);
+	expect(closed?.params.seconds_open).toBeLessThan(30);
+});
+
+test("records nothing of the booking dialog without analytics consent", async ({
+	page,
+}) => {
+	await page.goto("/en-BE/");
+	await page.getByRole("button", { name: "Book Appointment" }).first().click();
+	const dialog = page.getByRole("dialog", { name: "Book Appointment" });
+	await expect(dialog).toBeVisible();
+	await dialog.getByRole("button", { name: "Close" }).first().click();
+	await expect(dialog).toBeHidden();
+
+	expect(await bookingEvents(page)).toEqual([]);
+});
+
 test("language menu trigger is present", async ({ page }) => {
 	await page.goto("/en-BE/");
 
