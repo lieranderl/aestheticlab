@@ -25,12 +25,12 @@ type PageMeta struct {
 // pageSignals are the signals every page shares:
 //   - cookies: the cookie banner shows (no choice stored yet, or reopened);
 //   - booking*: the booking dialog's widget URL, its title (the text of the
-//     button that opened it), load state and that button's analytics
-//     parameters (JSON);
+//     button that opened it), load state, when it opened (ms) and that
+//     button's analytics parameters (JSON);
 //   - menu: the phone menu is open;
 //   - scrolled, overHero, bar, section: the header's scroll state
 //     (frontend/site.js).
-const pageSignals = `{cookies: false, bookingUrl: '', bookingTitle: '', bookingLoaded: false, bookingEvent: '{}', menu: false, scrolled: false, overHero: false, bar: false, section: ''}`
+const pageSignals = `{cookies: false, bookingUrl: '', bookingTitle: '', bookingLoaded: false, bookingOpenedAt: 0, bookingEvent: '{}', menu: false, scrolled: false, overHero: false, bar: false, section: ''}`
 
 // Layout is the document shell: the head with the page's SEO and
 // link-preview tags, then the page, the cookie banner and the one booking
@@ -783,33 +783,46 @@ func bookingDialog() templ.Component {
 		}
 		ctx = templ.InitializeContext(ctx)
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<dialog id=\"booking\" class=\"modal modal-bottom sm:modal-middle\" aria-labelledby=\"booking-title\" aria-modal=\"true\" data-on:close=\"$bookingUrl = ''; $bookingLoaded = false\"><div class=\"modal-box relative flex min-h-[70vh] w-full max-w-5xl flex-col bg-base-100 p-2 pt-12 sm:min-h-[50vh] sm:w-[calc(100%-1rem)]\"><h2 id=\"booking-title\" class=\"sr-only\" data-text=\"$bookingTitle\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<dialog id=\"booking\" class=\"modal modal-bottom sm:modal-middle\" aria-labelledby=\"booking-title\" aria-modal=\"true\" data-on:close=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var44 string
-		templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Book your appointment"))
+		templ_7745c5c3_Var44, templ_7745c5c3_Err = templruntime.NewAttributeExpression(bookingClosed).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 165, Col: 102}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 162, Col: 31}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var44)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "</h2><form method=\"dialog\"><button type=\"submit\" class=\"btn btn-ghost btn-square absolute right-1 top-1 min-h-11 min-w-11\" aria-label=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "\"><div class=\"modal-box relative flex min-h-[70vh] w-full max-w-5xl flex-col bg-base-100 p-2 pt-12 sm:min-h-[50vh] sm:w-[calc(100%-1rem)]\"><h2 id=\"booking-title\" class=\"sr-only\" data-text=\"$bookingTitle\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var45 string
-		templ_7745c5c3_Var45, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Close")).Resolve(ctx)
+		templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Book your appointment"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 167, Col: 129}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 165, Col: 102}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var45)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "</h2><form method=\"dialog\"><button type=\"submit\" class=\"btn btn-ghost btn-square absolute right-1 top-1 min-h-11 min-w-11\" aria-label=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var46 string
+		templ_7745c5c3_Var46, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Close")).Resolve(ctx)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 167, Col: 129}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var46)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 64, "\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -817,46 +830,46 @@ func bookingDialog() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 64, "</button></form><div class=\"relative min-h-[60vh] grow\" data-attr:aria-busy=\"$bookingLoaded ? 'false' : 'true'\"><div class=\"absolute inset-0 flex items-center justify-center\" role=\"status\" data-show=\"!$bookingLoaded\"><span class=\"loading loading-spinner loading-lg text-secondary\"></span> <span class=\"sr-only\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var46 string
-		templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Loading booking widget…"))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 174, Col: 65}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, "</span></div><iframe title=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, "</button></form><div class=\"relative min-h-[60vh] grow\" data-attr:aria-busy=\"$bookingLoaded ? 'false' : 'true'\"><div class=\"absolute inset-0 flex items-center justify-center\" role=\"status\" data-show=\"!$bookingLoaded\"><span class=\"loading loading-spinner loading-lg text-secondary\"></span> <span class=\"sr-only\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var47 string
-		templ_7745c5c3_Var47, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Book your appointment")).Resolve(ctx)
+		templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Loading booking widget…"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 177, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 174, Col: 65}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var47)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "\" class=\"h-[75vh] w-full translate-y-2 border-0 opacity-0 transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none\" data-attr:src=\"$bookingUrl || false\" data-class=\"{'opacity-100': $bookingLoaded, 'translate-y-0': $bookingLoaded, 'opacity-0': !$bookingLoaded, 'translate-y-2': !$bookingLoaded}\" data-on:load=\"if ($bookingUrl) { $bookingLoaded = true; aesthetic.track('booking_widget_loaded', JSON.parse($bookingEvent)) }\"></iframe></div></div><form method=\"dialog\" class=\"modal-backdrop\"><button type=\"submit\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "</span></div><iframe title=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var48 string
-		templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Close"))
+		templ_7745c5c3_Var48, templ_7745c5c3_Err = templruntime.NewAttributeExpression(tr(ctx, "Book your appointment")).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 186, Col: 43}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 177, Col: 45}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var48)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "</button></form></dialog>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "\" class=\"h-[75vh] w-full translate-y-2 border-0 opacity-0 transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none\" data-attr:src=\"$bookingUrl || false\" data-class=\"{'opacity-100': $bookingLoaded, 'translate-y-0': $bookingLoaded, 'opacity-0': !$bookingLoaded, 'translate-y-2': !$bookingLoaded}\" data-on:load=\"if ($bookingUrl) { $bookingLoaded = true; aesthetic.track('booking_widget_loaded', JSON.parse($bookingEvent)) }\"></iframe></div></div><form method=\"dialog\" class=\"modal-backdrop\"><button type=\"submit\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var49 string
+		templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "Close"))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 186, Col: 43}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 68, "</button></form></dialog>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
